@@ -24,13 +24,14 @@ import copy
 
 import numpy as np
 import tensorflow as tf
+import regex as re
 
 from tensorflow.python.platform import gfile
 from batch_generator import BatchGenerator
 
 import model_utils
 
-def pretty_progress(step, prog_int,dot_count):
+def pretty_progress(step, prog_int, dot_count):
   if ( (prog_int<=1) or (step % (int(prog_int)+1)) == 0):
     dot_count += 1; print('.',end=''); sys.stdout.flush()
   return dot_count
@@ -56,14 +57,17 @@ def run_epoch(session, model, train_data, valid_data,
   print("Steps: %d "%total_steps,end=' ')
 
   for step in range(train_steps):
-
     batch = train_data.next_batch()
     train_mse += model.train_step(session, batch, keep_prob=keep_prob)
-
     if verbose: dot_count = pretty_progress(step,prog_int,dot_count)
 
-  # evaluate validation data
+  for step in range(valid_steps):
+    batch = valid_data.next_batch()
+    valid_mse += model.step(session, batch)
+    if verbose: dot_count = pretty_progress(train_steps+step,prog_int,dot_count)
       
+  # evaluate validation data
+
   if verbose:
     print("."*(100-dot_count),end='')
     print(" passes: %.2f  "
@@ -78,7 +82,7 @@ def train_model(config):
 
   print("Loading training data ...")
 
-  batches = BatchGenerator(train_path, config, randomly_sample=True)
+  batches = BatchGenerator(train_path,config)
 
   train_data = batches.train_batches()
   valid_data = batches.valid_batches()
@@ -104,13 +108,30 @@ def train_model(config):
     # This sets the initial learning rate tensor
     lr = model.assign_lr(session,config.initial_learning_rate)
 
-
     for i in range(config.max_epoch):
 
-      (train_err,valid_err) = run_epoch(session, model, train_data, valid_data,
-                                         keep_prob=config.keep_prob, passes=config.passes,
-                                         verbose=True)
-       
-      print( ('Epoch: %d Error: %.6f %.6f Learning rate: %.4f') %
-            (i + 1, train_error, valid_error, lr) )
+      (train_mse, valid_mse) = run_epoch(session, model, train_data, valid_data,
+                                          keep_prob=config.keep_prob, passes=config.passes,
+                                          verbose=True)
+      print( ('Epoch: %6d Train MSE: %.6f Valid MSE: %.6f Learning rate: %.4f') %
+            (i + 1, train_mse, valid_mse, lr) )
       sys.stdout.flush()
+
+      train_history.append( train_mse )
+      valid_history.append( valid_mse )
+      
+    if re.match("Gradient|Momentum",config.optimizer):
+      lr = model_utils.adjust_learning_rate(session, model, lr, config.dlr_decay, train_history )
+
+      if not os.path.exists(config.model_dir):
+        print("Creating directory %s" % config.model_dir)
+        os.mkdir(config.model_dir)
+
+      chkpt_file_prefix = "training.ckpt"
+      if model_utils.stop_training(config,valid_history,chkpt_file_prefix):
+        print("Training stopped.")
+        quit()
+      else:
+        checkpoint_path = os.path.join(config.model_dir, chkpt_file_prefix)
+        tf.train.Saver().save(session, checkpoint_path, global_step=i)
+      

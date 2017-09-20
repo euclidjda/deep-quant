@@ -196,7 +196,7 @@ class BatchGenerator(object):
         indexes = self._data[self._key_name].isin(valid_keys)
         train_data = self._data[~indexes]
         return BatchGenerator("",self._config,validation=False,
-                                  randomly_sample=self._randomly_sample,
+                                  randomly_sample=True,
                                   data=train_data)
 
     def valid_batches(self):
@@ -204,7 +204,7 @@ class BatchGenerator(object):
         indexes = self._data[self._key_name].isin(valid_keys)
         valid_data = self._data[indexes]
         return BatchGenerator("",self._config,validation=False,
-                                  randomly_sample=self._randomly_sample,
+                                  randomly_sample=False,
                                   data=valid_data)
 
     def rewind(self):

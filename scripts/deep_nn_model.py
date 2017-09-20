@@ -45,7 +45,7 @@ class DeepNNModel(object):
       valid_evals:
     """
 
-    feed_dict = self._get_feed_dict(batch,keep_prob)
+    feed_dict = self._get_feed_dict(batch,keep_prob=keep_prob,training=True)
 
     #(x,y,z) = sess.run([self._predictions,self._targets,self._mse],feed_dict)
     #print(x)
@@ -73,20 +73,21 @@ class DeepNNModel(object):
        predictions: the model predictions for each data point in batch
      """
 
-     feed_dict = self._get_feed_dict(batch)
+     feed_dict = self._get_feed_dict(batch,keep_prob=1.0,training=False)
 
-     predictions = sess.run(self._predictions,feed_dict)
+     mse = sess.run(self._mse,feed_dict)
 
-     return predictions
+     return mse
 
    
-  def _get_feed_dict(self,batch,keep_prob=1.0):
+  def _get_feed_dict(self,batch, keep_prob=1.0, training=False):
 
     feed_dict = dict()
 
     feed_dict[self._batch_size] = batch.inputs[0].shape[0]
     feed_dict[self._keep_prob] = keep_prob
     feed_dict[self._seq_lengths] = batch.seq_lengths
+    feed_dict[self._phase] = 1 if training is True else 0
     
     for i in range(self._num_unrollings):
       feed_dict[self._inputs[i]]  = batch.inputs[i]

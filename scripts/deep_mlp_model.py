@@ -48,7 +48,8 @@ class DeepMlpModel(DeepNNModel):
       batch_size = self._batch_size = tf.placeholder(tf.int32, shape=[])
       self._seq_lengths = tf.placeholder(tf.int64, shape=[None])
       self._keep_prob = tf.placeholder(tf.float32, shape=[])
-
+      self._phase = tf.placeholder(tf.bool, name='phase')
+      
       self._inputs = list()
       self._targets = list()
       self._train_mask = list() # Weights for loss functions per example
@@ -73,9 +74,10 @@ class DeepMlpModel(DeepNNModel):
       outputs = inputs
 
       for i in range(config.num_layers):
-        weights = tf.get_variable("hidden_w_%d"%i,[num_prev, config.num_hidden])
-        biases = tf.get_variable("hidden_b_%d"%i,[config.num_hidden])
-        outputs = tf.nn.relu(tf.nn.xw_plus_b(outputs, weights, biases))
+        # weights = tf.get_variable("hidden_w_%d"%i,[num_prev, config.num_hidden])
+        # biases = tf.get_variable("hidden_b_%d"%i,[config.num_hidden])
+        # outputs = tf.nn.relu(tf.nn.xw_plus_b(outputs, weights, biases))
+        outputs = self._batch_relu_layer(outputs, config.num_hidden, self._phase, "layer_%d"%i)
         if config.hidden_dropout is True:
           outputs = tf.nn.dropout(outputs, self._keep_prob)
         num_prev = config.num_hidden
@@ -88,13 +90,13 @@ class DeepMlpModel(DeepNNModel):
       # final regression layer  
       regress_b = tf.get_variable("softmax_b", [num_outputs])
       regress_w = tf.get_variable("softmax_w", [num_prev, num_outputs])
-      self._predictions = predictions = tf.nn.xw_plus_b(outputs, regress_w, regress_b)
+      self._predictions = tf.nn.xw_plus_b(outputs, regress_w, regress_b)
 
       self._t = targets = tf.unstack(tf.reverse_sequence(tf.reshape(
         tf.concat(self._targets, 1),[batch_size,num_unrollings,num_outputs] ),
         self._seq_lengths,seq_axis=1,batch_axis=0),axis=1)[0]
 
-      self._mse = tf.losses.mean_squared_error(targets, predictions)
+      self._mse = tf.losses.mean_squared_error(targets, self._predictions)
       
       # here is the learning part of the graph
       tvars = tf.trainable_variables()
@@ -123,3 +125,14 @@ class DeepMlpModel(DeepNNModel):
     ret = math_ops.div(inputs, self._keep_prob) * binary_tensor
     ret.set_shape(inputs.get_shape())
     return ret
+
+  def _batch_relu_layer(self, x, size, phase, scope):
+    with tf.variable_scope(scope):
+      h1 = tf.contrib.layers.fully_connected(x, size,
+                                              activation_fn=None,
+                                              scope='dense')
+      h2 = tf.contrib.layers.batch_norm(h1, 
+                                        center=True, scale=True,
+                                        is_training=phase,
+                                        scope='bn')
+      return tf.nn.relu(h2, 'relu')

@@ -57,7 +57,7 @@ def get_configs():
   configs.DEFINE_float("max_grad_norm",10.0,"Gradient clipping")
   configs.DEFINE_integer("end_date",210001,"Last date to train on as YYYYMM")
   configs.DEFINE_float("keep_prob",1.0,"Keep probability for dropout")
-  configs.DEFINE_boolean("train_model",True,"Train model otherwise inference only")
+  configs.DEFINE_boolean("train",True,"Train model otherwise inference only")
   configs.DEFINE_boolean("input_dropout",False,"Do dropout on input layer")
   configs.DEFINE_boolean("hidden_dropout",True,"Do dropout on hidden layers")
   configs.DEFINE_boolean("skip_connections",False,"Have direct connections between input and output in MLP")
@@ -80,7 +80,7 @@ def get_configs():
 def main(_):
     config = get_configs()
 
-    if config.train_model is True:
+    if config.train is True:
       train_model(config)
         
 if __name__ == "__main__":

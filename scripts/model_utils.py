@@ -101,7 +101,7 @@ def adjust_learning_rate(session, model,
     curr = cost_history[-1]
     # If performance has dropped by less than 1%, decay learning_rate
     if ((learning_rate >= 0.0001) and (mean > 0.0)
-        and (mean >= curr) and (curr/mean >= 0.99)):
+        and (mean >= curr) and (curr/mean >= 0.98)):
         learning_rate = learning_rate * lr_decay
   model.assign_lr(session, learning_rate)
   return learning_rate
