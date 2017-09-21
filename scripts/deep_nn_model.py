@@ -86,14 +86,11 @@ class DeepNNModel(object):
 
     feed_dict[self._batch_size] = batch.inputs[0].shape[0]
     feed_dict[self._keep_prob] = keep_prob
-    feed_dict[self._seq_lengths] = batch.seq_lengths
     feed_dict[self._phase] = 1 if training is True else 0
     
     for i in range(self._num_unrollings):
       feed_dict[self._inputs[i]]  = batch.inputs[i]
       feed_dict[self._targets[i]] = batch.targets[i]
-      feed_dict[self._train_mask[i]] = batch.train_mask[i]
-      feed_dict[self._valid_mask[i]] = batch.valid_mask[i]
     
     return feed_dict
 

@@ -63,8 +63,9 @@ def get_configs():
   configs.DEFINE_boolean("skip_connections",False,"Have direct connections between input and output in MLP")
   configs.DEFINE_boolean("use_cache",True,"Load data for logreg from cache (vs processing from batch generator)")
   configs.DEFINE_string("optimizer", 'GradientDescentOptimizer', 'Any tensorflow optimizer in tf.train')
+  configs.DEFINE_string("optimizer_params", 'learning_rate=0.6', 'Named arams required by the optimizer')
+  configs.DEFINE_float("initial_learning_rate",0.6, "Learning rate decay")
   configs.DEFINE_float("lr_decay",0.9, "Learning rate decay")
-  configs.DEFINE_float("initial_learning_rate",1.0,"Initial learning rate")
   configs.DEFINE_float("validation_size",0.0,"Size of validation set as %")
   configs.DEFINE_float("passes",1.0,"Passes through day per epoch")
   configs.DEFINE_float("rnn_loss_weight",None,"How much moret to weight kth example")
@@ -79,7 +80,7 @@ def get_configs():
 
 def main(_):
     config = get_configs()
-
+    
     if config.train is True:
       train_model(config)
         

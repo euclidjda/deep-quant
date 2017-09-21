@@ -46,37 +46,27 @@ class DeepMlpModel(DeepNNModel):
       total_input_size = num_unrollings * num_inputs
 
       batch_size = self._batch_size = tf.placeholder(tf.int32, shape=[])
-      self._seq_lengths = tf.placeholder(tf.int64, shape=[None])
       self._keep_prob = tf.placeholder(tf.float32, shape=[])
       self._phase = tf.placeholder(tf.bool, name='phase')
       
       self._inputs = list()
       self._targets = list()
-      self._train_mask = list() # Weights for loss functions per example
-      self._valid_mask = list() # Weights for loss functions per example
 
       for _ in range(num_unrollings):
         self._inputs.append( tf.placeholder(tf.float32,
                                               shape=[None,num_inputs]) )
         self._targets.append( tf.placeholder(tf.float32,
                                               shape=[None,num_outputs]) )
-        self._train_mask.append(tf.placeholder(tf.float32, shape=[None]))
-        self._valid_mask.append(tf.placeholder(tf.float32, shape=[None]))
+        
+      inputs = tf.concat( self._inputs, 1 )
 
-      inputs = tf.reverse_sequence(tf.concat( self._inputs, 1 ),
-                                    self._seq_lengths*num_inputs,
-                                    seq_axis=1,batch_axis=0)
-      
       if config.input_dropout is True: inputs = self._input_dropout(inputs)
 
       num_prev = total_input_size
-
+ 
       outputs = inputs
 
       for i in range(config.num_layers):
-        # weights = tf.get_variable("hidden_w_%d"%i,[num_prev, config.num_hidden])
-        # biases = tf.get_variable("hidden_b_%d"%i,[config.num_hidden])
-        # outputs = tf.nn.relu(tf.nn.xw_plus_b(outputs, weights, biases))
         outputs = self._batch_relu_layer(outputs, config.num_hidden, self._phase, "layer_%d"%i)
         if config.hidden_dropout is True:
           outputs = tf.nn.dropout(outputs, self._keep_prob)
@@ -92,13 +82,11 @@ class DeepMlpModel(DeepNNModel):
       regress_w = tf.get_variable("softmax_w", [num_prev, num_outputs])
       self._predictions = tf.nn.xw_plus_b(outputs, regress_w, regress_b)
 
-      self._t = targets = tf.unstack(tf.reverse_sequence(tf.reshape(
-        tf.concat(self._targets, 1),[batch_size,num_unrollings,num_outputs] ),
-        self._seq_lengths,seq_axis=1,batch_axis=0),axis=1)[0]
-
-      self._mse = tf.losses.mean_squared_error(targets, self._predictions)
+      # We are just predicting the next (last in targets) time step so we index by -1
+      # in self._targets
+      self._mse = tf.losses.mean_squared_error(self._targets[-1], self._predictions)
       
-      # here is the learning part of the graph
+      # from here down is the learning part of the graph
       tvars = tf.trainable_variables()
       grads = tf.gradients(self._mse,tvars)
 
@@ -107,13 +95,23 @@ class DeepMlpModel(DeepNNModel):
 
       self._lr = tf.Variable(0.0, trainable=False)
       optimizer = None
+      args = self._get_optimizer_args(config.optimizer_params)
       if hasattr(tf.train,config.optimizer):
-        optimizer = getattr(tf.train, config.optimizer)(self._lr)
+        optimizer = getattr(tf.train, config.optimizer)(**args)
       else:
         raise RuntimeError("Unknown optimizer = %s"%config.optimizer)
 
       self._train_op = optimizer.apply_gradients(zip(grads, tvars))
 
+  def _get_optimizer_args(self,optimizer_params):
+      # optimizer_params is a string of the form "param1=value1,param2=value2,..."
+      # this method maps it to dictionary { param1 : value1, param2 : value2, ...}
+      args_list = [p.split('=') for p in optimizer_params.split(',')]
+      args = dict()
+      for p in args_list:
+        args[p[0]] = float(p[1])
+      return args
+      
   def _input_dropout(self,inputs):
     # This implementation of dropout dropouts an entire feature along the time dim
     random_tensor = self._keep_prob
