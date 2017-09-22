@@ -51,10 +51,10 @@ def run_epoch(session, model, train_data, valid_data,
   total_steps = train_steps+valid_steps
   prog_int = total_steps/100 # progress interval for stdout
 
-  train_data.rewind() # make sure we start a beggining
-  valid_data.rewind() # make sure we start a beggining
+  train_data.shuffle() # we want to randomly shuffle train data 
+  valid_data.rewind()  # make sure we start a beggining
 
-  print("Steps: %d "%total_steps,end=' ')
+  print("Steps: %4d "%total_steps,end=' ')
 
   for step in range(train_steps):
     batch = train_data.next_batch()
@@ -105,23 +105,23 @@ def train_model(config):
     
     train_history = list()
     valid_history = list()
-    # This sets the initial learning rate tensor
-    lr = model.assign_lr(session,config.initial_learning_rate)
 
+    lr = model.assign_lr(session,config.learning_rate)
+    
     for i in range(config.max_epoch):
 
       (train_mse, valid_mse) = run_epoch(session, model, train_data, valid_data,
                                           keep_prob=config.keep_prob, passes=config.passes,
                                           verbose=True)
-      print( ('Epoch: %6d Train MSE: %.6f Valid MSE: %.6f Learning rate: %.4f') %
+      print( ('Epoch: %4d Train MSE: %.6f Valid MSE: %.6f Learning rate: %.4f') %
             (i + 1, train_mse, valid_mse, lr) )
       sys.stdout.flush()
 
       train_history.append( train_mse )
       valid_history.append( valid_mse )
       
-    if re.match("Gradient|Momentum",config.optimizer):
-      lr = model_utils.adjust_learning_rate(session, model, lr, config.dlr_decay, train_history )
+      if re.match("Gradient|Momentum",config.optimizer):
+        lr = model_utils.adjust_learning_rate(session, model, lr, config.lr_decay, train_history )
 
       if not os.path.exists(config.model_dir):
         print("Creating directory %s" % config.model_dir)

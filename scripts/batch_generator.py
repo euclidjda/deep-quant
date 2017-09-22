@@ -27,13 +27,12 @@ class BatchGenerator(object):
     sequences from the datafile whose shape is specified by config.batch_size
     and config.num_unrollings.
     """
-    def __init__(self, filename, config, randomly_sample=False, validation=True, data=None):
+    def __init__(self, filename, config, validation=True, data=None):
         """
         Init a BatchGenerator
         """
         self._key_name = key_name = config.key_field
         self._target_name = target_name = config.target_field
-        self._randomly_sample = randomly_sample
         self._num_classes = config.num_outputs
         self._num_inputs = config.num_inputs
         self._num_unrollings = num_unrollings = config.num_unrollings
@@ -83,7 +82,6 @@ class BatchGenerator(object):
             self._validation_set = dict(zip(sample,[1]*sample_size))
             print("Num training entities: %d"%(len(keys)-sample_size))
             print("Num validation entities: %d"%sample_size)
-            #print("\n".join(sample))
 
         # Setup indexes into the sequences
         self._seq_length = min_seq_length = self._stride * num_unrollings
@@ -170,11 +168,8 @@ class BatchGenerator(object):
         #   Set cursor for next batch
         #############################################################################
         batch_size = self._batch_size
-        if self._randomly_sample is True:
-            self._index_cursor = random.sample(range(len(self._indices)),batch_size)
-        else:
-            num_idxs = len(self._indices)
-            self._index_cursor = [ (self._index_cursor[b]+1)%num_idxs for b in range(batch_size) ]
+        num_idxs = len(self._indices)
+        self._index_cursor = [ (self._index_cursor[b]+1)%num_idxs for b in range(batch_size) ]
 
         return Batch(x_batch, y_batch, attribs )
 
@@ -194,7 +189,6 @@ class BatchGenerator(object):
         indexes = self._data[self._key_name].isin(valid_keys)
         train_data = self._data[~indexes]
         return BatchGenerator("",self._config,validation=False,
-                                  randomly_sample=True,
                                   data=train_data)
 
     def valid_batches(self):
@@ -202,9 +196,12 @@ class BatchGenerator(object):
         indexes = self._data[self._key_name].isin(valid_keys)
         valid_data = self._data[indexes]
         return BatchGenerator("",self._config,validation=False,
-                                  randomly_sample=False,
                                   data=valid_data)
 
+    def shuffle(self):
+        random.shuffle(self._batch_cache)
+        self._batch_cusror = 0
+         
     def rewind(self):
         self._batch_cusror = 0
 

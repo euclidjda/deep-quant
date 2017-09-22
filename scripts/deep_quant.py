@@ -63,8 +63,8 @@ def get_configs():
   configs.DEFINE_boolean("skip_connections",False,"Have direct connections between input and output in MLP")
   configs.DEFINE_boolean("use_cache",True,"Load data for logreg from cache (vs processing from batch generator)")
   configs.DEFINE_string("optimizer", 'GradientDescentOptimizer', 'Any tensorflow optimizer in tf.train')
-  configs.DEFINE_string("optimizer_params", 'learning_rate=0.6', 'Named arams required by the optimizer')
-  configs.DEFINE_float("initial_learning_rate",0.6, "Learning rate decay")
+  configs.DEFINE_string("optimizer_params", None, '')
+  configs.DEFINE_float("learning_rate",0.6,"")
   configs.DEFINE_float("lr_decay",0.9, "Learning rate decay")
   configs.DEFINE_float("validation_size",0.0,"Size of validation set as %")
   configs.DEFINE_float("passes",1.0,"Passes through day per epoch")
@@ -74,15 +74,26 @@ def get_configs():
   configs.DEFINE_integer("seed",None,"Seed for deterministic training")
 
   c = configs.ConfigValues()
-  # Check to see if we are in training or testing mode
 
+  # optimizer_params is a string of the form "param1=value1,param2=value2,..."
+  # this maps it to dictionary { param1 : value1, param2 : value2, ...}
+  if c.optimizer_params is not None:
+     args_list = [p.split('=') for p in c.optimizer_params.split(',')]
+     params = dict()
+     for p in args_list:
+	      params[p[0]] = float(p[1])
+     c.optimizer_params = params
+
+  assert('learning_rate' not in c.optimizer_params)
+     
   return c
 
 def main(_):
-    config = get_configs()
-    
-    if config.train is True:
-      train_model(config)
+  config = get_configs()
+
+  # Check to see if we are in training or testing mode
+  if config.train is True:
+     train_model(config)
         
 if __name__ == "__main__":
   tf.app.run()

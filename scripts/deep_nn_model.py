@@ -97,7 +97,7 @@ class DeepNNModel(object):
   def assign_lr(self, session, lr_value):
     session.run(tf.assign(self._lr, lr_value))
     return lr_value
-
+  
   @property
   def inputs(self):
     return self._inputs

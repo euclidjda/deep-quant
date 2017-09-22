@@ -95,9 +95,9 @@ class DeepMlpModel(DeepNNModel):
 
       self._lr = tf.Variable(0.0, trainable=False)
       optimizer = None
-      args = self._get_optimizer_args(config.optimizer_params)
+      args = config.optimizer_params
       if hasattr(tf.train,config.optimizer):
-        optimizer = getattr(tf.train, config.optimizer)(**args)
+        optimizer = getattr(tf.train, config.optimizer)(learning_rate=self._lr,**args)
       else:
         raise RuntimeError("Unknown optimizer = %s"%config.optimizer)
 
