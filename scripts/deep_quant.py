@@ -44,6 +44,7 @@ def get_configs():
   configs.DEFINE_string("nn_type",'DeepRnnModel',"Model type")
   configs.DEFINE_string("key_field", 'gvkey',"Key column name header in datafile")
   configs.DEFINE_string("target_field", 'target',"Target column name header in datafile")
+  configs.DEFINE_string("feature_field", '',"First feature")
   configs.DEFINE_string("data_dir",'',"The data directory")
   configs.DEFINE_string("model_dir",'',"Model directory")
   configs.DEFINE_integer("num_unrollings",4,"Number of unrolling steps")
@@ -62,8 +63,9 @@ def get_configs():
   configs.DEFINE_boolean("hidden_dropout",True,"Do dropout on hidden layers")
   configs.DEFINE_boolean("skip_connections",False,"Have direct connections between input and output in MLP")
   configs.DEFINE_boolean("use_cache",True,"Load data for logreg from cache (vs processing from batch generator)")
+  configs.DEFINE_string("data_scaler",None,'sklearn scaling algorithm or None if no scaling')
   configs.DEFINE_string("optimizer", 'GradientDescentOptimizer', 'Any tensorflow optimizer in tf.train')
-  configs.DEFINE_string("optimizer_params", None, '')
+  configs.DEFINE_string("optimizer_params",None, 'Additional optimizer params such as momentum')
   configs.DEFINE_float("learning_rate",0.6,"")
   configs.DEFINE_float("lr_decay",0.9, "Learning rate decay")
   configs.DEFINE_float("validation_size",0.0,"Size of validation set as %")
@@ -77,15 +79,16 @@ def get_configs():
 
   # optimizer_params is a string of the form "param1=value1,param2=value2,..."
   # this maps it to dictionary { param1 : value1, param2 : value2, ...}
-  if c.optimizer_params is not None:
+  if c.optimizer_params is None:
+     c.optimizer_params = dict()
+  else:
      args_list = [p.split('=') for p in c.optimizer_params.split(',')]
      params = dict()
      for p in args_list:
 	      params[p[0]] = float(p[1])
      c.optimizer_params = params
-
-  assert('learning_rate' not in c.optimizer_params)
-     
+     assert('learning_rate' not in c.optimizer_params)
+		
   return c
 
 def main(_):

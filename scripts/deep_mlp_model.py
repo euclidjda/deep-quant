@@ -45,6 +45,10 @@ class DeepMlpModel(DeepNNModel):
 
       total_input_size = num_unrollings * num_inputs
 
+      # input/target normalization params
+      self._center = tf.get_variable('center',shape=[num_inputs])
+      self._scale  = tf.get_variable('scale',shape=[num_inputs])
+      
       batch_size = self._batch_size = tf.placeholder(tf.int32, shape=[])
       self._keep_prob = tf.placeholder(tf.float32, shape=[])
       self._phase = tf.placeholder(tf.bool, name='phase')
@@ -60,6 +64,11 @@ class DeepMlpModel(DeepNNModel):
         
       inputs = tf.concat( self._inputs, 1 )
 
+      # center and scale
+      if config.data_scaler is not None:
+        inputs = tf.divide(inputs - tf.tile(self._center,[num_unrollings]),
+                             tf.tile(self._scale,[num_unrollings]))
+      
       if config.input_dropout is True: inputs = self._input_dropout(inputs)
 
       num_prev = total_input_size
@@ -78,9 +87,9 @@ class DeepMlpModel(DeepNNModel):
         outputs  = tf.concat( [ skip_inputs, outputs], 1)
 
       # final regression layer  
-      regress_b = tf.get_variable("softmax_b", [num_outputs])
-      regress_w = tf.get_variable("softmax_w", [num_prev, num_outputs])
-      self._predictions = tf.nn.xw_plus_b(outputs, regress_w, regress_b)
+      linear_b = tf.get_variable("linear_b", [num_outputs])
+      linear_w = tf.get_variable("linear_w", [num_prev, num_outputs])
+      self._predictions = tf.nn.xw_plus_b(outputs, linear_w, linear_b)
 
       # We are just predicting the next (last in targets) time step so we index by -1
       # in self._targets
@@ -103,15 +112,6 @@ class DeepMlpModel(DeepNNModel):
 
       self._train_op = optimizer.apply_gradients(zip(grads, tvars))
 
-  def _get_optimizer_args(self,optimizer_params):
-      # optimizer_params is a string of the form "param1=value1,param2=value2,..."
-      # this method maps it to dictionary { param1 : value1, param2 : value2, ...}
-      args_list = [p.split('=') for p in optimizer_params.split(',')]
-      args = dict()
-      for p in args_list:
-        args[p[0]] = float(p[1])
-      return args
-      
   def _input_dropout(self,inputs):
     # This implementation of dropout dropouts an entire feature along the time dim
     random_tensor = self._keep_prob
@@ -134,3 +134,4 @@ class DeepMlpModel(DeepNNModel):
                                         is_training=phase,
                                         scope='bn')
       return tf.nn.relu(h2, 'relu')
+

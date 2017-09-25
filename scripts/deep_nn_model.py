@@ -94,7 +94,16 @@ class DeepNNModel(object):
     
     return feed_dict
 
-  def assign_lr(self, session, lr_value):
+  def set_scaling_params(self,session,center=None,scale=None):
+    assert(center is not None)
+    assert(scale is not None)
+
+    # wide_center = np.tile(center,self._num_unrollings)
+    # wide_scale = np.tile(scale,self._num_unrollings)
+    session.run(tf.assign(self._center,center))
+    session.run(tf.assign(self._scale,scale))
+    
+  def set_learning_rate(self, session, lr_value):
     session.run(tf.assign(self._lr, lr_value))
     return lr_value
   

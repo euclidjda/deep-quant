@@ -17,6 +17,7 @@ import os
 import numpy as np
 import pandas as pd
 import random
+import sklearn.preprocessing
 
 _NUM_CLASSES = 2
 
@@ -33,6 +34,7 @@ class BatchGenerator(object):
         """
         self._key_name = key_name = config.key_field
         self._target_name = target_name = config.target_field
+        self._first_feature_name = first_feature_name = config.feature_field
         self._num_classes = config.num_outputs
         self._num_inputs = config.num_inputs
         self._num_unrollings = num_unrollings = config.num_unrollings
@@ -56,11 +58,11 @@ class BatchGenerator(object):
 
         self._end_date = data['date'].max()
         self._start_date = data['date'].min()
-        self._feature_start_idx = list(data.columns.values).index(target_name)+1
+        self._feature_start_idx = list(data.columns.values).index(first_feature_name)
         self._key_idx = list(data.columns.values).index(key_name)
         self._target_idx = list(data.columns.values).index(target_name)
         self._date_idx = list(data.columns.values).index('date')
-        self._feature_names = list(data.columns.values)[self._target_idx+1:]
+        self._feature_names = list(data.columns.values)[self._feature_start_idx:]
         assert(self._feature_start_idx>=0)
 
         # This assert ensures that no x features are the yval
@@ -183,7 +185,23 @@ class BatchGenerator(object):
         self._batch_cursor = (self._batch_cursor+1) % (self._num_batches)
 
         return b
-    
+
+    def get_scaling_params(self,scaler_class):
+
+        scaler = None
+        
+        if hasattr(sklearn.preprocessing,scaler_class):
+            scaler = getattr(sklearn.preprocessing,scaler_class)()
+        else:
+            raise RuntimeError("Unknown scaler = %s"%scaler_class)
+
+        scaler.fit(self._data[self._feature_names])
+        params = dict()
+        params['center'] = scaler.center_
+        params['scale'] = scaler.scale_
+        
+        return params
+        
     def train_batches(self):
         valid_keys = list(self._validation_set.keys())
         indexes = self._data[self._key_name].isin(valid_keys)

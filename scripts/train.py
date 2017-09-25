@@ -99,6 +99,10 @@ def train_model(config):
 
     model = model_utils.get_model(session, config, verbose=True)
 
+    if config.data_scaler is not None:
+      scaling_params = train_data.get_scaling_params('RobustScaler')
+      model.set_scaling_params(session,**scaling_params)
+    
     if config.early_stop is not None:
       print("Training will early stop without "
         "improvement after %d epochs."%config.early_stop)
@@ -106,7 +110,7 @@ def train_model(config):
     train_history = list()
     valid_history = list()
 
-    lr = model.assign_lr(session,config.learning_rate)
+    lr = model.set_learning_rate(session,config.learning_rate)
     
     for i in range(config.max_epoch):
 
