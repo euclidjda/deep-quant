@@ -81,7 +81,7 @@ class DeepMlpModel(DeepNNModel):
       outputs = inputs
 
       for i in range(config.num_layers):
-        outputs = self._batch_relu_layer(outputs, config.num_hidden, self._phase, "layer_%d"%i)
+        outputs = self._batch_relu_layer(outputs, config.num_hidden, "layer_%d"%i)
         if config.hidden_dropout is True:
           outputs = tf.nn.dropout(outputs, self._keep_prob)
         num_prev = config.num_hidden
@@ -94,9 +94,14 @@ class DeepMlpModel(DeepNNModel):
       # final regression layer  
       linear_b = tf.get_variable("linear_b", [num_outputs])
       linear_w = tf.get_variable("linear_w", [num_prev, num_outputs])
-      self._predictions = tf.nn.xw_plus_b(outputs, linear_w, linear_b)
+      outputs = tf.nn.xw_plus_b(outputs, linear_w, linear_b)
+      
+      self._mse = tf.losses.mean_squared_error(targets, outputs)
 
-      self._mse = tf.losses.mean_squared_error(targets, self._predictions)
+      if config.data_scaler is not None:
+        self._predictions = tf.multiply(outputs,self._scale) + self._center
+      else:
+        self._predictions = outputs
       
       # from here down is the learning part of the graph
       tvars = tf.trainable_variables()
@@ -130,14 +135,14 @@ class DeepMlpModel(DeepNNModel):
     
     return ret
 
-  def _batch_relu_layer(self, x, size, phase, scope):
+  def _batch_relu_layer(self, x, size, scope):
     with tf.variable_scope(scope):
       h1 = tf.contrib.layers.fully_connected(x, size,
                                              activation_fn=None,
                                              scope='dense')
       h2 = tf.contrib.layers.batch_norm(h1, 
                                         center=True, scale=True,
-                                        is_training=phase,
+                                        is_training=self._phase,
                                         scope='bn')
       return tf.nn.relu(h2, 'relu')
 

@@ -35,6 +35,7 @@ from batch_generator import BatchGenerator
 #import model_utils
 import configs as configs
 from train import train_model
+from predict import predict
 
 def get_configs():
   """Defines all configuration params passable to command line.
@@ -96,7 +97,9 @@ def main(_):
   # Check to see if we are in training or testing mode
   if config.train is True:
      train_model(config)
-        
+  else:
+     predict(config)
+     
 if __name__ == "__main__":
   tf.app.run()
 
