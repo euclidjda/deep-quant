@@ -35,7 +35,6 @@ class BatchGenerator(object):
         self._key_name = key_name = config.key_field
         self._target_name = target_name = config.target_field
         self._first_feature_name = first_feature_name = config.feature_field
-        self._num_classes = config.num_outputs
         self._num_inputs = config.num_inputs
         self._num_unrollings = num_unrollings = config.num_unrollings
         self._stride = config.stride
@@ -112,16 +111,6 @@ class BatchGenerator(object):
         self._batch_cache = [None]*num_batches
         self._batch_cursor = 0
         
-    def _target_to_class_idx(self, target_val):
-        n = self._num_classes
-        assert( n > 0 )
-        class_idx = 0
-        if target_val == 1.0:
-            class_idx = n-1
-        else:
-            class_idx = int(target_val*n)
-        return class_idx
-
     def _next_step(self, step):
         """
         Get next step in current batch.

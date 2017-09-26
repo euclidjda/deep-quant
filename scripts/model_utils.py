@@ -151,7 +151,6 @@ def _create_model(session,config,verbose=False):
       print("  batch_size  = %d"% config.batch_size)
       print("  num_inputs  = %d"% config.num_inputs)
       print("  num_hidden  = %d"% config.num_hidden)
-      print("  num_output  = %d"% config.num_outputs)
       print("  num_layers  = %d"% config.num_layers)
       print("  optimizer   = %s"% config.optimizer)
       print("  device      = %s"% config.default_gpu)

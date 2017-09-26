@@ -40,7 +40,6 @@ def main():
     configs.DEFINE_float("validation_size",0.3,"Size of validation set as %")
     configs.DEFINE_string("key_field", 'gvkey',"Key column name header in datafile")
     configs.DEFINE_string("target_field", 'target',"Target column name header in datafile")
-    configs.DEFINE_integer("num_outputs",2,"Number of classes (outputs)")
     configs.DEFINE_integer("num_inputs",10,"Number of inputs")
     configs.DEFINE_integer("end_date",210001,"Last date to train on as YYYYMM")
     configs.DEFINE_integer("seed",1024,"Seed for deterministic training")
