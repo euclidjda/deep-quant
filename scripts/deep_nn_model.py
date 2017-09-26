@@ -47,7 +47,7 @@ class DeepNNModel(object):
 
     feed_dict = self._get_feed_dict(batch,keep_prob=keep_prob,training=True)
 
-    #(x,y,z) = sess.run([self._predictions,self._targets,self._mse],feed_dict)
+    #(x,y,z) = sess.run([self._inps,self._targets,self._mse],feed_dict)
     #print(x)
     #print("---------------")
     #print(y)

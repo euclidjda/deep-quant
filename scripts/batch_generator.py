@@ -195,7 +195,11 @@ class BatchGenerator(object):
         else:
             raise RuntimeError("Unknown scaler = %s"%scaler_class)
 
-        scaler.fit(self._data[self._feature_names])
+        start_idx = self._feature_start_idx
+        end_idx   = start_idx+self._num_inputs
+        fdata = self._data.iloc[:,start_idx:end_idx]
+        # print(fdata.head()); exit()
+        scaler.fit(fdata)
         params = dict()
         params['center'] = scaler.center_
         params['scale'] = scaler.scale_

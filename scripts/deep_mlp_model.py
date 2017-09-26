@@ -46,8 +46,8 @@ class DeepMlpModel(DeepNNModel):
       total_input_size = num_unrollings * num_inputs
 
       # input/target normalization params
-      self._center = tf.get_variable('center',shape=[num_inputs])
-      self._scale  = tf.get_variable('scale',shape=[num_inputs])
+      self._center = tf.get_variable('center',shape=[num_inputs],trainable=False)
+      self._scale  = tf.get_variable('scale',shape=[num_inputs],trainable=False)
       
       batch_size = self._batch_size = tf.placeholder(tf.int32, shape=[])
       self._keep_prob = tf.placeholder(tf.float32, shape=[])
@@ -68,7 +68,7 @@ class DeepMlpModel(DeepNNModel):
       if config.data_scaler is not None:
         inputs = tf.divide(inputs - tf.tile(self._center,[num_unrollings]),
                              tf.tile(self._scale,[num_unrollings]))
-      
+
       if config.input_dropout is True: inputs = self._input_dropout(inputs)
 
       num_prev = total_input_size
