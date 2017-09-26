@@ -37,24 +37,10 @@ class DeepNNModel(object):
       batch: batch of data of type Batch (see batch_generator.py)
       keep_prob: keep_prob for dropout
     Returns:
-      train_cost: cross entropy cost function for the next batch in batches
-      train_accy: binary classifcation accuracy for the next batch in batches
-      train_evals:
-      valid_cost: 
-      valid_accy:
-      valid_evals:
+      mse
     """
 
     feed_dict = self._get_feed_dict(batch,keep_prob=keep_prob,training=True)
-
-    #(x,y,z) = sess.run([self._inps,self._targets,self._mse],feed_dict)
-    #print(x)
-    #print("---------------")
-    #print(y)
-    #print("---------------")
-    #print(z)
-    #print("---------------")
-    #exit()
 
     (mse, _) = sess.run([self._mse,self._train_op],feed_dict)
     # assert( train_evals > 0 )
@@ -79,7 +65,39 @@ class DeepNNModel(object):
 
      return mse
 
-   
+  def test_step(self, sess, batch, keep_prob=1.0):
+    """
+    Take one step through the data set. A step contains a sequences of batches
+    where the sequence is of size num_unrollings. The batches are size
+    batch_size. 
+    Args:
+      sess: current tf session the model is being run in
+      batch: batch of data of type Batch (see batch_generator.py)
+      keep_prob: keep_prob for dropout
+    Returns:
+      train_cost: cross entropy cost function for the next batch in batches
+      train_accy: binary classifcation accuracy for the next batch in batches
+      train_evals:
+      valid_cost: 
+      valid_accy:
+      valid_evals:
+    """
+
+    feed_dict = self._get_feed_dict(batch,keep_prob=1.0,training=False)
+
+    (x,y,z) = sess.run([self._predictions,self._targets,self._mse],feed_dict)
+    print(x)
+    print("---------------")
+    print(y)
+    print("---------------")
+    print(z)
+    print("---------------")
+
+    (mse) = sess.run([self._mse],feed_dict)
+    # assert( train_evals > 0 )
+
+    return mse
+
   def _get_feed_dict(self,batch, keep_prob=1.0, training=False):
 
     feed_dict = dict()

@@ -39,10 +39,11 @@ class DeepMlpModel(DeepNNModel):
       Args:
         config
       """
-      num_outputs = 2
+
       self._num_unrollings = num_unrollings = config.num_unrollings
       self._num_inputs = num_inputs = config.num_inputs
-
+      num_outputs = num_inputs
+      
       total_input_size = num_unrollings * num_inputs
 
       # input/target normalization params
@@ -63,12 +64,14 @@ class DeepMlpModel(DeepNNModel):
                                               shape=[None,num_outputs]) )
         
       inputs = tf.concat( self._inputs, 1 )
-
+      targets = self._targets[-1]
+      
       # center and scale
       if config.data_scaler is not None:
         inputs = tf.divide(inputs - tf.tile(self._center,[num_unrollings]),
                              tf.tile(self._scale,[num_unrollings]))
-
+        targets = tf.divide(targets - self._center, self._scale)
+        
       if config.input_dropout is True: inputs = self._input_dropout(inputs)
 
       num_prev = total_input_size
@@ -91,9 +94,7 @@ class DeepMlpModel(DeepNNModel):
       linear_w = tf.get_variable("linear_w", [num_prev, num_outputs])
       self._predictions = tf.nn.xw_plus_b(outputs, linear_w, linear_b)
 
-      # We are just predicting the next (last in targets) time step so we index by -1
-      # in self._targets
-      self._mse = tf.losses.mean_squared_error(self._targets[-1], self._predictions)
+      self._mse = tf.losses.mean_squared_error(targets, self._predictions)
       
       # from here down is the learning part of the graph
       tvars = tf.trainable_variables()
@@ -122,6 +123,7 @@ class DeepMlpModel(DeepNNModel):
 
     ret = math_ops.div(inputs, self._keep_prob) * binary_tensor
     ret.set_shape(inputs.get_shape())
+    
     return ret
 
   def _batch_relu_layer(self, x, size, phase, scope):

@@ -61,10 +61,20 @@ def run_epoch(session, model, train_data, valid_data,
     train_mse += model.train_step(session, batch, keep_prob=keep_prob)
     if verbose: dot_count = pretty_progress(step,prog_int,dot_count)
 
+  # Look at train out
+  #print()
+  #batch = train_data.next_batch()
+  #model.test_step(session, batch, keep_prob=keep_prob)
+      
   for step in range(valid_steps):
     batch = valid_data.next_batch()
     valid_mse += model.step(session, batch)
     if verbose: dot_count = pretty_progress(train_steps+step,prog_int,dot_count)
+
+  # Look at test out
+  #print()
+  #batch = valid_data.next_batch()
+  #model.test_step(session, batch, keep_prob=keep_prob)
       
   # evaluate validation data
 
