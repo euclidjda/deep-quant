@@ -61,9 +61,9 @@ class DeepNNModel(object):
 
      feed_dict = self._get_feed_dict(batch,keep_prob=1.0,training=False)
 
-     mse = sess.run(self._mse,feed_dict)
+     (mse, preds) = sess.run([self._mse,self._predictions],feed_dict)
 
-     return mse
+     return mse, preds
 
   def test_step(self, sess, batch, training=False):
     """
