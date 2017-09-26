@@ -65,7 +65,7 @@ class DeepNNModel(object):
 
      return mse
 
-  def test_step(self, sess, batch, keep_prob=1.0):
+  def test_step(self, sess, batch, training=False):
     """
     Take one step through the data set. A step contains a sequences of batches
     where the sequence is of size num_unrollings. The batches are size
@@ -83,12 +83,16 @@ class DeepNNModel(object):
       valid_evals:
     """
 
-    feed_dict = self._get_feed_dict(batch,keep_prob=1.0,training=False)
+    feed_dict = self._get_feed_dict(batch,keep_prob=1.0,training=training)
+    
+    (x,y,z) = sess.run([self._predictions,self._t,self._mse],feed_dict)
 
-    (x,y,z) = sess.run([self._predictions,self._targets,self._mse],feed_dict)
-    print(x)
+    np.set_printoptions(suppress=True)
+    np.set_printoptions(precision=3)
+
+    print(np.array(x))
     print("---------------")
-    print(y)
+    print(np.array(y))
     print("---------------")
     print(z)
     print("---------------")
@@ -115,9 +119,6 @@ class DeepNNModel(object):
   def set_scaling_params(self,session,center=None,scale=None):
     assert(center is not None)
     assert(scale is not None)
-
-    # wide_center = np.tile(center,self._num_unrollings)
-    # wide_scale = np.tile(scale,self._num_unrollings)
     session.run(tf.assign(self._center,center))
     session.run(tf.assign(self._scale,scale))
     

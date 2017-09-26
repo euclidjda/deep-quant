@@ -64,7 +64,7 @@ def run_epoch(session, model, train_data, valid_data,
   # Look at train out
   #print()
   #batch = train_data.next_batch()
-  #model.test_step(session, batch, keep_prob=keep_prob)
+  #model.test_step(session, batch, training=False)
       
   for step in range(valid_steps):
     batch = valid_data.next_batch()
@@ -74,7 +74,7 @@ def run_epoch(session, model, train_data, valid_data,
   # Look at test out
   #print()
   #batch = valid_data.next_batch()
-  #model.test_step(session, batch, keep_prob=keep_prob)
+  #model.test_step(session, batch, training=False)
       
   # evaluate validation data
 

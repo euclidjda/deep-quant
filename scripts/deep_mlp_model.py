@@ -71,7 +71,9 @@ class DeepMlpModel(DeepNNModel):
         inputs = tf.divide(inputs - tf.tile(self._center,[num_unrollings]),
                              tf.tile(self._scale,[num_unrollings]))
         targets = tf.divide(targets - self._center, self._scale)
-        
+
+      self._t = targets
+      
       if config.input_dropout is True: inputs = self._input_dropout(inputs)
 
       num_prev = total_input_size
@@ -110,8 +112,10 @@ class DeepMlpModel(DeepNNModel):
         optimizer = getattr(tf.train, config.optimizer)(learning_rate=self._lr,**args)
       else:
         raise RuntimeError("Unknown optimizer = %s"%config.optimizer)
-
-      self._train_op = optimizer.apply_gradients(zip(grads, tvars))
+     
+      update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+      with tf.control_dependencies(update_ops):
+        self._train_op = optimizer.apply_gradients(zip(grads, tvars))
 
   def _input_dropout(self,inputs):
     # This implementation of dropout dropouts an entire feature along the time dim
@@ -129,11 +133,11 @@ class DeepMlpModel(DeepNNModel):
   def _batch_relu_layer(self, x, size, phase, scope):
     with tf.variable_scope(scope):
       h1 = tf.contrib.layers.fully_connected(x, size,
-                                              activation_fn=None,
-                                              scope='dense')
+                                             # activation_fn=None,
+                                             scope='dense')
       h2 = tf.contrib.layers.batch_norm(h1, 
                                         center=True, scale=True,
                                         is_training=phase,
                                         scope='bn')
-      return tf.nn.relu(h2, 'relu')
+      return h2 # tf.nn.relu(h2, 'relu')
 

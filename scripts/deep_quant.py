@@ -52,7 +52,6 @@ def get_configs():
   configs.DEFINE_integer("batch_size",1,"Size of each batch")
   configs.DEFINE_integer("num_layers",1, "Numer of RNN layers")
   configs.DEFINE_integer("num_inputs",10,"Number of inputs")
-  configs.DEFINE_integer("num_outputs",2,"Number of classes (outputs)")
   configs.DEFINE_integer("num_hidden",10,"Number of hidden layer units")
   configs.DEFINE_float("init_scale",0.1, "Initial scale for weights")
   configs.DEFINE_float("max_grad_norm",10.0,"Gradient clipping")
