@@ -86,7 +86,7 @@ class BatchGenerator(object):
             print("Num validation entities: %d"%sample_size)
 
         # Setup indexes into the sequences
-        self._seq_length = min_seq_length = self._stride * num_unrollings
+        self._seq_length = min_seq_length = self._stride * (num_unrollings+1)
         self._indices = list()
         last_key = ""
         cur_length = 1
@@ -127,13 +127,11 @@ class BatchGenerator(object):
         Get next step in current batch.
         """
         x = np.zeros(shape=(self._batch_size, self._num_inputs), dtype=np.float)
-        y = np.zeros(shape=(self._batch_size, self._num_classes), dtype=np.float)
         attr = list()
         data = self._data
         features_idx = self._feature_start_idx
         num_inputs = self._num_inputs
         key_idx = self._key_idx
-        target_idx = self._target_idx
         date_idx = self._date_idx
         stride = self._stride
         for b in range(self._batch_size):
@@ -143,29 +141,28 @@ class BatchGenerator(object):
             idx = start_idx + (step*stride)
             assert(idx <= end_idx)
             x[b,:] = data.iloc[idx,features_idx:features_idx+num_inputs].as_matrix()
-            val = data.iat[idx,target_idx] 
-            class_idx = self._target_to_class_idx( val )
-            y[b,class_idx] = 1.0
             date = data.iat[idx,date_idx]
             key = data.iat[idx,key_idx]
             attr.append((key,date))
 
-        return x, y, attr
+        return x, attr
 
     def _next_batch(self):
         """Generate the next batch of sequences from the data.
         Returns:
           A batch of type Batch (see class def below)
         """
-        x_batch = list()
-        y_batch = list()
-        attribs = list()
-        for i in range(self._num_unrollings):
-            x, y, attr = self._next_step(i)
-            x_batch.append(x)
-            y_batch.append(y)
-            attribs.append(attr)
+        batch_data = list()
+        attributes = list()
+        for i in range(self._num_unrollings+1):
+            data, attr = self._next_step(i)
+            batch_data.append(data)
+            attributes.append(attr)
 
+        inputs  = batch_data[0:-1]
+        targets = batch_data[1:]
+        assert(len(inputs)==len(targets))
+        
         #############################################################################
         #   Set cursor for next batch
         #############################################################################
@@ -173,7 +170,7 @@ class BatchGenerator(object):
         num_idxs = len(self._indices)
         self._index_cursor = [ (self._index_cursor[b]+1)%num_idxs for b in range(batch_size) ]
 
-        return Batch(x_batch, y_batch, attribs )
+        return Batch(inputs, targets, attributes)
 
     def next_batch(self):
         b = None
