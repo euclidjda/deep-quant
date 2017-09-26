@@ -31,6 +31,14 @@ from batch_generator import BatchGenerator
 
 import model_utils
 
+def print_vector(name,v):
+  print("%s: "%name,end='')
+  for i in range(len(v)):
+    print("%.2f "%v[i],end=' ')
+  print()
+            
+
+  
 def predict(config):
 
   path = model_utils.get_data_path(config.data_dir,config.datafile)
@@ -58,9 +66,13 @@ def predict(config):
       inputs  = batch.inputs[-1][0]
       targets = batch.targets[-1][0]
       outputs = preds[0]
+
+      np.set_printoptions(suppress=True)
+      np.set_printoptions(precision=3)
       
       print("%s %s "%(key,date))
-      print(inputs)
-      print(targets)
-      print(outputs)
+      print_vector("input[t-2]",batch.inputs[-2][0])
+      print_vector("input[t-1]",batch.inputs[-1][0])
+      print_vector("output[t ]",outputs)
+      print_vector("target[t ]",targets)
       print("--------------------------------")
