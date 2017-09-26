@@ -138,11 +138,11 @@ class DeepMlpModel(DeepNNModel):
   def _batch_relu_layer(self, x, size, scope):
     with tf.variable_scope(scope):
       h1 = tf.contrib.layers.fully_connected(x, size,
-                                             # activation_fn=None,
+                                             activation_fn=None,
                                              scope='dense')
       h2 = tf.contrib.layers.batch_norm(h1, 
                                         center=True, scale=True,
                                         is_training=self._phase,
                                         scope='bn')
-      return h2 # tf.nn.relu(h2, 'relu')
+      return tf.nn.relu(h2, 'relu')
 
