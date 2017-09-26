@@ -68,7 +68,8 @@ def run_epoch(session, model, train_data, valid_data,
       
   for step in range(valid_steps):
     batch = valid_data.next_batch()
-    valid_mse += model.step(session, batch)
+    (mse,_) = model.step(session, batch)
+    valid_mse += mse
     if verbose: dot_count = pretty_progress(train_steps+step,prog_int,dot_count)
 
   # Look at test out
