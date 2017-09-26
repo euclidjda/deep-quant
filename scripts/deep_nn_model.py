@@ -47,7 +47,7 @@ class DeepNNModel(object):
 
     feed_dict = self._get_feed_dict(batch,keep_prob=keep_prob,training=True)
 
-    #(x,y,z) = sess.run([self._predictions,self._targets,self._mse],feed_dict)
+    #(x,y,z) = sess.run([self._inps,self._targets,self._mse],feed_dict)
     #print(x)
     #print("---------------")
     #print(y)
@@ -86,21 +86,27 @@ class DeepNNModel(object):
 
     feed_dict[self._batch_size] = batch.inputs[0].shape[0]
     feed_dict[self._keep_prob] = keep_prob
-    feed_dict[self._seq_lengths] = batch.seq_lengths
     feed_dict[self._phase] = 1 if training is True else 0
     
     for i in range(self._num_unrollings):
       feed_dict[self._inputs[i]]  = batch.inputs[i]
       feed_dict[self._targets[i]] = batch.targets[i]
-      feed_dict[self._train_mask[i]] = batch.train_mask[i]
-      feed_dict[self._valid_mask[i]] = batch.valid_mask[i]
     
     return feed_dict
 
-  def assign_lr(self, session, lr_value):
+  def set_scaling_params(self,session,center=None,scale=None):
+    assert(center is not None)
+    assert(scale is not None)
+
+    # wide_center = np.tile(center,self._num_unrollings)
+    # wide_scale = np.tile(scale,self._num_unrollings)
+    session.run(tf.assign(self._center,center))
+    session.run(tf.assign(self._scale,scale))
+    
+  def set_learning_rate(self, session, lr_value):
     session.run(tf.assign(self._lr, lr_value))
     return lr_value
-
+  
   @property
   def inputs(self):
     return self._inputs

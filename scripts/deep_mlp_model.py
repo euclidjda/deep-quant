@@ -45,38 +45,37 @@ class DeepMlpModel(DeepNNModel):
 
       total_input_size = num_unrollings * num_inputs
 
+      # input/target normalization params
+      self._center = tf.get_variable('center',shape=[num_inputs],trainable=False)
+      self._scale  = tf.get_variable('scale',shape=[num_inputs],trainable=False)
+      
       batch_size = self._batch_size = tf.placeholder(tf.int32, shape=[])
-      self._seq_lengths = tf.placeholder(tf.int64, shape=[None])
       self._keep_prob = tf.placeholder(tf.float32, shape=[])
       self._phase = tf.placeholder(tf.bool, name='phase')
       
       self._inputs = list()
       self._targets = list()
-      self._train_mask = list() # Weights for loss functions per example
-      self._valid_mask = list() # Weights for loss functions per example
 
       for _ in range(num_unrollings):
         self._inputs.append( tf.placeholder(tf.float32,
                                               shape=[None,num_inputs]) )
         self._targets.append( tf.placeholder(tf.float32,
                                               shape=[None,num_outputs]) )
-        self._train_mask.append(tf.placeholder(tf.float32, shape=[None]))
-        self._valid_mask.append(tf.placeholder(tf.float32, shape=[None]))
+        
+      inputs = tf.concat( self._inputs, 1 )
 
-      inputs = tf.reverse_sequence(tf.concat( self._inputs, 1 ),
-                                    self._seq_lengths*num_inputs,
-                                    seq_axis=1,batch_axis=0)
-      
+      # center and scale
+      if config.data_scaler is not None:
+        inputs = tf.divide(inputs - tf.tile(self._center,[num_unrollings]),
+                             tf.tile(self._scale,[num_unrollings]))
+
       if config.input_dropout is True: inputs = self._input_dropout(inputs)
 
       num_prev = total_input_size
-
+ 
       outputs = inputs
 
       for i in range(config.num_layers):
-        # weights = tf.get_variable("hidden_w_%d"%i,[num_prev, config.num_hidden])
-        # biases = tf.get_variable("hidden_b_%d"%i,[config.num_hidden])
-        # outputs = tf.nn.relu(tf.nn.xw_plus_b(outputs, weights, biases))
         outputs = self._batch_relu_layer(outputs, config.num_hidden, self._phase, "layer_%d"%i)
         if config.hidden_dropout is True:
           outputs = tf.nn.dropout(outputs, self._keep_prob)
@@ -88,17 +87,15 @@ class DeepMlpModel(DeepNNModel):
         outputs  = tf.concat( [ skip_inputs, outputs], 1)
 
       # final regression layer  
-      regress_b = tf.get_variable("softmax_b", [num_outputs])
-      regress_w = tf.get_variable("softmax_w", [num_prev, num_outputs])
-      self._predictions = tf.nn.xw_plus_b(outputs, regress_w, regress_b)
+      linear_b = tf.get_variable("linear_b", [num_outputs])
+      linear_w = tf.get_variable("linear_w", [num_prev, num_outputs])
+      self._predictions = tf.nn.xw_plus_b(outputs, linear_w, linear_b)
 
-      self._t = targets = tf.unstack(tf.reverse_sequence(tf.reshape(
-        tf.concat(self._targets, 1),[batch_size,num_unrollings,num_outputs] ),
-        self._seq_lengths,seq_axis=1,batch_axis=0),axis=1)[0]
-
-      self._mse = tf.losses.mean_squared_error(targets, self._predictions)
+      # We are just predicting the next (last in targets) time step so we index by -1
+      # in self._targets
+      self._mse = tf.losses.mean_squared_error(self._targets[-1], self._predictions)
       
-      # here is the learning part of the graph
+      # from here down is the learning part of the graph
       tvars = tf.trainable_variables()
       grads = tf.gradients(self._mse,tvars)
 
@@ -107,8 +104,9 @@ class DeepMlpModel(DeepNNModel):
 
       self._lr = tf.Variable(0.0, trainable=False)
       optimizer = None
+      args = config.optimizer_params
       if hasattr(tf.train,config.optimizer):
-        optimizer = getattr(tf.train, config.optimizer)(self._lr)
+        optimizer = getattr(tf.train, config.optimizer)(learning_rate=self._lr,**args)
       else:
         raise RuntimeError("Unknown optimizer = %s"%config.optimizer)
 
@@ -136,3 +134,4 @@ class DeepMlpModel(DeepNNModel):
                                         is_training=phase,
                                         scope='bn')
       return tf.nn.relu(h2, 'relu')
+

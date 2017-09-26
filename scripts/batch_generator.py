@@ -17,6 +17,7 @@ import os
 import numpy as np
 import pandas as pd
 import random
+import sklearn.preprocessing
 
 _NUM_CLASSES = 2
 
@@ -27,13 +28,13 @@ class BatchGenerator(object):
     sequences from the datafile whose shape is specified by config.batch_size
     and config.num_unrollings.
     """
-    def __init__(self, filename, config, randomly_sample=False, validation=True, data=None):
+    def __init__(self, filename, config, validation=True, data=None):
         """
         Init a BatchGenerator
         """
         self._key_name = key_name = config.key_field
         self._target_name = target_name = config.target_field
-        self._randomly_sample = randomly_sample
+        self._first_feature_name = first_feature_name = config.feature_field
         self._num_classes = config.num_outputs
         self._num_inputs = config.num_inputs
         self._num_unrollings = num_unrollings = config.num_unrollings
@@ -57,11 +58,11 @@ class BatchGenerator(object):
 
         self._end_date = data['date'].max()
         self._start_date = data['date'].min()
-        self._feature_start_idx = list(data.columns.values).index(target_name)+1
+        self._feature_start_idx = list(data.columns.values).index(first_feature_name)
         self._key_idx = list(data.columns.values).index(key_name)
         self._target_idx = list(data.columns.values).index(target_name)
         self._date_idx = list(data.columns.values).index('date')
-        self._feature_names = list(data.columns.values)[self._target_idx+1:]
+        self._feature_names = list(data.columns.values)[self._feature_start_idx:]
         assert(self._feature_start_idx>=0)
 
         # This assert ensures that no x features are the yval
@@ -83,7 +84,6 @@ class BatchGenerator(object):
             self._validation_set = dict(zip(sample,[1]*sample_size))
             print("Num training entities: %d"%(len(keys)-sample_size))
             print("Num validation entities: %d"%sample_size)
-            #print("\n".join(sample))
 
         # Setup indexes into the sequences
         self._seq_length = min_seq_length = self._stride * num_unrollings
@@ -95,14 +95,9 @@ class BatchGenerator(object):
             if (key != last_key):
                 cur_length = 1
             if (cur_length >= min_seq_length):
-                #
                 # TODO: HERE WE COULD OVER-SAMPLE BASED ON
                 # DATE TO MORE HEAVILY WEIGHT MORE RECENT
-                # 
                 self._indices.append(i-min_seq_length+1)
-                #self._end_indices.append(i)
-                #self._indices.append(i-seq_length+1)
-                # print("%d %d %d"%(seq_length,i,i-seq_length+1))
             cur_length += 1
             last_key = key
 
@@ -111,10 +106,12 @@ class BatchGenerator(object):
         # track of where we are in the dataset.
         batch_size = self._batch_size
         num_batches = len(self._indices) // batch_size
-        self._cursor = [ offset * num_batches for offset in range(batch_size) ]
-        self._init_cursor = self._cursor[:]
+        self._index_cursor = [ offset * num_batches for offset in range(batch_size) ]
+        self._init_index_cursor = self._index_cursor[:]
         self._num_batches = num_batches
-
+        self._batch_cache = [None]*num_batches
+        self._batch_cursor = 0
+        
     def _target_to_class_idx(self, target_val):
         n = self._num_classes
         assert( n > 0 )
@@ -125,14 +122,12 @@ class BatchGenerator(object):
             class_idx = int(target_val*n)
         return class_idx
 
-    def _next_step(self, step, seq_lengths):
+    def _next_step(self, step):
         """
         Get next step in current batch.
         """
         x = np.zeros(shape=(self._batch_size, self._num_inputs), dtype=np.float)
         y = np.zeros(shape=(self._batch_size, self._num_classes), dtype=np.float)
-        train_mask = np.zeros(shape=(self._batch_size), dtype=np.float)
-        valid_mask = np.zeros(shape=(self._batch_size), dtype=np.float)
         attr = list()
         data = self._data
         features_idx = self._feature_start_idx
@@ -142,11 +137,9 @@ class BatchGenerator(object):
         date_idx = self._date_idx
         stride = self._stride
         for b in range(self._batch_size):
-            cursor = self._cursor[b]
+            cursor = self._index_cursor[b]
             start_idx = self._indices[cursor]
             end_idx = start_idx + self._seq_length - 1
-            seq_lengths[b] = int((end_idx-start_idx+1)//stride)
-            assert(seq_lengths[b]>0)
             idx = start_idx + (step*stride)
             assert(idx <= end_idx)
             x[b,:] = data.iloc[idx,features_idx:features_idx+num_inputs].as_matrix()
@@ -157,46 +150,67 @@ class BatchGenerator(object):
             key = data.iat[idx,key_idx]
             attr.append((key,date))
 
-        return x, y, train_mask, valid_mask, attr
+        return x, y, attr
 
-    def next_batch(self):
+    def _next_batch(self):
         """Generate the next batch of sequences from the data.
         Returns:
           A batch of type Batch (see class def below)
         """
-        seq_lengths = np.full(self._batch_size, self._num_unrollings, dtype=int) 
         x_batch = list()
         y_batch = list()
-        train_mask = list()
-        valid_mask = list()
         attribs = list()
         for i in range(self._num_unrollings):
-            x, y, tw, vw, attr = self._next_step(i, seq_lengths)
+            x, y, attr = self._next_step(i)
             x_batch.append(x)
             y_batch.append(y)
-            train_mask.append(tw)
-            valid_mask.append(vw)
             attribs.append(attr)
 
         #############################################################################
         #   Set cursor for next batch
         #############################################################################
         batch_size = self._batch_size
-        if self._randomly_sample is True:
-            self._cursor = random.sample(range(len(self._indices)),batch_size)
+        num_idxs = len(self._indices)
+        self._index_cursor = [ (self._index_cursor[b]+1)%num_idxs for b in range(batch_size) ]
+
+        return Batch(x_batch, y_batch, attribs )
+
+    def next_batch(self):
+        b = None
+        if self._batch_cache[self._batch_cursor] is not None:
+            b = self._batch_cache[self._batch_cursor]
         else:
-            num_idxs = len(self._indices)
-            self._cursor = [ (self._cursor[b]+1)%num_idxs for b in range(batch_size) ]
+            b = self._next_batch()
+            self._batch_cache[self._batch_cursor] = b
+        self._batch_cursor = (self._batch_cursor+1) % (self._num_batches)
 
-        return Batch(x_batch, y_batch, seq_lengths,
-                         train_mask, valid_mask, attribs )
+        return b
 
+    def get_scaling_params(self,scaler_class):
+
+        scaler = None
+        
+        if hasattr(sklearn.preprocessing,scaler_class):
+            scaler = getattr(sklearn.preprocessing,scaler_class)()
+        else:
+            raise RuntimeError("Unknown scaler = %s"%scaler_class)
+
+        start_idx = self._feature_start_idx
+        end_idx   = start_idx+self._num_inputs
+        fdata = self._data.iloc[:,start_idx:end_idx]
+        # print(fdata.head()); exit()
+        scaler.fit(fdata)
+        params = dict()
+        params['center'] = scaler.center_
+        params['scale'] = scaler.scale_
+        
+        return params
+        
     def train_batches(self):
         valid_keys = list(self._validation_set.keys())
         indexes = self._data[self._key_name].isin(valid_keys)
         train_data = self._data[~indexes]
         return BatchGenerator("",self._config,validation=False,
-                                  randomly_sample=True,
                                   data=train_data)
 
     def valid_batches(self):
@@ -204,11 +218,14 @@ class BatchGenerator(object):
         indexes = self._data[self._key_name].isin(valid_keys)
         valid_data = self._data[indexes]
         return BatchGenerator("",self._config,validation=False,
-                                  randomly_sample=False,
                                   data=valid_data)
 
+    def shuffle(self):
+        random.shuffle(self._batch_cache)
+        self._batch_cusror = 0
+         
     def rewind(self):
-        self._cursor = self._init_cursor[:]
+        self._batch_cusror = 0
 
     @property
     def num_batches(self):
@@ -222,13 +239,9 @@ class Batch(object):
     """
     """
 
-    def __init__(self,inputs,targets,seq_lengths,
-                     train_mask,valid_mask, attribs):
+    def __init__(self,inputs,targets, attribs):
         self._inputs = inputs
         self._targets = targets
-        self._seq_lengths = seq_lengths
-        self._train_mask = train_mask
-        self._valid_mask = valid_mask
         self._attribs = attribs
 
     @property
@@ -238,18 +251,6 @@ class Batch(object):
     @property
     def targets(self):
         return self._targets
-
-    @property
-    def seq_lengths(self):
-        return self._seq_lengths
-
-    @property
-    def train_mask(self):
-        return self._train_mask
-
-    @property
-    def valid_mask(self):
-        return self._valid_mask
 
     @property
     def attribs(self):

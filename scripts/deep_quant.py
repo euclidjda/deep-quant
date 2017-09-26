@@ -44,6 +44,7 @@ def get_configs():
   configs.DEFINE_string("nn_type",'DeepRnnModel',"Model type")
   configs.DEFINE_string("key_field", 'gvkey',"Key column name header in datafile")
   configs.DEFINE_string("target_field", 'target',"Target column name header in datafile")
+  configs.DEFINE_string("feature_field", '',"First feature")
   configs.DEFINE_string("data_dir",'',"The data directory")
   configs.DEFINE_string("model_dir",'',"Model directory")
   configs.DEFINE_integer("num_unrollings",4,"Number of unrolling steps")
@@ -62,9 +63,11 @@ def get_configs():
   configs.DEFINE_boolean("hidden_dropout",True,"Do dropout on hidden layers")
   configs.DEFINE_boolean("skip_connections",False,"Have direct connections between input and output in MLP")
   configs.DEFINE_boolean("use_cache",True,"Load data for logreg from cache (vs processing from batch generator)")
+  configs.DEFINE_string("data_scaler",None,'sklearn scaling algorithm or None if no scaling')
   configs.DEFINE_string("optimizer", 'GradientDescentOptimizer', 'Any tensorflow optimizer in tf.train')
+  configs.DEFINE_string("optimizer_params",None, 'Additional optimizer params such as momentum')
+  configs.DEFINE_float("learning_rate",0.6,"")
   configs.DEFINE_float("lr_decay",0.9, "Learning rate decay")
-  configs.DEFINE_float("initial_learning_rate",1.0,"Initial learning rate")
   configs.DEFINE_float("validation_size",0.0,"Size of validation set as %")
   configs.DEFINE_float("passes",1.0,"Passes through day per epoch")
   configs.DEFINE_float("rnn_loss_weight",None,"How much moret to weight kth example")
@@ -73,15 +76,27 @@ def get_configs():
   configs.DEFINE_integer("seed",None,"Seed for deterministic training")
 
   c = configs.ConfigValues()
-  # Check to see if we are in training or testing mode
 
+  # optimizer_params is a string of the form "param1=value1,param2=value2,..."
+  # this maps it to dictionary { param1 : value1, param2 : value2, ...}
+  if c.optimizer_params is None:
+     c.optimizer_params = dict()
+  else:
+     args_list = [p.split('=') for p in c.optimizer_params.split(',')]
+     params = dict()
+     for p in args_list:
+	      params[p[0]] = float(p[1])
+     c.optimizer_params = params
+     assert('learning_rate' not in c.optimizer_params)
+		
   return c
 
 def main(_):
-    config = get_configs()
+  config = get_configs()
 
-    if config.train is True:
-      train_model(config)
+  # Check to see if we are in training or testing mode
+  if config.train is True:
+     train_model(config)
         
 if __name__ == "__main__":
   tf.app.run()
