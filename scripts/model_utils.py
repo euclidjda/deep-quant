@@ -27,6 +27,9 @@ import tensorflow as tf
 
 from tensorflow.python.platform import gfile
 from deep_mlp_model import DeepMlpModel
+from clvynt_model import ClvyntModel
+from naive_model import NaiveModel
+
 #from deep_rnn_model import DeepRnnModel
 #from log_reg_model import LogRegModel
 

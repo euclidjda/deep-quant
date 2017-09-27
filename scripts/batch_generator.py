@@ -34,7 +34,7 @@ class BatchGenerator(object):
         """
         self._key_name = key_name = config.key_field
         self._target_name = target_name = config.target_field
-        self._first_feature_name = first_feature_name = config.feature_field
+        self._first_feature_name = first_feature_name = config.first_feature_field
         self._num_inputs = config.num_inputs
         self._num_unrollings = num_unrollings = config.num_unrollings
         self._stride = config.stride
@@ -184,7 +184,6 @@ class BatchGenerator(object):
         start_idx = self._feature_start_idx
         end_idx   = start_idx+self._num_inputs
         fdata = self._data.iloc[:,start_idx:end_idx]
-        # print(fdata.head()); exit()
         scaler.fit(fdata)
         params = dict()
         params['center'] = scaler.center_
