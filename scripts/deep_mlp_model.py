@@ -140,9 +140,10 @@ class DeepMlpModel(DeepNNModel):
       h1 = tf.contrib.layers.fully_connected(x, size,
                                              activation_fn=None,
                                              scope='dense')
-      h2 = tf.contrib.layers.batch_norm(h1, 
-                                        center=True, scale=True,
-                                        is_training=self._phase,
-                                        scope='bn')
-      return tf.nn.relu(h2, 'relu')
+      #h2 = tf.contrib.layers.batch_norm(h1, 
+      #                                  center=True, scale=True,
+      #                                  is_training=self._phase,
+      #                                  scope='bn')
+      # return tf.nn.relu(h2, 'relu')
+      return tf.nn.relu(h1, 'relu')
 
