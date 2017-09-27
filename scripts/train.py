@@ -128,7 +128,7 @@ def train_model(config):
       (train_mse, valid_mse) = run_epoch(session, model, train_data, valid_data,
                                           keep_prob=config.keep_prob, passes=config.passes,
                                           verbose=True)
-      print( ('Epoch: %4d Train MSE: %.6f Valid MSE: %.6f Learning rate: %.4f') %
+      print( ('Epoch: %d Train MSE: %.6f Valid MSE: %.6f Learning rate: %.4f') %
             (i + 1, train_mse, valid_mse, lr) )
       sys.stdout.flush()
 
