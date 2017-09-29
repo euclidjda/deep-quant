@@ -54,7 +54,7 @@ def run_epoch(session, model, train_data, valid_data,
   train_data.shuffle() # we want to randomly shuffle train data 
   valid_data.rewind()  # make sure we start a beggining
 
-  print("Steps: %4d "%total_steps,end=' ')
+  print("Steps: %d "%total_steps,end=' ')
 
   for step in range(train_steps):
     batch = train_data.next_batch()
