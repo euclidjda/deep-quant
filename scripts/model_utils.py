@@ -29,8 +29,8 @@ from tensorflow.python.platform import gfile
 from deep_mlp_model import DeepMlpModel
 from clvynt_model import ClvyntModel
 from naive_model import NaiveModel
+from deep_rnn_model import DeepRnnModel
 
-#from deep_rnn_model import DeepRnnModel
 #from log_reg_model import LogRegModel
 
 def get_data_path(data_dir, filename):
@@ -150,6 +150,7 @@ def _create_model(session,config,verbose=False):
 
     if verbose is True:
       print("Model has the following geometry:")
+      print("  model_type  = %s"% config.nn_type)
       print("  num_unroll  = %d"% config.num_unrollings)
       print("  batch_size  = %d"% config.batch_size)
       print("  num_inputs  = %d"% config.num_inputs)

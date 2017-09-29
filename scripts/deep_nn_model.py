@@ -85,7 +85,7 @@ class DeepNNModel(object):
 
     feed_dict = self._get_feed_dict(batch,keep_prob=1.0,training=training)
     
-    (x,y,z) = sess.run([self._predictions,self._t,self._mse],feed_dict)
+    (x,y,z) = sess.run([self._o,self._t,self._mse],feed_dict)
 
     np.set_printoptions(suppress=True)
     np.set_printoptions(precision=3)

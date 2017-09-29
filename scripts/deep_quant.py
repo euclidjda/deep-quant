@@ -70,7 +70,7 @@ def get_configs():
   configs.DEFINE_float("lr_decay",0.9, "Learning rate decay")
   configs.DEFINE_float("validation_size",0.0,"Size of validation set as %")
   configs.DEFINE_float("passes",1.0,"Passes through day per epoch")
-  configs.DEFINE_float("rnn_loss_weight",None,"How much moret to weight kth example")
+  configs.DEFINE_float("rnn_lambda",0.5,"How much to weight last step vs. all steps in loss")
   configs.DEFINE_integer("max_epoch",0,"Stop after max_epochs")
   configs.DEFINE_integer("early_stop",None,"Early stop parameter")
   configs.DEFINE_integer("seed",None,"Seed for deterministic training")
