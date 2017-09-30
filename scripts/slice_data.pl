@@ -1,5 +1,10 @@
 #! /usr/bin/env perl
 
+# Purpose: Create a file with data point between start_date and end_date, inclusive
+# Date format is YYYYMM
+#
+# Usage: slice_data.pl start_date end_date < file_with_data.dat > sliced_data_file.dat
+#
 use strict;
 
 main();

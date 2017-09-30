@@ -72,23 +72,19 @@ class DeepRnnModel(DeepNNModel):
           self._scaled_inputs[i] = self._inputs[i]
           self._scaled_targets[i] = self._targets[i]
             
-      rnn_cell = tf.contrib.rnn.GRUCell(num_hidden)
+      hp = self._keep_prob if config.hidden_dropout is True else 1.0
+      ip = self._keep_prob if config.input_dropout is True else 1.0
 
-      hidden_keep_prob = self._keep_prob if config.hidden_dropout is True else 1.0
-      input_keep_prob = self._keep_prob if config.input_dropout is True else 1.0
+      def rnn_cell():
+        cell = tf.contrib.rnn.GRUCell(num_hidden)
+        return tf.contrib.rnn.DropoutWrapper(cell,output_keep_prob=hp,input_keep_prob=ip)
 
-      rnn_cell = tf.contrib.rnn.DropoutWrapper(rnn_cell, 
-                                               output_keep_prob=hidden_keep_prob, 
-                                               input_keep_prob=input_keep_prob)
+      stacked_rnn = tf.contrib.rnn.MultiRNNCell([rnn_cell() for _ in range(config.num_layers)])
       
-      rnn_net = tf.contrib.rnn.MultiRNNCell([rnn_cell] * config.num_layers)
-
-      outputs, state = tf.contrib.rnn.static_rnn(rnn_net, self._scaled_inputs, dtype=tf.float32)
+      outputs, state = tf.contrib.rnn.static_rnn(stacked_rnn, self._scaled_inputs, dtype=tf.float32)
 
       softmax_w = tf.get_variable("softmax_w", [num_hidden, num_outputs])
       softmax_b = tf.get_variable("softmax_b", [num_outputs])
-
-      # outputs = tf.nn.xw_plus_b( tf.concat(outputs,0), softmax_w, softmax_b)
 
       self._outputs = list()
       for i in range(num_unrollings):
