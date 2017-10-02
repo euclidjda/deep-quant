@@ -69,9 +69,11 @@ class NaiveModel(DeepNNModel):
         targets = tf.divide(targets - self._center, self._scale)
         outputs = tf.divide(outputs - self._center, self._scale)        
 
+      self._o = outputs
       self._t = targets
       
-      self._mse = tf.losses.mean_squared_error(targets, outputs)
+      self._mse = tf.losses.mean_squared_error(tf.clip_by_value(targets,-10.,10.),
+                                               tf.clip_by_value(outputs,-10.,10.))
 
       if config.data_scaler is not None:
         self._predictions = tf.multiply(outputs,self._scale) + self._center

@@ -100,6 +100,7 @@ class BatchGenerator(object):
             cur_length += 1
             last_key = key
 
+        print("Number of batch indices: %d"%(len(self._indices)))
         # Create a cursor of equally spaced indices into the dataset. Each index
         # in the cursor points to one sequence in a batch and is used to keep
         # track of where we are in the dataset.
