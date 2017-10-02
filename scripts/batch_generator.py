@@ -19,8 +19,6 @@ import pandas as pd
 import random
 import sklearn.preprocessing
 
-_NUM_CLASSES = 2
-
 class BatchGenerator(object):
     """
     BatchGenerator object takes a data file are returns an object with
@@ -34,6 +32,7 @@ class BatchGenerator(object):
         """
         self._key_name = key_name = config.key_field
         self._target_name = target_name = config.target_field
+        self._scaling_feature = config.scale_field
         self._first_feature_name = first_feature_name = config.first_feature_field
         self._num_inputs = config.num_inputs
         self._num_unrollings = num_unrollings = config.num_unrollings
@@ -57,11 +56,11 @@ class BatchGenerator(object):
 
         self._end_date = data['date'].max()
         self._start_date = data['date'].min()
-        self._feature_start_idx = list(data.columns.values).index(first_feature_name)
+        self._feature_start_idx = fsidx = list(data.columns.values).index(first_feature_name)
         self._key_idx = list(data.columns.values).index(key_name)
         self._target_idx = list(data.columns.values).index(target_name)
         self._date_idx = list(data.columns.values).index('date')
-        self._feature_names = list(data.columns.values)[self._feature_start_idx:]
+        self._feature_names = list(data.columns.values)[fsidx:fsidx+config.num_inputs]
         assert(self._feature_start_idx>=0)
 
         # This assert ensures that no x features are the yval
@@ -130,7 +129,8 @@ class BatchGenerator(object):
             end_idx = start_idx + self._seq_length - 1
             idx = start_idx + (step*stride)
             assert(idx <= end_idx)
-            x[b,:] = data.iloc[idx,features_idx:features_idx+num_inputs].as_matrix()
+            x[b,:] = self._get_scaled_feature_vector(start_idx,step)
+            # x[b,:] = data.iloc[idx,features_idx:features_idx+num_inputs].as_matrix()
             date = data.iat[idx,date_idx]
             key = data.iat[idx,key_idx]
             attr.append((key,date))
@@ -173,7 +173,7 @@ class BatchGenerator(object):
 
         return b
 
-    def get_scaling_params(self,scaler_class):
+    def __get_scaling_params(self,scaler_class):
 
         scaler = None
         
@@ -187,11 +187,49 @@ class BatchGenerator(object):
         fdata = self._data.iloc[:,start_idx:end_idx]
         scaler.fit(fdata)
         params = dict()
-        params['center'] = scaler.center_
+        params['center'] = scaler.center_ if hasattr(scaler,'center_') else scaler.mean_
         params['scale'] = scaler.scale_
         
         return params
+
+    def _get_scaled_feature_vector(self,start_idx,cur_step):
         
+        features_idx = self._feature_start_idx
+        num_inputs = self._num_inputs
+        stride = self._stride
+        data = self._data
+
+        s = max(data.iloc[start_idx][self._scaling_feature],10.0)
+        x = data.iloc[start_idx+cur_step*stride,features_idx:features_idx+num_inputs].as_matrix()
+
+        return np.divide(x,s)
+    
+    def get_scaling_params(self,scaler_class):
+
+        features_idx = self._feature_start_idx
+        num_inputs = self._num_inputs
+        stride = self._stride
+        data = self._data
+        
+        sample = list()
+        for i in self._indices:
+            step = np.random.randint(self._num_unrollings)
+            sample.append(self._get_scaled_feature_vector(i,step))
+
+        scaler = None
+        
+        if hasattr(sklearn.preprocessing,scaler_class):
+            scaler = getattr(sklearn.preprocessing,scaler_class)()
+        else:
+            raise RuntimeError("Unknown scaler = %s"%scaler_class)
+
+        scaler.fit(sample)
+        params = dict()
+        params['center'] = scaler.center_ if hasattr(scaler,'center_') else scaler.mean_
+        params['scale'] = scaler.scale_
+
+        return params
+            
     def train_batches(self):
         valid_keys = list(self._validation_set.keys())
         indexes = self._data[self._key_name].isin(valid_keys)
@@ -212,6 +250,14 @@ class BatchGenerator(object):
          
     def rewind(self):
         self._batch_cusror = 0
+
+    @property
+    def feature_names(self):
+        return self._feature_names
+        
+    @property
+    def dataframe(self):
+        return self._data
 
     @property
     def num_batches(self):

@@ -67,7 +67,7 @@ class NaiveModel(DeepNNModel):
       # center and scale
       if config.data_scaler is not None:
         targets = tf.divide(targets - self._center, self._scale)
-        outputs = tf.divide(outputs - self._center, self._scale)        
+        outputs = tf.divide(outputs - self._center, self._scale)
 
       self._o = outputs
       self._t = targets
