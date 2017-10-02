@@ -66,13 +66,14 @@ def predict(config):
       inputs  = batch.inputs[-1][0]
       targets = batch.targets[-1][0]
       outputs = preds[0]
-
+      scale   = batch.seq_scales[0]
+      
       np.set_printoptions(suppress=True)
       np.set_printoptions(precision=3)
       
       print("%s %s "%(key,date))
-      print_vector("input[t-2]",batch.inputs[-2][0])
-      print_vector("input[t-1]",batch.inputs[-1][0])
-      print_vector("output[t ]",outputs)
-      print_vector("target[t ]",targets)
+      print_vector("input[t-2]", scale*batch.inputs[-2][0] )
+      print_vector("input[t-1]", scale*batch.inputs[-1][0])
+      print_vector("output[t ]", scale*outputs)
+      print_vector("target[t ]", scale*targets)
       print("--------------------------------")

@@ -19,6 +19,8 @@ import pandas as pd
 import random
 import sklearn.preprocessing
 
+_MIN_SEQ_SCALE = 1.0
+
 class BatchGenerator(object):
     """
     BatchGenerator object takes a data file are returns an object with
@@ -128,7 +130,7 @@ class BatchGenerator(object):
             end_idx = start_idx + self._seq_length - 1
             idx = start_idx + (step*stride)
             assert(idx <= end_idx)
-            x[b,:] = self._get_scaled_feature_vector(start_idx,step)
+            x[b,:] = self._get_normed_feature_vector(start_idx,step)
             # x[b,:] = data.iloc[idx,features_idx:features_idx+num_inputs].as_matrix()
             date = data.iat[idx,date_idx]
             key = data.iat[idx,key_idx]
@@ -136,11 +138,23 @@ class BatchGenerator(object):
 
         return x, attr
 
+    def _get_sequence_scales(self):
+        scales = list()
+        
+        for b in range(self._batch_size):
+            cursor = self._index_cursor[b]
+            start_idx = self._indices[cursor]
+            s = max(self._data.iloc[start_idx][self._scaling_feature],_MIN_SEQ_SCALE)
+            scales.append(s)
+        return np.array( scales )
+       
     def _next_batch(self):
         """Generate the next batch of sequences from the data.
         Returns:
           A batch of type Batch (see class def below)
         """
+        scales = self._get_sequence_scales( )
+        
         batch_data = list()
         attributes = list()
         for i in range(self._num_unrollings+1):
@@ -151,7 +165,7 @@ class BatchGenerator(object):
         inputs  = batch_data[0:-1]
         targets = batch_data[1:]
         assert(len(inputs)==len(targets))
-        
+
         #############################################################################
         #   Set cursor for next batch
         #############################################################################
@@ -159,7 +173,7 @@ class BatchGenerator(object):
         num_idxs = len(self._indices)
         self._index_cursor = [ (self._index_cursor[b]+1)%num_idxs for b in range(batch_size) ]
 
-        return Batch(inputs, targets, attributes)
+        return Batch(inputs, targets, attributes, scales)
 
     def next_batch(self):
         b = None
@@ -172,33 +186,14 @@ class BatchGenerator(object):
 
         return b
 
-    def __get_scaling_params(self,scaler_class):
-
-        scaler = None
-        
-        if hasattr(sklearn.preprocessing,scaler_class):
-            scaler = getattr(sklearn.preprocessing,scaler_class)()
-        else:
-            raise RuntimeError("Unknown scaler = %s"%scaler_class)
-
-        start_idx = self._feature_start_idx
-        end_idx   = start_idx+self._num_inputs
-        fdata = self._data.iloc[:,start_idx:end_idx]
-        scaler.fit(fdata)
-        params = dict()
-        params['center'] = scaler.center_ if hasattr(scaler,'center_') else scaler.mean_
-        params['scale'] = scaler.scale_
-        
-        return params
-
-    def _get_scaled_feature_vector(self,start_idx,cur_step):
+    def _get_normed_feature_vector(self,start_idx,cur_step):
         
         features_idx = self._feature_start_idx
         num_inputs = self._num_inputs
         stride = self._stride
         data = self._data
 
-        s = max(data.iloc[start_idx][self._scaling_feature],10.0)
+        s = max(data.iloc[start_idx][self._scaling_feature],_MIN_SEQ_SCALE)
         x = data.iloc[start_idx+cur_step*stride,features_idx:features_idx+num_inputs].as_matrix()
 
         return np.divide(x,s)
@@ -213,7 +208,7 @@ class BatchGenerator(object):
         sample = list()
         for i in self._indices:
             step = np.random.randint(self._num_unrollings)
-            sample.append(self._get_scaled_feature_vector(i,step))
+            sample.append(self._get_normed_feature_vector(i,step))
 
         scaler = None
         
@@ -270,10 +265,11 @@ class Batch(object):
     """
     """
 
-    def __init__(self,inputs,targets, attribs):
+    def __init__(self, inputs, targets, attribs, seq_scales):
         self._inputs = inputs
         self._targets = targets
         self._attribs = attribs
+        self._seq_scales = seq_scales
 
     @property
     def inputs(self):
@@ -287,3 +283,7 @@ class Batch(object):
     def attribs(self):
         return self._attribs
 
+    @property
+    def seq_scales(self):
+        return self._seq_scales
+    
