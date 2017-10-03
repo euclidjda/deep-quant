@@ -34,10 +34,10 @@ def main():
 
     configs.DEFINE_integer("num_unrollings",5,"Number of unrolling steps")
     configs.DEFINE_integer("stride",12,"How many steps to skip per unrolling")
-    configs.DEFINE_integer("batch_size",256,"Size of each batch")
+    configs.DEFINE_integer("batch_size",1,"Size of each batch")
     configs.DEFINE_string("datafile",'source-ml-data-100M-train.dat',"a datafile name.")
     configs.DEFINE_string("data_dir",'datasets',"The data directory")
-    configs.DEFINE_float("validation_size",0.25,"Size of validation set as %")
+    configs.DEFINE_float("validation_size",0.10,"Size of validation set as %")
     configs.DEFINE_string("scale_field", 'mrkcap',"Feature to scale inputs by")
     configs.DEFINE_string("key_field", 'gvkey',"Key column name header in datafile")
     configs.DEFINE_string("target_field", 'target',"Target column name header in datafile")

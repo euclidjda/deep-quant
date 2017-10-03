@@ -38,7 +38,10 @@ def print_vector(name,v):
   print()
             
 
-  
+def unlogmap(s,x):
+  y = s * np.multiply(np.sign(x),np.expm1(np.fabs(x)))
+  return y
+
 def predict(config):
 
   path = model_utils.get_data_path(config.data_dir,config.datafile)
@@ -72,8 +75,8 @@ def predict(config):
       np.set_printoptions(precision=3)
       
       print("%s %s "%(key,date))
-      print_vector("input[t-2]", scale*batch.inputs[-2][0] )
-      print_vector("input[t-1]", scale*batch.inputs[-1][0])
-      print_vector("output[t ]", scale*outputs)
-      print_vector("target[t ]", scale*targets)
+      print_vector("input[t-2]", unlogmap(scale, batch.inputs[-2][0]) )
+      print_vector("input[t-1]", unlogmap(scale, batch.inputs[-1][0]) )
+      print_vector("output[t ]", unlogmap(scale, outputs) )
+      print_vector("target[t ]", unlogmap(scale, targets) )
       print("--------------------------------")
