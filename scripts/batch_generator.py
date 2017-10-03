@@ -131,7 +131,7 @@ class BatchGenerator(object):
             end_idx = start_idx + self._seq_length - 1
             idx = start_idx + (step*stride)
             assert(idx <= end_idx)
-            x[b,:] = self._get_normed_feature_vector(start_idx,step)
+            x[b,:] = self._get_scaled_feature_vector(start_idx,step)
             # x[b,:] = data.iloc[idx,features_idx:features_idx+num_inputs].as_matrix()
             date = data.iat[idx,date_idx]
             key = data.iat[idx,key_idx]
@@ -139,16 +139,6 @@ class BatchGenerator(object):
 
         return x, attr
 
-    def _get_sequence_scales(self):
-        scales = list()
-        
-        for b in range(self._batch_size):
-            cursor = self._index_cursor[b]
-            start_idx = self._indices[cursor]
-            s = max(self._data.iloc[start_idx][self._scaling_feature],_MIN_SEQ_SCALE)
-            scales.append(s)
-        return np.array( scales )
-       
     def _next_batch(self):
         """Generate the next batch of sequences from the data.
         Returns:
@@ -187,18 +177,30 @@ class BatchGenerator(object):
 
         return b
 
-    def _get_normed_feature_vector(self,start_idx,cur_step):
+    def _get_scale(self,start_idx):
+        scale_idx = start_idx + (self._num_unrollings-1)*self._stride
+        s = max(self._data.iloc[scale_idx][self._scaling_feature],_MIN_SEQ_SCALE)
+        return s
         
+    def _get_sequence_scales(self):
+        scales = list()
+        
+        for b in range(self._batch_size):
+            cursor = self._index_cursor[b]
+            start_idx = self._indices[cursor]
+            s = self._get_scale(start_idx)
+            scales.append(s)
+        return np.array( scales )
+           
+    def _get_scaled_feature_vector(self,start_idx,cur_step):
         features_idx = self._feature_start_idx
         num_inputs = self._num_inputs
         stride = self._stride
         data = self._data
-
-        s = max(data.iloc[start_idx][self._scaling_feature],_MIN_SEQ_SCALE)
+        s = self._get_scale(start_idx)
         x = data.iloc[start_idx+cur_step*stride,features_idx:features_idx+num_inputs].as_matrix()
-
         return np.divide(x,s)
-    
+
     def get_scaling_params(self,scaler_class):
 
         features_idx = self._feature_start_idx
@@ -209,7 +211,7 @@ class BatchGenerator(object):
         sample = list()
         for i in self._indices:
             step = np.random.randint(self._num_unrollings)
-            sample.append(self._get_normed_feature_vector(i,step))
+            sample.append(self._get_scaled_feature_vector(i,step))
 
         scaler = None
         
