@@ -81,8 +81,6 @@ def rewrite_chkpt(model_dir,chkpt_name):
       outfile.write("model_checkpoint_path: \"%s\"\n"%chkpt_name)
       outfile.write("all_model_checkpoint_paths: \"%s\"\n"%chkpt_name)
 
-
-
 def adjust_learning_rate(session, model, 
                          learning_rate, lr_decay, cost_history, lookback=5):
   """
