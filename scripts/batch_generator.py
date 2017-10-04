@@ -30,7 +30,7 @@ class BatchGenerator(object):
     sequences from the datafile whose shape is specified by config.batch_size
     and config.num_unrollings.
     """
-    def __init__(self, filename, config, validation=True, data=None):
+    def __init__(self, filename, config, validation=True, data=None, verbose=True):
         """
         Init a BatchGenerator
         """
@@ -76,7 +76,7 @@ class BatchGenerator(object):
 
         if validation is True:
             if config.seed is not None:
-                print("setting random seed to "+str(config.seed))
+                if verbose is True: print("setting random seed to "+str(config.seed))
                 random.seed( config.seed )
             # get number of keys
             keys = list(set(data[key_name]))
@@ -84,8 +84,9 @@ class BatchGenerator(object):
             sample_size = int( config.validation_size * len(keys) )
             sample = random.sample(keys, sample_size)
             self._validation_set = dict(zip(sample,[1]*sample_size))
-            print("Num training entities: %d"%(len(keys)-sample_size))
-            print("Num validation entities: %d"%sample_size)
+            if verbose is True:
+                print("Num training entities: %d"%(len(keys)-sample_size))
+                print("Num validation entities: %d"%sample_size)
 
         # Setup indexes into the sequences
         self._seq_length = min_seq_length = self._stride * (num_unrollings+1)
@@ -103,7 +104,8 @@ class BatchGenerator(object):
             cur_length += 1
             last_key = key
 
-        print("Number of batch indices: %d"%(len(self._indices)))
+        if verbose is True:
+            print("Number of batch indices: %d"%(len(self._indices)))
         # Create a cursor of equally spaced indices into the dataset. Each index
         # in the cursor points to one sequence in a batch and is used to keep
         # track of where we are in the dataset.

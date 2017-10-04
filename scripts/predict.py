@@ -43,15 +43,15 @@ def unlogmap(s,x):
 
 def predict(config):
 
-  pritty_print = False
+  pretty_print = False
   
-  if hasattr(config,'pritty_print_preds') and config.pritty_print_preds is True:  
-    pritty_print = True  
+  if hasattr(config,'pretty_print_preds') and config.pretty_print_preds is True:  
+    pretty_print = True  
 
   path = model_utils.get_data_path(config.data_dir,config.datafile)
 
   config.batch_size = 1  
-  batches = BatchGenerator(path,config)
+  batches = BatchGenerator(path, config, verbose=False)
 
   tf_config = tf.ConfigProto( allow_soft_placement=True  ,
                               log_device_placement=False )
@@ -63,15 +63,12 @@ def predict(config):
     for i in range(batches.num_batches):
       batch = batches.next_batch()
       (mse, preds) = model.step(session, batch)
-      if pritty_print is True:
-        pritty_print_predictions(batch, preds)
+      if pretty_print is True:
+        pretty_print_predictions(batch, preds)
       else:
         print_predictions(batch, preds)
-    
 
-      
-
-def pritty_print_predictions(batch, preds):
+def pretty_print_predictions(batch, preds):
 
   key     = batch.attribs[-1][0][0]
   date    = batch.attribs[-1][0][1]
