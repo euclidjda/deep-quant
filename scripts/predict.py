@@ -37,7 +37,6 @@ def print_vector(name,v):
     print("%.2f "%v[i],end=' ')
   print()
             
-
 def unlogmap(s,x):
   y = s * np.multiply(np.sign(x),np.expm1(np.fabs(x)))
   return y
