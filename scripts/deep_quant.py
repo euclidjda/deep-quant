@@ -64,6 +64,7 @@ def get_configs():
   configs.DEFINE_boolean("hidden_dropout",True,"Do dropout on hidden layers")
   configs.DEFINE_boolean("skip_connections",False,"Have direct connections between input and output in MLP")
   configs.DEFINE_boolean("use_cache",True,"Load data for logreg from cache (vs processing from batch generator)")
+  configs.DEFINE_boolean("pritty_print_preds",False,"Print predictions in tabular format with inputs, targets, and keys")
   configs.DEFINE_string("data_scaler",None,'sklearn scaling algorithm or None if no scaling')
   configs.DEFINE_string("optimizer", 'GradientDescentOptimizer', 'Any tensorflow optimizer in tf.train')
   configs.DEFINE_string("optimizer_params",None, 'Additional optimizer params such as momentum')

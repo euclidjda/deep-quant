@@ -204,8 +204,7 @@ class BatchGenerator(object):
         # return np.clip(np.divide(x,s),_MIN_SCALED_VALUE,_MAX_SCALED_VALUE)
         y = np.divide(x,s)
         y_abs = np.absolute(y).astype(float)
-        z = np.multiply(np.sign(y),np.log1p(y_abs))
-        return z
+        return np.multiply(np.sign(y),np.log1p(y_abs))
             
     def get_scaling_params(self,scaler_class):
 

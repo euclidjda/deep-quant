@@ -44,6 +44,11 @@ def unlogmap(s,x):
 
 def predict(config):
 
+  pritty_print = False
+  
+  if hasattr(config,'pritty_print_preds') and config.pritty_print_preds is True:  
+    pritty_print = True  
+
   path = model_utils.get_data_path(config.data_dir,config.datafile)
 
   config.batch_size = 1  
@@ -56,27 +61,50 @@ def predict(config):
 
     model = model_utils.get_model(session, config, verbose=False)
 
-    print("Num data points is %d"%batches.num_batches)
-    
     for i in range(batches.num_batches):
-
       batch = batches.next_batch()
-
       (mse, preds) = model.step(session, batch)
+      if pritty_print is True:
+        pritty_print_predictions(batch, preds)
+      else:
+        print_predictions(batch, preds)
+    
 
-      key     = batch.attribs[-1][0][0]
-      date    = batch.attribs[-1][0][1]
-      inputs  = batch.inputs[-1][0]
-      targets = batch.targets[-1][0]
-      outputs = preds[0]
-      scale   = batch.seq_scales[0]
       
-      np.set_printoptions(suppress=True)
-      np.set_printoptions(precision=3)
+
+def pritty_print_predictions(batch, preds):
+
+  key     = batch.attribs[-1][0][0]
+  date    = batch.attribs[-1][0][1]
+  inputs  = batch.inputs[-1][0]
+  targets = batch.targets[-1][0]
+  outputs = preds[0]
+  scale   = batch.seq_scales[0]
       
-      print("%s %s "%(key,date))
-      print_vector("input[t-2]", unlogmap(scale, batch.inputs[-2][0]) )
-      print_vector("input[t-1]", unlogmap(scale, batch.inputs[-1][0]) )
-      print_vector("output[t ]", unlogmap(scale, outputs) )
-      print_vector("target[t ]", unlogmap(scale, targets) )
-      print("--------------------------------")
+  np.set_printoptions(suppress=True)
+  np.set_printoptions(precision=3)
+      
+  print("%s %s "%(key,date))
+  print_vector("input[t-2]", unlogmap(scale, batch.inputs[-2][0]) )
+  print_vector("input[t-1]", unlogmap(scale, batch.inputs[-1][0]) )
+  print_vector("output[t ]", unlogmap(scale, outputs) )
+  print_vector("target[t ]", unlogmap(scale, targets) )
+  print("--------------------------------")
+  sys.stdout.flush()
+  
+def print_predictions(batch, preds):
+
+  key     = batch.attribs[-1][0][0]
+  date    = batch.attribs[-1][0][1]
+  inputs  = batch.inputs[-1][0]
+  targets = batch.targets[-1][0]
+  outputs = preds[0]
+  scale   = batch.seq_scales[0]
+      
+  np.set_printoptions(suppress=True)
+  np.set_printoptions(precision=3)
+  out = unlogmap(scale, outputs)
+  outputs_str = ' '.join([str(out[i]) for i in range(len(out))])
+
+  print("%s %s %s"%(key,date,outputs_str))
+  sys.stdout.flush()
