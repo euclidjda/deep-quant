@@ -80,7 +80,7 @@ def pretty_print_predictions(batch, preds):
   np.set_printoptions(suppress=True)
   np.set_printoptions(precision=3)
       
-  print("%s %s "%(key,date))
+  print("%s %s "%(date,key))
   print_vector("input[t-2]", unlogmap(scale, batch.inputs[-2][0]) )
   print_vector("input[t-1]", unlogmap(scale, batch.inputs[-1][0]) )
   print_vector("output[t ]", unlogmap(scale, outputs) )
@@ -102,5 +102,5 @@ def print_predictions(batch, preds):
   out = unlogmap(scale, outputs)
   outputs_str = ' '.join([str(out[i]) for i in range(len(out))])
 
-  print("%s %s %s"%(key,date,outputs_str))
+  print("%s %s %s"%(date,key,outputs_str))
   sys.stdout.flush()
