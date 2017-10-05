@@ -25,12 +25,12 @@ sub main {
 	chomp;
 	my @fields = split ' ',$_;
 	
-	if ($fields[0] eq 'gvkey') {
+	if ($fields[1] eq 'gvkey') {
 	    @headers = @fields;
 	    next LINE;
 	}
 
-	my $date = $fields[1];
+	my $date = $fields[0];
 
 	if (($date ge $start_date) && ($date le $end_date)) {
 	    push @lines, \@fields;
