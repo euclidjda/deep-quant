@@ -1,20 +1,100 @@
-Loading training data ...
-setting random seed to 1010101
-Num training entities: 4395
-Num validation entities: 1883
-Number of batch indices: 252811
-Number of batch indices: 177606
-Number of batch indices: 75205
-Constructing model ...
-Model has the following geometry:
-  model_type  = ClvyntModel
-  num_unroll  = 5
-  batch_size  = 256
-  num_inputs  = 16
-  num_hidden  = 10
-  num_layers  = 1
-  optimizer   = AdagradOptimizer
-  device      = /gpu:0
-Created model with fresh parameters.
-Training will early stop without improvement after 50 epochs.
-Steps: 986  ....
+Steps: 986  .................................................................................................... passes: 1.00  speed: 1 seconds
+Epoch: 4475 Train MSE: 0.000000 Valid MSE: 0.000000 Learning rate: 0.6000
+Steps: 986  .................................................................................................... passes: 1.00  speed: 1 seconds
+Epoch: 4476 Train MSE: 0.000000 Valid MSE: 0.000000 Learning rate: 0.6000
+Steps: 986  .................................................................................................... passes: 1.00  speed: 1 seconds
+Epoch: 4477 Train MSE: 0.000000 Valid MSE: 0.000000 Learning rate: 0.6000
+Steps: 986  .................................................................................................... passes: 1.00  speed: 1 seconds
+Epoch: 4478 Train MSE: 0.000000 Valid MSE: 0.000000 Learning rate: 0.6000
+Steps: 986  .................................................................................................... passes: 1.00  speed: 1 seconds
+Epoch: 4479 Train MSE: 0.000000 Valid MSE: 0.000000 Learning rate: 0.6000
+Steps: 986  .................................................................................................... passes: 1.00  speed: 1 seconds
+Epoch: 4480 Train MSE: 0.000000 Valid MSE: 0.000000 Learning rate: 0.6000
+Steps: 986  .................................................................................................... passes: 1.00  speed: 1 seconds
+Epoch: 4481 Train MSE: 0.000000 Valid MSE: 0.000000 Learning rate: 0.6000
+Steps: 986  .................................................................................................... passes: 1.00  speed: 1 seconds
+Epoch: 4482 Train MSE: 0.000000 Valid MSE: 0.000000 Learning rate: 0.6000
+Steps: 986  .................................................................................................... passes: 1.00  speed: 1 seconds
+Epoch: 4483 Train MSE: 0.000000 Valid MSE: 0.000000 Learning rate: 0.6000
+Steps: 986  .................................................................................................... passes: 1.00  speed: 1 seconds
+Epoch: 4484 Train MSE: 0.000000 Valid MSE: 0.000000 Learning rate: 0.6000
+Steps: 986  .................................................................................................... passes: 1.00  speed: 1 seconds
+Epoch: 4485 Train MSE: 0.000000 Valid MSE: 0.000000 Learning rate: 0.6000
+Steps: 986  .................................................................................................... passes: 1.00  speed: 1 seconds
+Epoch: 4486 Train MSE: 0.000000 Valid MSE: 0.000000 Learning rate: 0.6000
+Steps: 986  .................................................................................................... passes: 1.00  speed: 1 seconds
+Epoch: 4487 Train MSE: 0.000000 Valid MSE: 0.000000 Learning rate: 0.6000
+Steps: 986  .................................................................................................... passes: 1.00  speed: 1 seconds
+Epoch: 4488 Train MSE: 0.000000 Valid MSE: 0.000000 Learning rate: 0.6000
+Steps: 986  .................................................................................................... passes: 1.00  speed: 1 seconds
+Epoch: 4489 Train MSE: 0.000000 Valid MSE: 0.000000 Learning rate: 0.6000
+Steps: 986  .................................................................................................... passes: 1.00  speed: 1 seconds
+Epoch: 4490 Train MSE: 0.000000 Valid MSE: 0.000000 Learning rate: 0.6000
+Steps: 986  .................................................................................................... passes: 1.00  speed: 1 seconds
+Epoch: 4491 Train MSE: 0.000000 Valid MSE: 0.000000 Learning rate: 0.6000
+Steps: 986  .................................................................................................... passes: 1.00  speed: 1 seconds
+Epoch: 4492 Train MSE: 0.000000 Valid MSE: 0.000000 Learning rate: 0.6000
+Steps: 986  .................................................................................................... passes: 1.00  speed: 1 seconds
+Epoch: 4493 Train MSE: 0.000000 Valid MSE: 0.000000 Learning rate: 0.6000
+Steps: 986  .................................................................................................... passes: 1.00  speed: 1 seconds
+Epoch: 4494 Train MSE: 0.000000 Valid MSE: 0.000000 Learning rate: 0.6000
+Steps: 986  .................................................................................................... passes: 1.00  speed: 1 seconds
+Epoch: 4495 Train MSE: 0.000000 Valid MSE: 0.000000 Learning rate: 0.6000
+Steps: 986  .................................................................................................... passes: 1.00  speed: 1 seconds
+Epoch: 4496 Train MSE: 0.000000 Valid MSE: 0.000000 Learning rate: 0.6000
+Steps: 986  .................................................................................................... passes: 1.00  speed: 1 seconds
+Epoch: 4497 Train MSE: 0.000000 Valid MSE: 0.000000 Learning rate: 0.6000
+Steps: 986  .................................................................................................... passes: 1.00  speed: 1 seconds
+Epoch: 4498 Train MSE: 0.000000 Valid MSE: 0.000000 Learning rate: 0.6000
+Steps: 986  .................................................................................................... passes: 1.00  speed: 1 seconds
+Epoch: 4499 Train MSE: 0.000000 Valid MSE: 0.000000 Learning rate: 0.6000
+Steps: 986  .................................................................................................... passes: 1.00  speed: 1 seconds
+Epoch: 4500 Train MSE: 0.000000 Valid MSE: 0.000000 Learning rate: 0.6000
+Steps: 986  .................................................................................................... passes: 1.00  speed: 1 seconds
+Epoch: 4501 Train MSE: 0.000000 Valid MSE: 0.000000 Learning rate: 0.6000
+Steps: 986  .................................................................................................... passes: 1.00  speed: 1 seconds
+Epoch: 4502 Train MSE: 0.000000 Valid MSE: 0.000000 Learning rate: 0.6000
+Steps: 986  .................................................................................................... passes: 1.00  speed: 2 seconds
+Epoch: 4503 Train MSE: 0.000000 Valid MSE: 0.000000 Learning rate: 0.6000
+Steps: 986  .................................................................................................... passes: 1.00  speed: 1 seconds
+Epoch: 4504 Train MSE: 0.000000 Valid MSE: 0.000000 Learning rate: 0.6000
+Steps: 986  .................................................................................................... passes: 1.00  speed: 1 seconds
+Epoch: 4505 Train MSE: 0.000000 Valid MSE: 0.000000 Learning rate: 0.6000
+Steps: 986  .................................................................................................... passes: 1.00  speed: 1 seconds
+Epoch: 4506 Train MSE: 0.000000 Valid MSE: 0.000000 Learning rate: 0.6000
+Steps: 986  .................................................................................................... passes: 1.00  speed: 1 seconds
+Epoch: 4507 Train MSE: 0.000000 Valid MSE: 0.000000 Learning rate: 0.6000
+Steps: 986  .................................................................................................... passes: 1.00  speed: 1 seconds
+Epoch: 4508 Train MSE: 0.000000 Valid MSE: 0.000000 Learning rate: 0.6000
+Steps: 986  .................................................................................................... passes: 1.00  speed: 1 seconds
+Epoch: 4509 Train MSE: 0.000000 Valid MSE: 0.000000 Learning rate: 0.6000
+Steps: 986  .................................................................................................... passes: 1.00  speed: 1 seconds
+Epoch: 4510 Train MSE: 0.000000 Valid MSE: 0.000000 Learning rate: 0.6000
+Steps: 986  .................................................................................................... passes: 1.00  speed: 1 seconds
+Epoch: 4511 Train MSE: 0.000000 Valid MSE: 0.000000 Learning rate: 0.6000
+Steps: 986  .................................................................................................... passes: 1.00  speed: 1 seconds
+Epoch: 4512 Train MSE: 0.000000 Valid MSE: 0.000000 Learning rate: 0.6000
+Steps: 986  .................................................................................................... passes: 1.00  speed: 1 seconds
+Epoch: 4513 Train MSE: 0.000000 Valid MSE: 0.000000 Learning rate: 0.6000
+Steps: 986  .................................................................................................... passes: 1.00  speed: 1 seconds
+Epoch: 4514 Train MSE: 0.000000 Valid MSE: 0.000000 Learning rate: 0.6000
+Steps: 986  .................................................................................................... passes: 1.00  speed: 1 seconds
+Epoch: 4515 Train MSE: 0.000000 Valid MSE: 0.000000 Learning rate: 0.6000
+Steps: 986  .................................................................................................... passes: 1.00  speed: 1 seconds
+Epoch: 4516 Train MSE: 0.000000 Valid MSE: 0.000000 Learning rate: 0.6000
+Steps: 986  .................................................................................................... passes: 1.00  speed: 1 seconds
+Epoch: 4517 Train MSE: 0.000000 Valid MSE: 0.000000 Learning rate: 0.6000
+Steps: 986  .................................................................................................... passes: 1.00  speed: 1 seconds
+Epoch: 4518 Train MSE: 0.000000 Valid MSE: 0.000000 Learning rate: 0.6000
+Steps: 986  .................................................................................................... passes: 1.00  speed: 1 seconds
+Epoch: 4519 Train MSE: 0.000000 Valid MSE: 0.000000 Learning rate: 0.6000
+Steps: 986  .................................................................................................... passes: 1.00  speed: 1 seconds
+Epoch: 4520 Train MSE: 0.000000 Valid MSE: 0.000000 Learning rate: 0.6000
+Steps: 986  .................................................................................................... passes: 1.00  speed: 1 seconds
+Epoch: 4521 Train MSE: 0.000000 Valid MSE: 0.000000 Learning rate: 0.6000
+Steps: 986  .................................................................................................... passes: 1.00  speed: 1 seconds
+Epoch: 4522 Train MSE: 0.000000 Valid MSE: 0.000000 Learning rate: 0.6000
+Steps: 986  .................................................................................................... passes: 1.00  speed: 1 seconds
+Epoch: 4523 Train MSE: 0.000000 Valid MSE: 0.000000 Learning rate: 0.6000
+Steps: 986  .................................................................................................... passes: 1.00  speed: 1 seconds
+Epoch: 4524 Train MSE: 0.000000 Valid MSE: 0.000000 Learning rate: 0.6000
