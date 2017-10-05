@@ -9,11 +9,15 @@ List of things to do
 
 - Implement Clairvioant and Naive models (DONE)
 
+- Create file cache for batch_generator
+
+- Regularization in cost function for RNN and MLP
+
+- Set passes to 0.2 for next set of trainings
+
 - Trainable ReLu units in MLP
 
 - Batch normalization in RNN
-
-- Regularization in cost function for RNN and MLP
 
 - rename config's num_inputs to num_features
 
