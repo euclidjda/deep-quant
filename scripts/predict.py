@@ -100,7 +100,7 @@ def print_predictions(batch, preds):
   np.set_printoptions(suppress=True)
   np.set_printoptions(precision=3)
   out = unlogmap(scale, outputs)
-  outputs_str = ' '.join([str(out[i]) for i in range(len(out))])
+  out_str = ' '.join([str(out[i]) for i in range(len(out))])
 
-  print("%s %s %s"%(date,key,outputs_str))
+  print("%s %s %s"%(date,key,out_str))
   sys.stdout.flush()
