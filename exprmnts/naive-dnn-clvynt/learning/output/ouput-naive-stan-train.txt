@@ -1,0 +1,20 @@
+Loading training data ...
+setting random seed to 1010101
+Num training entities: 4395
+Num validation entities: 1883
+Number of batch indices: 252811
+Number of batch indices: 177606
+Number of batch indices: 75205
+Constructing model ...
+Model has the following geometry:
+  model_type  = NaiveModel
+  num_unroll  = 5
+  batch_size  = 256
+  num_inputs  = 16
+  num_hidden  = 10
+  num_layers  = 1
+  optimizer   = AdagradOptimizer
+  device      = /gpu:0
+Created model with fresh parameters.
+Training will early stop without improvement after 50 epochs.
+Steps: 986  .............
