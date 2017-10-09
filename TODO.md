@@ -1,5 +1,5 @@
 
-List of things to do
+THE TODO LIST:
 
 - Factor standardization use scikit learn (Done)
 
@@ -9,11 +9,21 @@ List of things to do
 
 - Implement Clairvioant and Naive models (DONE)
 
-- Create file cache for batch_generator
+- Simulate clairvoyant progression from 0,3,6,12, ... months to be how perf improves
 
-- Regularization in cost function for RNN and MLP
+- In predict.py, make predictions even when there is no target data available
+
+- In predict.py, output make predictions timesteps less than t. I.e., t-1, t-2, 0
+
+- Implement predicting next n-timestep average of inputs in batch_generator
+
+- Re-working scaling/unscaling implementation so it is more intuitive
 
 - Set passes to 0.2 for next set of trainings
+
+- max-norm regularization for RNN and MLP (use tf.clip_by_norm)
+
+- Create file cache for batch_generator
 
 - Trainable ReLu units in MLP
 
