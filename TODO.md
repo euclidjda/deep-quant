@@ -1,21 +1,22 @@
-
 THE TODO LIST:
 
-- Factor standardization use scikit learn (Done)
+- (DONE) Factor standardization use scikit learn
 
-- Change Y values to shifted X values for sequence learning (DONE)
+- (DONE) Change Y values to shifted X values for sequence learning
 
-- Does MSE need to be divided by batch size batch? No. Done in TF. (DONE)
+- (DONE) Does MSE need to be divided by batch size batch? No. Done in TF.
 
-- Implement Clairvioant and Naive models (DONE)
+- (DONE) Implement Clairvioant and Naive models
+
+- (DONE) Implement batch sequences that only require final step being an active stock.
+
+- (DONE) Implement predicting next n-timestep average of inputs in batch_generator
 
 - Simulate clairvoyant progression from 0,3,6,12, ... months to be how perf improves
 
 - In predict.py, make predictions even when there is no target data available
 
 - In predict.py, output make predictions timesteps less than t. I.e., t-1, t-2, 0
-
-- Implement predicting next n-timestep average of inputs in batch_generator
 
 - Re-working scaling/unscaling implementation so it is more intuitive
 

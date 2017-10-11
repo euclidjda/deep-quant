@@ -20,8 +20,6 @@ import random
 import sklearn.preprocessing
 
 _MIN_SEQ_SCALE = 1.0
-_MIN_SCALED_VALUE = -10000
-_MAX_SCALED_VALUE =  10000
 
 class BatchGenerator(object):
     """
@@ -30,7 +28,8 @@ class BatchGenerator(object):
     sequences from the datafile whose shape is specified by config.batch_size
     and config.num_unrollings.
     """
-    def __init__(self, filename, config, validation=True, data=None, verbose=True):
+    def __init__(self, filename, config, validation=True, require_targets=True,
+                     data=None, verbose=True):
         """
         Init a BatchGenerator
         """
@@ -40,9 +39,10 @@ class BatchGenerator(object):
         self._first_feature_name = first_feature_name = config.first_feature_field
         self._num_inputs = config.num_inputs
         self._num_unrollings = num_unrollings = config.num_unrollings
+        self._predict_steps = config.predict_steps
         self._stride = config.stride
         self._batch_size = batch_size = config.batch_size
-
+        
         assert( self._stride >= 1 )
 
         self._rnn_loss_weight = None
@@ -63,6 +63,7 @@ class BatchGenerator(object):
         self._feature_start_idx = fsidx = list(data.columns.values).index(first_feature_name)
         self._key_idx = list(data.columns.values).index(key_name)
         self._target_idx = list(data.columns.values).index(target_name)
+        self._active_idx = list(data.columns.values).index(config.active_field)
         self._date_idx = list(data.columns.values).index('date')
         self._feature_names = list(data.columns.values)[fsidx:fsidx+config.num_inputs]
         assert(self._feature_start_idx>=0)
@@ -89,18 +90,21 @@ class BatchGenerator(object):
                 print("Num validation entities: %d"%sample_size)
 
         # Setup indexes into the sequences
-        self._seq_length = min_seq_length = self._stride * (num_unrollings+1)
+        seq_length = self._stride * num_unrollings
+        steps = self._predict_steps
         self._indices = list()
         last_key = ""
         cur_length = 1
         for i in range(self._data_len):
+            # get active value
             key = data.iat[i,self._key_idx]
+            pred_key = data.iat[i+steps,self._key_idx] if i+steps < len(data) else ""
+            active = True if int(data.iat[i,self._active_idx]) else False
             if (key != last_key):
                 cur_length = 1
-            if (cur_length >= min_seq_length):
-                # TODO: HERE WE COULD OVER-SAMPLE BASED ON
-                # DATE TO MORE HEAVILY WEIGHT MORE RECENT
-                self._indices.append(i-min_seq_length+1)
+            if ( (cur_length >= seq_length) and (active is True) ):
+                if (not require_targets) or (key == pred_key):
+                    self._indices.append(i-seq_length+1)
             cur_length += 1
             last_key = key
 
@@ -132,14 +136,16 @@ class BatchGenerator(object):
         for b in range(self._batch_size):
             cursor = self._index_cursor[b]
             start_idx = self._indices[cursor]
-            end_idx = start_idx + self._seq_length - 1
+            # end_idx = start_idx + self._seq_length - 1
             idx = start_idx + (step*stride)
-            assert(idx <= end_idx)
-            x[b,:] = self._get_scaled_feature_vector(start_idx,step)
-            # x[b,:] = data.iloc[idx,features_idx:features_idx+num_inputs].as_matrix()
             date = data.iat[idx,date_idx]
             key = data.iat[idx,key_idx]
-            attr.append((key,date))
+            if ((step>0) and (key != data.iat[idx-1,key_idx])):
+                x[b,:] = 0.0
+                attr.append(None)
+            else:
+                x[b,:] = self._get_scaled_feature_vector(start_idx,step)
+                attr.append((key,date))
 
         return x, attr
 
@@ -152,13 +158,14 @@ class BatchGenerator(object):
         
         batch_data = list()
         attributes = list()
-        for i in range(self._num_unrollings+1):
+        for i in range(self._num_unrollings+self._predict_steps):
             data, attr = self._next_step(i)
             batch_data.append(data)
             attributes.append(attr)
 
-        inputs  = batch_data[0:-1]
-        targets = batch_data[1:]
+        inputs  = batch_data[0:self._num_unrollings]
+        # targets = batch_data[1:]
+        targets = self._create_targets(batch_data)
         assert(len(inputs)==len(targets))
 
         #############################################################################
@@ -170,6 +177,16 @@ class BatchGenerator(object):
 
         return Batch(inputs, targets, attributes, scales)
 
+    def _create_targets(self,batch_data):
+        steps = self._predict_steps
+        targets = list()
+        if steps == 1:
+            targets = batch_data[1:]
+        else:
+            for i in range(1,len(batch_data)-steps+1):
+                targets.append( np.mean(batch_data[i:i+steps], axis=0) )
+        return targets
+        
     def next_batch(self):
         b = None
         if self._batch_cache[self._batch_cursor] is not None:
@@ -203,7 +220,6 @@ class BatchGenerator(object):
         data = self._data
         s = self._get_scale(start_idx)
         x = data.iloc[start_idx+cur_step*stride,features_idx:features_idx+num_inputs].as_matrix()
-        # return np.clip(np.divide(x,s),_MIN_SCALED_VALUE,_MAX_SCALED_VALUE)
         y = np.divide(x,s)
         y_abs = np.absolute(y).astype(float)
         return np.multiply(np.sign(y),np.log1p(y_abs))

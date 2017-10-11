@@ -33,13 +33,17 @@ from batch_generator import BatchGenerator
 def main():
 
     configs.DEFINE_integer("num_unrollings",6,"Number of unrolling steps")
+    configs.DEFINE_integer("predict_steps",1,"Average future preds over this many steps")
     configs.DEFINE_integer("stride",12,"How many steps to skip per unrolling")
     configs.DEFINE_integer("batch_size",256,"Size of each batch")
     configs.DEFINE_string("datafile",'row-norm-all-100M.dat',"a datafile name.")
     configs.DEFINE_string("data_dir",'datasets',"The data directory")
     configs.DEFINE_float("validation_size",0.3,"Size of validation set as %")
     configs.DEFINE_string("key_field", 'gvkey',"Key column name header in datafile")
+    configs.DEFINE_string("scale_field", 'mrkcap',"Feature to scale inputs by")
     configs.DEFINE_string("target_field", 'target',"Target column name header in datafile")
+    configs.DEFINE_string("active_field", 'active',"Target column name header in datafile")
+    configs.DEFINE_string("first_feature_field", 'saleq_ttm',"First feature")
     configs.DEFINE_integer("num_inputs",10,"Number of inputs")
     configs.DEFINE_integer("end_date",210001,"Last date to train on as YYYYMM")
     configs.DEFINE_integer("seed",1024,"Seed for deterministic training")
@@ -50,21 +54,24 @@ def main():
 
     print("Loading training data ...")
 
-    batches = BatchGenerator(train_path,config)
+    batches = BatchGenerator(train_path,config,require_targets=False)
 
-    train_data = batches.train_batches()
-
-    print("Steps per epoch: %d"%train_data.num_batches)
+    print("Num batches %d"%batches.num_batches)
     
+    #train_data = batches.train_batches()
+
+    #print("Steps per epoch: %d"%train_data.num_batches)
+
     while(1):
         start_time = time.time()
-        for step in range(train_data.num_batches):
-            b = train_data.next_batch()
+        for step in range(batches.num_batches):
+            b = batches.next_batch()
             print(".",end=''); sys.stdout.flush()
         speed = time.time() - start_time
         print("\nEpoch time is %0f seconds" % speed)
         sys.stdout.flush()
-    
+        exit()
+
 if __name__ == "__main__":
     main()
 
