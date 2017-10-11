@@ -91,14 +91,14 @@ class BatchGenerator(object):
 
         # Setup indexes into the sequences
         seq_length = self._stride * num_unrollings
-        steps = self._predict_steps
+        steps      = self._predict_steps*self._stride
         self._indices = list()
         last_key = ""
         cur_length = 1
         for i in range(self._data_len):
             # get active value
             key = data.iat[i,self._key_idx]
-            pred_key = data.iat[i+steps,self._key_idx] if i+steps < len(data) else ""
+            pred_key = data.iat[i+steps, self._key_idx] if i+steps < len(data) else ""
             active = True if int(data.iat[i,self._active_idx]) else False
             if (key != last_key):
                 cur_length = 1
@@ -140,12 +140,8 @@ class BatchGenerator(object):
             idx = start_idx + (step*stride)
             date = data.iat[idx,date_idx]
             key = data.iat[idx,key_idx]
-            if ((step>0) and (key != data.iat[idx-1,key_idx])):
-                x[b,:] = 0.0
-                attr.append(None)
-            else:
-                x[b,:] = self._get_scaled_feature_vector(start_idx,step)
-                attr.append((key,date))
+            x[b,:] = self._get_scaled_feature_vector(start_idx,step)
+            attr.append((key,date))
 
         return x, attr
 
@@ -164,7 +160,6 @@ class BatchGenerator(object):
             attributes.append(attr)
 
         inputs  = batch_data[0:self._num_unrollings]
-        # targets = batch_data[1:]
         targets = self._create_targets(batch_data)
         assert(len(inputs)==len(targets))
 
@@ -254,19 +249,20 @@ class BatchGenerator(object):
         valid_keys = list(self._validation_set.keys())
         indexes = self._data[self._key_name].isin(valid_keys)
         train_data = self._data[~indexes]
-        return BatchGenerator("",self._config,validation=False,
+        return BatchGenerator("", self._config, validation=False,
                                   data=train_data)
 
     def valid_batches(self):
         valid_keys = list(self._validation_set.keys())
         indexes = self._data[self._key_name].isin(valid_keys)
         valid_data = self._data[indexes]
-        return BatchGenerator("",self._config,validation=False,
+        return BatchGenerator("", self._config, validation=False,
                                   data=valid_data)
 
     def shuffle(self):
-        random.shuffle(self._batch_cache)
-        self._batch_cusror = 0
+        if (self._batch_cache[-1] is not None):
+            random.shuffle(self._batch_cache)
+            self._batch_cusror = 0
          
     def rewind(self):
         self._batch_cusror = 0
