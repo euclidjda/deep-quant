@@ -51,7 +51,7 @@ def predict(config):
   path = model_utils.get_data_path(config.data_dir,config.datafile)
 
   config.batch_size = 1  
-  batches = BatchGenerator(path, config, require_targets=False, verbose=False)
+  batches = BatchGenerator(path, config, require_targets=True, verbose=False)
 
   tf_config = tf.ConfigProto( allow_soft_placement=True  ,
                               log_device_placement=False )
