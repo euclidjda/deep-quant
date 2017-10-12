@@ -70,8 +70,8 @@ def predict(config):
 
 def pretty_print_predictions(batch, preds):
 
-  key     = batch.attribs[-1][0][0]
-  date    = batch.attribs[-1][0][1]
+  key     = batch.attribs[-2][0][0]
+  date    = batch.attribs[-2][0][1]
   inputs  = batch.inputs[-1][0]
   targets = batch.targets[-1][0]
   outputs = preds[0]

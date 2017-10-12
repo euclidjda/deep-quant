@@ -12,6 +12,8 @@ THE TODO LIST:
 
 - (DONE) Implement predicting next n-timestep average of inputs in batch_generator
 
+- Incorporate merge-model-with-simdata.pl into euclid2
+
 - Simulate clairvoyant progression from 0,3,6,12, ... months to be how perf improves
 
 - In predict.py, make predictions even when there is no target data available

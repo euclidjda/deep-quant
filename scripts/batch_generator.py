@@ -103,6 +103,8 @@ class BatchGenerator(object):
             if (key != last_key):
                 cur_length = 1
             if ( (cur_length >= seq_length) and (active is True) ):
+                # If targets are not required, we don't need the future
+                # sequences to be there, otherwise we do
                 if (not require_targets) or (key == pred_key):
                     self._indices.append(i-seq_length+1)
             cur_length += 1
@@ -260,6 +262,7 @@ class BatchGenerator(object):
                                   data=valid_data)
 
     def shuffle(self):
+        # We cannot shuffle until the entire dataset is cached
         if (self._batch_cache[-1] is not None):
             random.shuffle(self._batch_cache)
             self._batch_cusror = 0
