@@ -90,8 +90,8 @@ class BatchGenerator(object):
                 print("Num validation entities: %d"%sample_size)
 
         # Setup indexes into the sequences
-        seq_length = self._stride * num_unrollings
-        steps      = self._predict_steps*self._stride
+        min_seq_length = self._stride * (num_unrollings-1) + 1
+        steps = self._predict_steps*self._stride
         self._indices = list()
         last_key = ""
         cur_length = 1
@@ -102,11 +102,11 @@ class BatchGenerator(object):
             active = True if int(data.iat[i,self._active_idx]) else False
             if (key != last_key):
                 cur_length = 1
-            if ( (cur_length >= seq_length) and (active is True) ):
+            if ( (cur_length >= min_seq_length) and (active is True) ):
                 # If targets are not required, we don't need the future
                 # sequences to be there, otherwise we do
                 if (not require_targets) or (key == pred_key):
-                    self._indices.append(i-seq_length+1)
+                    self._indices.append(i-min_seq_length+1)
             cur_length += 1
             last_key = key
 
@@ -144,7 +144,6 @@ class BatchGenerator(object):
             key = data.iat[idx,key_idx]
             x[b,:] = self._get_scaled_feature_vector(start_idx,step)
             attr.append((key,date))
-
         return x, attr
 
     def _next_batch(self):
@@ -154,17 +153,20 @@ class BatchGenerator(object):
         """
         scales = self._get_sequence_scales( )
         
-        batch_data = list()
-        attributes = list()
+        seq_data = list()
+        attribs = list()
         for i in range(self._num_unrollings+self._predict_steps):
             data, attr = self._next_step(i)
-            batch_data.append(data)
-            attributes.append(attr)
+            seq_data.append(data)
+            attribs.append(attr)
 
-        inputs  = batch_data[0:self._num_unrollings]
-        targets = self._create_targets(batch_data)
+        inputs  = self._seq_to_inputs(seq_data)
+        targets = self._seq_to_targets(seq_data)
         assert(len(inputs)==len(targets))
+        assert((len(inputs)+self._predict_steps)==len(attribs))
 
+        attribs = attribs[-self._predict_steps-1]
+        
         #############################################################################
         #   Set cursor for next batch
         #############################################################################
@@ -172,16 +174,19 @@ class BatchGenerator(object):
         num_idxs = len(self._indices)
         self._index_cursor = [ (self._index_cursor[b]+1)%num_idxs for b in range(batch_size) ]
 
-        return Batch(inputs, targets, attributes, scales)
+        return Batch(inputs, targets, attribs, scales)
 
-    def _create_targets(self,batch_data):
+    def _seq_to_inputs(self,seq_data):
+        return seq_data[0:self._num_unrollings]
+    
+    def _seq_to_targets(self,seq_data):
         steps = self._predict_steps
         targets = list()
         if steps == 1:
-            targets = batch_data[1:]
+            targets = seq_data[1:]
         else:
-            for i in range(1,len(batch_data)-steps+1):
-                targets.append( np.mean(batch_data[i:i+steps], axis=0) )
+            for i in range(1,len(seq_data)-steps+1):
+                targets.append( np.mean(seq_data[i:i+steps], axis=0) )
         return targets
         
     def next_batch(self):

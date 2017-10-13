@@ -44,14 +44,17 @@ def unlogmap(s,x):
 def predict(config):
 
   pretty_print = False
-  
+  require_targets = False
+
   if hasattr(config,'pretty_print_preds') and config.pretty_print_preds is True:  
-    pretty_print = True  
+    pretty_print = True 
+    requre_targets = True
 
   path = model_utils.get_data_path(config.data_dir,config.datafile)
 
   config.batch_size = 1  
-  batches = BatchGenerator(path, config, require_targets=True, verbose=False)
+  batches = BatchGenerator(path, config, 
+                           require_targets=require_targets, verbose=False)
 
   tf_config = tf.ConfigProto( allow_soft_placement=True  ,
                               log_device_placement=False )
@@ -69,9 +72,8 @@ def predict(config):
         print_predictions(batch, preds)
 
 def pretty_print_predictions(batch, preds):
-
-  key     = batch.attribs[-2][0][0]
-  date    = batch.attribs[-2][0][1]
+  key     = batch.attribs[0][0]
+  date    = batch.attribs[0][1]
   inputs  = batch.inputs[-1][0]
   targets = batch.targets[-1][0]
   outputs = preds[0]
@@ -90,8 +92,8 @@ def pretty_print_predictions(batch, preds):
   
 def print_predictions(batch, preds):
 
-  key     = batch.attribs[-1][0][0]
-  date    = batch.attribs[-1][0][1]
+  key     = batch.attribs[0][0]
+  date    = batch.attribs[0][1]
   inputs  = batch.inputs[-1][0]
   targets = batch.targets[-1][0]
   outputs = preds[0]
@@ -100,7 +102,7 @@ def print_predictions(batch, preds):
   np.set_printoptions(suppress=True)
   np.set_printoptions(precision=3)
   out = unlogmap(scale, outputs)
-  out_str = ' '.join([str(out[i]) for i in range(len(out))])
+  out_str = ' '.join(["%.3f"%out[i] for i in range(len(out))])
 
   print("%s %s %s"%(date,key,out_str))
   sys.stdout.flush()
