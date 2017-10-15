@@ -72,12 +72,12 @@ class DeepRnnModel(DeepNNModel):
           self._scaled_inputs[i] = self._inputs[i]
           self._scaled_targets[i] = self._targets[i]
             
-      hp = self._keep_prob if config.hidden_dropout is True else 1.0
-      ip = self._keep_prob if config.input_dropout is True else 1.0
+      hkp = self._keep_prob if config.hidden_dropout is True else 1.0
+      ikp = self._keep_prob if config.input_dropout is True else 1.0
 
       def rnn_cell():
         cell = tf.contrib.rnn.GRUCell(num_hidden)
-        return tf.contrib.rnn.DropoutWrapper(cell,output_keep_prob=hp,input_keep_prob=ip)
+        return tf.contrib.rnn.DropoutWrapper(cell,output_keep_prob=hkp,input_keep_prob=ikp)
 
       stacked_rnn = tf.contrib.rnn.MultiRNNCell([rnn_cell() for _ in range(config.num_layers)])
       
