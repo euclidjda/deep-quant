@@ -2,9 +2,9 @@
 
 BIN=~/work/deep-quant/scripts
 
-$BIN/deep_quant.py --config=config/naive-stan-predict.conf  --train=False --pretty_print_preds=True  > output/predicts-pretty-naive-stan.txt  2> stderr-naive.txt  &
-$BIN/deep_quant.py --config=config/clvynt-stan-predict.conf --train=False --pretty_print_preds=True  > output/predicts-pretty-clvynt-stan.txt 2> stderr-clvynt.txt &
-$BIN/deep_quant.py --config=config/dnn-stan-predict.conf    --train=False --pretty_print_preds=True  > output/predicts-pretty-dnn-stan.txt    2> stderr-dnn.txt    ;
-$BIN/deep_quant.py --config=config/naive-stan-predict.conf  --train=False --pretty_print_preds=False > output/predicts-naive-stan.dat         2> stderr-naive.txt  &
-$BIN/deep_quant.py --config=config/clvynt-stan-predict.conf --train=False --pretty_print_preds=False > output/predicts-clvynt-stan.dat        2> stderr-clvynt.txt &
-$BIN/deep_quant.py --config=config/dnn-stan-predict.conf    --train=False --pretty_print_preds=False > output/predicts-dnn-stan.dat           2> stderr-dnn.txt
+CUDA_VISIBLE_DEVICES=0 $BIN/deep_quant.py --config=config/naive.conf  --train=False --datafile=source-ml-data-100M.dat --pretty_print_preds=True  > output/predicts-pretty-naive.txt  2> stderr-naive.txt  &
+CUDA_VISIBLE_DEVICES=1 $BIN/deep_quant.py --config=config/clvynt.conf --train=False --datafile=source-ml-data-100M.dat --pretty_print_preds=True  > output/predicts-pretty-clvynt.txt 2> stderr-clvynt.txt &
+CUDA_VISIBLE_DEVICES=2 $BIN/deep_quant.py --config=config/dnn.conf    --train=False --datafile=source-ml-data-100M.dat --pretty_print_preds=True  > output/predicts-pretty-dnn.txt    2> stderr-dnn.txt    ;
+CUDA_VISIBLE_DEVICES=0 $BIN/deep_quant.py --config=config/naive.conf  --train=False --datafile=source-ml-data-100M.dat --pretty_print_preds=False > output/predicts-naive.dat         2> stderr-naive.txt  &
+CUDA_VISIBLE_DEVICES=1 $BIN/deep_quant.py --config=config/clvynt.conf --train=False --datafile=source-ml-data-100M.dat --pretty_print_preds=False > output/predicts-clvynt.dat        2> stderr-clvynt.txt &
+CUDA_VISIBLE_DEVICES=2 $BIN/deep_quant.py --config=config/dnn.conf    --train=False --datafile=source-ml-data-100M.dat --pretty_print_preds=False > output/predicts-dnn.dat           2> stderr-dnn.txt
