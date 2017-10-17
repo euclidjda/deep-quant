@@ -47,6 +47,7 @@ def get_configs():
   configs.DEFINE_string("key_field", 'gvkey',"Key column name header in datafile")
   configs.DEFINE_string("target_field", 'target',"Target column name header in datafile")
   configs.DEFINE_string("scale_field", 'mrkcap',"Feature to scale inputs by")
+  configs.DEFINE_string("aux_feature_fields", '',"Features in input but not target")
   configs.DEFINE_string("first_feature_field", '',"First feature")
   configs.DEFINE_string("data_dir",'',"The data directory")
   configs.DEFINE_string("model_dir",'',"Model directory")

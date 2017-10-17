@@ -43,7 +43,6 @@ class DeepRnnModel(DeepNNModel):
       num_outputs = num_inputs
 
       # total_input_size = num_unrollings * num_inputs
-      
       # input/target normalization params
       self._center = tf.get_variable('center',shape=[num_inputs],trainable=False)
       self._scale  = tf.get_variable('scale',shape=[num_inputs],trainable=False)

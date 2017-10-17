@@ -128,6 +128,7 @@ class BatchGenerator(object):
         Get next step in current batch.
         """
         x = np.zeros(shape=(self._batch_size, self._num_inputs), dtype=np.float)
+        
         attr = list()
         data = self._data
         features_idx = self._feature_start_idx
@@ -227,7 +228,6 @@ class BatchGenerator(object):
         return np.multiply(np.sign(y),np.log1p(y_abs))
             
     def get_scaling_params(self,scaler_class):
-
         features_idx = self._feature_start_idx
         num_inputs = self._num_inputs
         stride = self._stride

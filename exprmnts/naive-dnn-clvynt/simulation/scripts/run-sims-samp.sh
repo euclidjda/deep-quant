@@ -1,11 +1,15 @@
 BIN=~/work/euclid2/bin
 
-for MODEL in "mlp-stan" "clvynt-stan" "naive-stan"
+for FACTOR in "ebit" "net"
 do
-    for PERIOD in "197401-199912" "200001-201609"
+    for MODEL in "dnn" "clvynt" "naive"
     do
-	echo "Running simulation for model $MODEL over period $PERIOD"
-	$BIN/fundsim --config=config/sim-samp-50nms.conf datasets/sim-data-100M-$MODEL-$PERIOD.dat \
-	    --dump-file=logging/dump-$MODEL-$PERIOD.dat --log-file=logging/logfile-$MODEL-$PERIOD.log > output/output-100M-$MODEL-$PERIOD.dat ;
-    done	  
+	for PERIOD in "197401-199912" "200001-201608"
+	do
+	    echo "Running simulation for model $MODEL on $FACTOR over period $PERIOD"
+	    $BIN/fundsim --config=config/sim-$FACTOR-50nms.conf \
+		--log-level=4 --log-file=logging/logfile-$MODEL-$FACTOR-$PERIOD.log \
+		datasets/sim-data-100M-$MODEL-$PERIOD.dat > output/output-100M-$MODEL-$FACTOR-$PERIOD.dat ;
+	done	  
+    done
 done
