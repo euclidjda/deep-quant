@@ -63,17 +63,38 @@ def predict(config):
 
     model = model_utils.get_model(session, config, verbose=False)
 
+    perfs = dict()
+    
     for i in range(batches.num_batches):
       batch = batches.next_batch()
       (mse, preds) = model.step(session, batch)
+
+      date = batch_to_date(batch)
+      if date not in perfs:
+        perfs[date] = list()
+      perfs[date].append(mse)
+      
       if pretty_print is True:
         pretty_print_predictions(batch, preds)
       else:
         print_predictions(batch, preds)
 
+    if pretty_print is True:
+      for date in sorted(perfs):
+        mean = np.mean(perfs[date])
+        print("%s %.6f"%(date,mean))
+      total_mean = np.mean([x for v in perfs.values() for x in v])
+      print("Total %.6f"%(total_mean))
+
+def batch_to_key(batch):
+  return batch.attribs[0][0]
+      
+def batch_to_date(batch):
+  return batch.attribs[0][1]
+      
 def pretty_print_predictions(batch, preds):
-  key     = batch.attribs[0][0]
-  date    = batch.attribs[0][1]
+  key     = batch_to_key(batch)
+  date    = batch_to_date(batch)
   inputs  = batch.inputs[-1][0]
   targets = batch.targets[-1][0]
   outputs = preds[0]
@@ -91,11 +112,9 @@ def pretty_print_predictions(batch, preds):
   sys.stdout.flush()
   
 def print_predictions(batch, preds):
-
-  key     = batch.attribs[0][0]
-  date    = batch.attribs[0][1]
+  key     = batch_to_key(batch)
+  date    = batch_to_date(batch)
   inputs  = batch.inputs[-1][0]
-  targets = batch.targets[-1][0]
   outputs = preds[0]
   scale   = batch.seq_scales[0]
       

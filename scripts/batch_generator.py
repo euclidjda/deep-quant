@@ -141,9 +141,12 @@ class BatchGenerator(object):
             start_idx = self._indices[cursor]
             # end_idx = start_idx + self._seq_length - 1
             idx = start_idx + (step*stride)
-            date = data.iat[idx,date_idx]
-            key = data.iat[idx,key_idx]
-            x[b,:] = self._get_scaled_feature_vector(start_idx,step)
+            date = None
+            key = None
+            if idx < self._data_len:
+                date = data.iat[idx,date_idx]
+                key = data.iat[idx,key_idx]
+                x[b,:] = self._get_scaled_feature_vector(start_idx,step)
             attr.append((key,date))
         return x, attr
 
