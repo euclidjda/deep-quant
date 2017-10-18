@@ -82,8 +82,9 @@ def predict(config):
     if pretty_print is True:
       for date in sorted(perfs):
         mean = np.mean(perfs[date])
-        print("%s %.6f"%(date,mean))
-      total_mean = np.mean([x for v in perfs.values() for x in v])
+        print("%s %.6f %d"%(date,mean,len(perfs[date])))
+      total_mean = np.mean( [x for v in perfs.values() for x in v] )
+
       print("Total %.6f"%(total_mean))
 
 def batch_to_key(batch):
