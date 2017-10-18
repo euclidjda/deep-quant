@@ -41,7 +41,7 @@ class DeepMlpModel(DeepNNModel):
       """
 
       self._num_unrollings = num_unrollings = config.num_unrollings
-      self._num_inputs = num_inputs = config.num_inputs
+      self._num_inputs = num_inputs = config.num_features
       num_outputs = num_inputs
       
       total_input_size = num_unrollings * num_inputs

@@ -151,12 +151,17 @@ def _create_model(session,config,verbose=False):
       print("  model_type  = %s"% config.nn_type)
       print("  num_unroll  = %d"% config.num_unrollings)
       print("  batch_size  = %d"% config.batch_size)
-      print("  num_inputs  = %d"% config.num_inputs)
+      print("  num_features= %d"% config.num_features)
       print("  num_hidden  = %d"% config.num_hidden)
       print("  num_layers  = %d"% config.num_layers)
       print("  optimizer   = %s"% config.optimizer)
       print("  device      = %s"% config.default_gpu)
-    
-    model = ModelConstructor(config)
+
+    initer = tf.random_uniform_initializer(-config.init_scale,config.init_scale,seed=config.seed)
+      
+    with tf.variable_scope("model", reuse=None, initializer=initer), \
+        tf.device(config.default_gpu):
+
+      model = ModelConstructor(config)
 
     return model

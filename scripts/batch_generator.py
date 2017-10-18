@@ -36,8 +36,6 @@ class BatchGenerator(object):
         self._key_name = key_name = config.key_field
         self._target_name = target_name = config.target_field
         self._scaling_feature = config.scale_field
-        self._first_feature_name = first_feature_name = config.first_feature_field
-        self._num_inputs = config.num_inputs
         self._num_unrollings = num_unrollings = config.num_unrollings
         self._predict_steps = config.predict_steps
         self._stride = config.stride
@@ -45,12 +43,6 @@ class BatchGenerator(object):
         
         assert( self._stride >= 1 )
 
-        self._rnn_loss_weight = None
-        if hasattr(config,'rnn_loss_weight'):
-            self._rnn_loss_weight = config.rnn_loss_weight
-        
-        self._config = config # save this around for train_batches() method
-        
         if data is None:
             if not os.path.isfile(filename):
                 raise RuntimeError("The data file %s does not exists" % filename)
@@ -58,23 +50,33 @@ class BatchGenerator(object):
             if config.end_date is not None:
                 data = data.drop(data[data['date'] > config.end_date].index)
 
-        self._end_date = data['date'].max()
-        self._start_date = data['date'].min()
-        self._feature_start_idx = fsidx = list(data.columns.values).index(first_feature_name)
+        assert( config.feature_fields.find('-') < len(config.feature_fields)-1 )
+        assert( config.feature_fields.find('-') > 0 )
+        (first_feature_name,last_feature_name) = config.feature_fields.split('-')
+        self._feature_start_idx = list(data.columns.values).index(first_feature_name)
+        self._feature_end_idx = list(data.columns.values).index(last_feature_name)
+        assert(self._feature_start_idx>=0)
+        assert( self._feature_start_idx <= self._feature_end_idx )
+        
+        self._feature_names = list(data.columns.values)[self._feature_start_idx:self._feature_end_idx+1]
+        config.num_features = self._num_features = self._feature_end_idx - self._feature_start_idx + 1
+        assert( self._num_features == len(self._feature_names) )
+
         self._key_idx = list(data.columns.values).index(key_name)
         self._target_idx = list(data.columns.values).index(target_name)
         self._active_idx = list(data.columns.values).index(config.active_field)
         self._date_idx = list(data.columns.values).index('date')
-        self._feature_names = list(data.columns.values)[fsidx:fsidx+config.num_inputs]
-        assert(self._feature_start_idx>=0)
 
+        self._config = config # save this around for train_batches() method
+        
         # This assert ensures that no x features are the yval
         assert(list(data.columns.values).index(target_name)
                    < self._feature_start_idx)
         self._data = data
         self._data_len = len(data)
-        self._validation_set = dict()
 
+        # Setup the validation data
+        self._validation_set = dict()
         if validation is True:
             if config.seed is not None:
                 if verbose is True: print("setting random seed to "+str(config.seed))
@@ -127,28 +129,27 @@ class BatchGenerator(object):
         """
         Get next step in current batch.
         """
-        x = np.zeros(shape=(self._batch_size, self._num_inputs), dtype=np.float)
+        x = np.zeros(shape=(self._batch_size, self._num_features), dtype=np.float)
+        y = np.zeros(shape=(self._batch_size, self._num_features), dtype=np.float)
         
         attr = list()
         data = self._data
-        features_idx = self._feature_start_idx
-        num_inputs = self._num_inputs
         key_idx = self._key_idx
         date_idx = self._date_idx
         stride = self._stride
         for b in range(self._batch_size):
             cursor = self._index_cursor[b]
             start_idx = self._indices[cursor]
-            # end_idx = start_idx + self._seq_length - 1
             idx = start_idx + (step*stride)
             date = None
             key = None
-            if idx < self._data_len:
-                date = data.iat[idx,date_idx]
-                key = data.iat[idx,key_idx]
-                x[b,:] = self._get_scaled_feature_vector(start_idx,step)
+            assert( idx < self._data_len )
+            date = data.iat[idx,date_idx]
+            key = data.iat[idx,key_idx]
+            x[b,:] = self._get_feature_vector(start_idx,step)
+            y[b,:] = self._get_feature_vector(start_idx,step+1)
             attr.append((key,date))
-        return x, attr
+        return x, y, attr
 
     def _next_batch(self):
         """Generate the next batch of sequences from the data.
@@ -157,19 +158,16 @@ class BatchGenerator(object):
         """
         scales = self._get_sequence_scales( )
         
-        seq_data = list()
-        attribs = list()
-        for i in range(self._num_unrollings+self._predict_steps):
-            data, attr = self._next_step(i)
-            seq_data.append(data)
-            attribs.append(attr)
+        inputs = list()
+        targets = list()
+        attribs = None
+        for i in range(self._num_unrollings):
+            x, y, attr = self._next_step(i)
+            inputs.append(x)
+            targets.append(y)
+            attribs = attr
 
-        inputs  = self._seq_to_inputs(seq_data)
-        targets = self._seq_to_targets(seq_data)
         assert(len(inputs)==len(targets))
-        assert((len(inputs)+self._predict_steps)==len(attribs))
-
-        attribs = attribs[-self._predict_steps-1]
         
         #############################################################################
         #   Set cursor for next batch
@@ -180,19 +178,6 @@ class BatchGenerator(object):
 
         return Batch(inputs, targets, attribs, scales)
 
-    def _seq_to_inputs(self,seq_data):
-        return seq_data[0:self._num_unrollings]
-    
-    def _seq_to_targets(self,seq_data):
-        steps = self._predict_steps
-        targets = list()
-        if steps == 1:
-            targets = seq_data[1:]
-        else:
-            for i in range(1,len(seq_data)-steps+1):
-                targets.append( np.mean(seq_data[i:i+steps], axis=0) )
-        return targets
-        
     def next_batch(self):
         b = None
         if self._batch_cache[self._batch_cursor] is not None:
@@ -219,27 +204,30 @@ class BatchGenerator(object):
             scales.append(s)
         return np.array( scales )
            
-    def _get_scaled_feature_vector(self,start_idx,cur_step):
+    def _get_feature_vector(self,start_idx,cur_step):
         features_idx = self._feature_start_idx
-        num_inputs = self._num_inputs
         stride = self._stride
         data = self._data
-        s = self._get_scale(start_idx)
-        x = data.iloc[start_idx+cur_step*stride,features_idx:features_idx+num_inputs].as_matrix()
-        y = np.divide(x,s)
-        y_abs = np.absolute(y).astype(float)
-        return np.multiply(np.sign(y),np.log1p(y_abs))
-            
+        cur_idx = start_idx+cur_step*stride
+        if cur_idx < self._data_len:
+            s = self._get_scale(start_idx)
+            x = data.iloc[cur_idx,self._feature_start_idx:self._feature_end_idx+1].as_matrix()
+            y = np.divide(x,s)
+            y_abs = np.absolute(y).astype(float)
+            return np.multiply(np.sign(y),np.log1p(y_abs))
+        else:
+            return np.zeros(shape=[self._num_features])
+        
     def get_scaling_params(self,scaler_class):
         features_idx = self._feature_start_idx
-        num_inputs = self._num_inputs
+        num_features = self._num_features
         stride = self._stride
         data = self._data
         
         sample = list()
         for i in self._indices:
             step = np.random.randint(self._num_unrollings)
-            sample.append(self._get_scaled_feature_vector(i,step))
+            sample.append(self._get_feature_vector(i,step))
 
         scaler = None
         
@@ -293,6 +281,10 @@ class BatchGenerator(object):
     @property
     def num_unrollings(self):
         return self._num_unrollings
+
+    @property
+    def num_features(self):
+        return self._num_features
     
 class Batch(object):
     """

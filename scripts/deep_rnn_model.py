@@ -38,7 +38,7 @@ class DeepRnnModel(DeepNNModel):
       """
 
       self._num_unrollings = num_unrollings = config.num_unrollings
-      self._num_inputs = num_inputs = config.num_inputs
+      self._num_inputs = num_inputs = config.num_features
       num_hidden = config.num_hidden
       num_outputs = num_inputs
 
