@@ -208,8 +208,9 @@ class BatchGenerator(object):
             key = data.iat[idx,key_idx]
             x[b,0:len1] = self._get_feature_vector(start_idx,step)
             y[b,0:len1] = self._get_feature_vector(start_idx,step+1)
-            x[b,len1:len1+len2] = self._get_aux_vector(start_idx,step)
-            y[b,len1:len1+len2] = self._get_aux_vector(start_idx,step)
+            if len2 > 0:
+                x[b,len1:len1+len2] = self._get_aux_vector(start_idx,step)
+                y[b,len1:len1+len2] = self._get_aux_vector(start_idx,step)
             attr.append((key,date))
         return x, y, attr
 
@@ -256,9 +257,9 @@ class BatchGenerator(object):
         data = self._data
         sample = list()
         for i in self._indices:
-            step = np.random.randint(1,self._num_unrollings)
+            step = np.random.randint(self._num_unrollings)
             x1 = self._get_feature_vector(i,step)
-            x2 = self._get_aux_vector(i,step-1)
+            x2 = self._get_aux_vector(i,step)
             sample.append(np.append(x1,x2))
 
         scaler = None
