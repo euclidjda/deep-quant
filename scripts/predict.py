@@ -48,7 +48,7 @@ def predict(config):
 
   if hasattr(config,'pretty_print_preds') and config.pretty_print_preds is True:  
     pretty_print = True 
-    requre_targets = True
+    require_targets = True
 
   path = model_utils.get_data_path(config.data_dir,config.datafile)
 
