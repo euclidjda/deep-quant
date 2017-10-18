@@ -37,10 +37,6 @@ def print_vector(name,v):
     print("%.2f "%v[i],end=' ')
   print()
             
-def unlogmap(s,x):
-  y = s * np.multiply(np.sign(x),np.expm1(np.fabs(x)))
-  return y
-
 def predict(config):
 
   pretty_print = False
@@ -75,9 +71,9 @@ def predict(config):
       perfs[date].append(mse)
       
       if pretty_print is True:
-        pretty_print_predictions(batch, preds)
+        pretty_print_predictions(batches, batch, preds)
       else:
-        print_predictions(batch, preds)
+        print_predictions(batches, batch, preds)
 
     if pretty_print is True:
       for date in sorted(perfs):
@@ -93,35 +89,39 @@ def batch_to_key(batch):
 def batch_to_date(batch):
   return batch.attribs[0][1]
       
-def pretty_print_predictions(batch, preds):
+def pretty_print_predictions(batches, batch, preds):
   key     = batch_to_key(batch)
   date    = batch_to_date(batch)
-  inputs  = batch.inputs[-1][0]
+  inputs0 = batch.inputs[-2][0]
+  inputs1 = batch.inputs[-1][0]
   targets = batch.targets[-1][0]
   outputs = preds[0]
-  scale   = batch.seq_scales[0]
       
   np.set_printoptions(suppress=True)
   np.set_printoptions(precision=3)
       
   print("%s %s "%(date,key))
-  print_vector("input[t-2]", unlogmap(scale, batch.inputs[-2][0]) )
-  print_vector("input[t-1]", unlogmap(scale, batch.inputs[-1][0]) )
-  print_vector("output[t ]", unlogmap(scale, outputs) )
-  print_vector("target[t ]", unlogmap(scale, targets) )
+  #print_vector("input[t-2]", inputs0 )
+  #print_vector("input[t-1]", inputs1 )
+  #print_vector("output[t ]", outputs )
+  #print_vector("target[t ]", targets )
+
+  print_vector("input[t-2]", batches.get_raw_features(batch,0,inputs0) )
+  print_vector("input[t-1]", batches.get_raw_features(batch,0,inputs1) )
+  print_vector("output[t ]", batches.get_raw_features(batch,0,outputs) )
+  print_vector("target[t ]", batches.get_raw_features(batch,0,targets) )
   print("--------------------------------")
   sys.stdout.flush()
   
-def print_predictions(batch, preds):
+def print_predictions(batches, batch, preds):
   key     = batch_to_key(batch)
   date    = batch_to_date(batch)
   inputs  = batch.inputs[-1][0]
   outputs = preds[0]
-  scale   = batch.seq_scales[0]
       
   np.set_printoptions(suppress=True)
   np.set_printoptions(precision=3)
-  out = unlogmap(scale, outputs)
+  out = batches.get_raw_features(batch,0,outputs)
   out_str = ' '.join(["%.3f"%out[i] for i in range(len(out))])
 
   print("%s %s %s"%(date,key,out_str))

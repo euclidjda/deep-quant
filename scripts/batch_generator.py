@@ -19,7 +19,7 @@ import pandas as pd
 import random
 import sklearn.preprocessing
 
-_MIN_SEQ_SCALE = 1.0
+_MIN_SEQ_NORM = 1.0
 
 class BatchGenerator(object):
     """
@@ -33,11 +33,8 @@ class BatchGenerator(object):
         """
         Init a BatchGenerator
         """
-        self._key_name = key_name = config.key_field
-        self._target_name = target_name = config.target_field
         self._scaling_feature = config.scale_field
         self._num_unrollings = num_unrollings = config.num_unrollings
-        self._predict_steps = config.predict_steps
         self._stride = config.stride
         self._batch_size = batch_size = config.batch_size
         
@@ -46,35 +43,19 @@ class BatchGenerator(object):
         if data is None:
             if not os.path.isfile(filename):
                 raise RuntimeError("The data file %s does not exists" % filename)
-            data = pd.read_csv(filename,sep=' ', dtype={ self._key_name : str } )
+            data = pd.read_csv(filename,sep=' ', dtype={ config.key_field : str } )
             if config.end_date is not None:
                 data = data.drop(data[data['date'] > config.end_date].index)
 
-        assert( config.feature_fields.find('-') < len(config.feature_fields)-1 )
-        assert( config.feature_fields.find('-') > 0 )
-        (first_feature_name,last_feature_name) = config.feature_fields.split('-')
-        self._feature_start_idx = list(data.columns.values).index(first_feature_name)
-        self._feature_end_idx = list(data.columns.values).index(last_feature_name)
-        assert(self._feature_start_idx>=0)
-        assert( self._feature_start_idx <= self._feature_end_idx )
-        
-        self._feature_names = list(data.columns.values)[self._feature_start_idx:self._feature_end_idx+1]
-        config.num_features = self._num_features = self._feature_end_idx - self._feature_start_idx + 1
-        assert( self._num_features == len(self._feature_names) )
-
-        self._key_idx = list(data.columns.values).index(key_name)
-        self._target_idx = list(data.columns.values).index(target_name)
-        self._active_idx = list(data.columns.values).index(config.active_field)
-        self._date_idx = list(data.columns.values).index('date')
-
-        self._config = config # save this around for train_batches() method
-        
-        # This assert ensures that no x features are the yval
-        assert(list(data.columns.values).index(target_name)
-                   < self._feature_start_idx)
         self._data = data
         self._data_len = len(data)
 
+        self._init_column_indices(config)
+        #self._init_validation_set(config)
+        #self._init_batch_cursor(config)
+
+        self._config = config # save this around for train_batches() method
+        
         # Setup the validation data
         self._validation_set = dict()
         if validation is True:
@@ -82,7 +63,7 @@ class BatchGenerator(object):
                 if verbose is True: print("setting random seed to "+str(config.seed))
                 random.seed( config.seed )
             # get number of keys
-            keys = list(set(data[key_name]))
+            keys = list(set(data[config.key_field]))
             keys.sort()
             sample_size = int( config.validation_size * len(keys) )
             sample = random.sample(keys, sample_size)
@@ -93,7 +74,7 @@ class BatchGenerator(object):
 
         # Setup indexes into the sequences
         min_seq_length = self._stride * (num_unrollings-1) + 1
-        steps = self._predict_steps*self._stride
+        steps = self._stride
         self._indices = list()
         last_key = ""
         cur_length = 1
@@ -124,7 +105,84 @@ class BatchGenerator(object):
         self._num_batches = num_batches
         self._batch_cache = [None]*num_batches
         self._batch_cursor = 0
+
+    def _get_indices_from_names(self,names):
+        data = self._data
+        assert(names.find('-') < len(names)-1 )
+        assert(names.find('-') > 0 )
+        (first,last) = names.split('-')
+        start_idx = list(data.columns.values).index(first)
+        end_idx = list(data.columns.values).index(last)
+        assert(start_idx>=0)
+        assert(start_idx <= end_idx )
+        return [i for i in range(start_idx,end_idx+1)]
         
+    def _init_column_indices(self,config):
+        data = self._data
+
+        assert( config.feature_fields is not None )
+        assert( len(config.feature_fields) > 0 )
+
+        self._feature_indices = self._get_indices_from_names( config.feature_fields )
+        
+        self._feature_names = list(data.columns.values[self._feature_indices])
+
+        self._aux_indices = list()
+        if config.aux_input_fields is not None:
+            self._aux_indices =  self._get_indices_from_names( config.aux_input_fields )
+            self._feature_names.extend( list(data.columns.values[self._aux_indices]) )
+            
+        config.num_features = self._num_features = len(self._feature_names)
+        
+        self._key_idx = list(data.columns.values).index(config.key_field)
+        self._target_idx = list(data.columns.values).index(config.target_field)
+        self._active_idx = list(data.columns.values).index(config.active_field)
+        self._date_idx = list(data.columns.values).index('date')
+
+
+    def _init_validation_set(self, config):
+        pass
+    
+    def _init_batch_cursor(self, config):
+        pass
+
+    def _get_normalizer(self,start_idx):
+        idx = start_idx + (self._num_unrollings-1)*self._stride
+        val = max(self._data.iloc[idx][self._scaling_feature],_MIN_SEQ_NORM)
+        return val
+        
+    def _get_batch_normalizers(self):
+        normalizers = list()
+        for b in range(self._batch_size):
+            cursor = self._index_cursor[b]
+            start_idx = self._indices[cursor]
+            s = self._get_normalizer(start_idx)
+            normalizers.append(s)
+        return np.array( normalizers )
+           
+    def _get_feature_vector(self,start_idx,cur_step):
+        stride = self._stride
+        data = self._data
+        cur_idx = start_idx+cur_step*stride
+        if cur_idx < self._data_len:
+            s = self._get_normalizer(start_idx)
+            x = data.iloc[cur_idx,self._feature_indices].as_matrix()
+            y = np.divide(x,s)
+            y_abs = np.absolute(y).astype(float)
+            return np.multiply(np.sign(y),np.log1p(y_abs))
+        else:
+            return np.zeros(shape=[len(self._feature_indices)])
+
+    def _get_aux_vector(self,start_idx,cur_step):
+        stride = self._stride
+        data = self._data
+        cur_idx = start_idx+cur_step*stride
+        if cur_idx < self._data_len:
+            x = data.iloc[cur_idx,self._aux_indices].as_matrix()
+            return x
+        else:
+            return np.zeros(shape=[len(self._aux_indices)])
+                
     def _next_step(self, step):
         """
         Get next step in current batch.
@@ -137,6 +195,8 @@ class BatchGenerator(object):
         key_idx = self._key_idx
         date_idx = self._date_idx
         stride = self._stride
+        len1 = len(self._feature_indices)
+        len2 = len(self._aux_indices)
         for b in range(self._batch_size):
             cursor = self._index_cursor[b]
             start_idx = self._indices[cursor]
@@ -146,8 +206,10 @@ class BatchGenerator(object):
             assert( idx < self._data_len )
             date = data.iat[idx,date_idx]
             key = data.iat[idx,key_idx]
-            x[b,:] = self._get_feature_vector(start_idx,step)
-            y[b,:] = self._get_feature_vector(start_idx,step+1)
+            x[b,0:len1] = self._get_feature_vector(start_idx,step)
+            y[b,0:len1] = self._get_feature_vector(start_idx,step+1)
+            x[b,len1:len1+len2] = self._get_aux_vector(start_idx,step)
+            y[b,len1:len1+len2] = self._get_aux_vector(start_idx,step)
             attr.append((key,date))
         return x, y, attr
 
@@ -156,7 +218,7 @@ class BatchGenerator(object):
         Returns:
           A batch of type Batch (see class def below)
         """
-        scales = self._get_sequence_scales( )
+        normalizers = self._get_batch_normalizers( )
         
         inputs = list()
         targets = list()
@@ -176,7 +238,7 @@ class BatchGenerator(object):
         num_idxs = len(self._indices)
         self._index_cursor = [ (self._index_cursor[b]+1)%num_idxs for b in range(batch_size) ]
 
-        return Batch(inputs, targets, attribs, scales)
+        return Batch(inputs, targets, attribs, normalizers)
 
     def next_batch(self):
         b = None
@@ -189,48 +251,17 @@ class BatchGenerator(object):
 
         return b
 
-    def _get_scale(self,start_idx):
-        scale_idx = start_idx + (self._num_unrollings-1)*self._stride
-        s = max(self._data.iloc[scale_idx][self._scaling_feature],_MIN_SEQ_SCALE)
-        return s
-        
-    def _get_sequence_scales(self):
-        scales = list()
-        
-        for b in range(self._batch_size):
-            cursor = self._index_cursor[b]
-            start_idx = self._indices[cursor]
-            s = self._get_scale(start_idx)
-            scales.append(s)
-        return np.array( scales )
-           
-    def _get_feature_vector(self,start_idx,cur_step):
-        features_idx = self._feature_start_idx
-        stride = self._stride
-        data = self._data
-        cur_idx = start_idx+cur_step*stride
-        if cur_idx < self._data_len:
-            s = self._get_scale(start_idx)
-            x = data.iloc[cur_idx,self._feature_start_idx:self._feature_end_idx+1].as_matrix()
-            y = np.divide(x,s)
-            y_abs = np.absolute(y).astype(float)
-            return np.multiply(np.sign(y),np.log1p(y_abs))
-        else:
-            return np.zeros(shape=[self._num_features])
-        
     def get_scaling_params(self,scaler_class):
-        features_idx = self._feature_start_idx
-        num_features = self._num_features
         stride = self._stride
         data = self._data
-        
         sample = list()
         for i in self._indices:
-            step = np.random.randint(self._num_unrollings)
-            sample.append(self._get_feature_vector(i,step))
+            step = np.random.randint(1,self._num_unrollings)
+            x1 = self._get_feature_vector(i,step)
+            x2 = self._get_aux_vector(i,step-1)
+            sample.append(np.append(x1,x2))
 
         scaler = None
-        
         if hasattr(sklearn.preprocessing,scaler_class):
             scaler = getattr(sklearn.preprocessing,scaler_class)()
         else:
@@ -242,17 +273,32 @@ class BatchGenerator(object):
         params['scale'] = scaler.scale_
 
         return params
-            
+
+
+    def normalize_features():
+        pass
+    
+    def get_raw_features(self,batch,idx,vec):
+        len1 = len(self._feature_indices)
+        len2 = len(self._aux_indices)
+        n = batch.normalizers[idx]
+        x = vec[0:len1]
+        y = n * np.multiply(np.sign(x),np.expm1(np.fabs(x)))
+        if len2 > 0:
+            assert(len(vec)==len1+len2)
+            y = np.append( y, vec[len1:len1+len2] )
+        return y
+        
     def train_batches(self):
         valid_keys = list(self._validation_set.keys())
-        indexes = self._data[self._key_name].isin(valid_keys)
+        indexes = self._data[self._config.key_field].isin(valid_keys)
         train_data = self._data[~indexes]
         return BatchGenerator("", self._config, validation=False,
                                   data=train_data)
 
     def valid_batches(self):
         valid_keys = list(self._validation_set.keys())
-        indexes = self._data[self._key_name].isin(valid_keys)
+        indexes = self._data[self._config.key_field].isin(valid_keys)
         valid_data = self._data[indexes]
         return BatchGenerator("", self._config, validation=False,
                                   data=valid_data)
@@ -289,12 +335,11 @@ class BatchGenerator(object):
 class Batch(object):
     """
     """
-
-    def __init__(self, inputs, targets, attribs, seq_scales):
+    def __init__(self, inputs, targets, attribs, normalizers):
         self._inputs = inputs
         self._targets = targets
         self._attribs = attribs
-        self._seq_scales = seq_scales
+        self._normalizers = normalizers
 
     @property
     def inputs(self):
@@ -309,6 +354,6 @@ class Batch(object):
         return self._attribs
 
     @property
-    def seq_scales(self):
-        return self._seq_scales
+    def normalizers(self):
+        return self._normalizers
     

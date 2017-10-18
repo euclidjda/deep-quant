@@ -49,7 +49,7 @@ def get_configs():
   configs.DEFINE_string("scale_field", 'mrkcap',"Feature to scale inputs by")
   configs.DEFINE_string("first_feature_field", '',"First feature")
   configs.DEFINE_string("feature_fields", '',"shared input and target field names")
-  configs.DEFINE_string("aux_input_fields", '',"non-target, input only fields")
+  configs.DEFINE_string("aux_input_fields", None,"non-target, input only fields")
   configs.DEFINE_string("data_dir",'',"The data directory")
   configs.DEFINE_string("model_dir",'',"Model directory")
   configs.DEFINE_integer("num_features", -1,"")

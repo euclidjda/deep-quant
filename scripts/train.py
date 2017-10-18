@@ -113,7 +113,9 @@ def train_model(config):
     if config.data_scaler is not None:
       scaling_params = train_data.get_scaling_params('RobustScaler')
       model.set_scaling_params(session,**scaling_params)
-    
+      # print(scaling_params['center'])
+      # print(scaling_params['scale'])
+      
     if config.early_stop is not None:
       print("Training will early stop without "
         "improvement after %d epochs."%config.early_stop)
