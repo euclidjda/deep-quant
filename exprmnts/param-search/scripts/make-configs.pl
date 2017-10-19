@@ -37,19 +37,22 @@ for my $model_type ('DeepMlpModel','DeepRnnModel') {
 
 				    for my $max_norm (0,1,5,10,50,100) {
 
-					my $name = sprintf("%s-%s-l%d-h%04d-r%04d-k%04d-i%04d-m%04d-%s%s",
-							   substr(lc($model_type),4,3),
-							   substr(lc($scaler),0,4),
-							   $num_layers,
-							   $num_hidden,
-							   int($rnn_lambda*10),
-							   int($keep_prob*10),
-							   int($init_scale*100),
-							   $max_norm,
-							   lc(substr($input_dropout,0,1)),
-							   lc(substr($hidden_dropout,0,1)));
+					for my $optimizer ('AdadeltaOptimizer','AdagradOptimizer','GradientDescentOptimizer') {
+
+					    my $name = sprintf("%s-%s-%s-l%d-h%04d-r%02d-k%02d-i%02d-m%03d-%s%s",
+							       substr(lc($model_type),4,3),
+							       substr(lc($optimizer),0,4),
+							       substr(lc($scaler),0,4),
+							       $num_layers,
+							       $num_hidden,
+							       int($rnn_lambda*10),
+							       int($keep_prob*10),
+							       int($init_scale*100),
+							       $max_norm,
+							       lc(substr($input_dropout,0,1)),
+							       lc(substr($hidden_dropout,0,1)));
 					
-					push(@names,$name);
+					    push(@names,$name);
 
 my $CONFIG_STR =<<"CONFIG_STR";
 --default_gpu		/gpu:0
@@ -63,7 +66,7 @@ my $CONFIG_STR =<<"CONFIG_STR";
 --data_dir		datasets
 --model_dir		$CHKPTS_DIR/chkpts-$name
 --nn_type		$model_type
---optimizer	        AdagradOptimizer
+--optimizer	        AdadeltaOptimizer
 --data_scaler           $scaler
 --passes		0.2
 --stride                12
@@ -84,6 +87,7 @@ my $CONFIG_STR =<<"CONFIG_STR";
 --input_dropout         $input_dropout
 --hidden_dropout        $hidden_dropout
 --rnn_lambda            $rnn_lambda
+--cache_id              1024
 CONFIG_STR
 
 my $fh = FileHandle->new("> $CONFIG_DIR/$name.conf");
@@ -91,7 +95,8 @@ my $fh = FileHandle->new("> $CONFIG_DIR/$name.conf");
 					
 					print $fh $CONFIG_STR;
 					close($fh);
-					
+
+					}					
 				    }
 				}
 			    }
@@ -102,7 +107,7 @@ my $fh = FileHandle->new("> $CONFIG_DIR/$name.conf");
 	    }
 	}
     }
-
+    
 }
 
 @names = shuffle(@names);
