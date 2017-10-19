@@ -125,15 +125,20 @@ def get_model(session, config, verbose=False):
       model = _create_model(session, config, verbose)
 
       ckpt = tf.train.get_checkpoint_state(config.model_dir)
+      start_time = time.time()
       if ckpt and gfile.Exists(ckpt.model_checkpoint_path+".index"):
         if verbose:
-          print("Reading model parameters from %s" % ckpt.model_checkpoint_path)
+          print("Reading model parameters from %s ..."%ckpt.model_checkpoint_path, end=' ')
         tf.train.Saver(max_to_keep=200).restore(session,
                                                   ckpt.model_checkpoint_path)
+        if verbose:
+          print("done in %.2f seconds."%(time.time() - start_time))
       else:
         if verbose:
-          print("Created model with fresh parameters.")
+          print("Creating model with fresh parameters ...", end=' ')
         session.run(tf.global_variables_initializer())
+        if verbose:
+          print("done in %.2f seconds."%(time.time() - start_time))
 
     return model
 

@@ -113,7 +113,7 @@ def train_model(config):
 
     if config.data_scaler is not None:
       start_time = time.time()
-      print("Calculating scaling paramters ...", end='')
+      print("Calculating scaling parameters ...", end=' '); sys.stdout.flush()
       scaling_params = train_data.get_scaling_params('RobustScaler')
       model.set_scaling_params(session,**scaling_params)
       print("done in %.2f seconds."%(time.time() - start_time))

@@ -268,7 +268,8 @@ class BatchGenerator(object):
         stride = self._stride
         data = self._data
         sample = list()
-        for i in self._indices:
+        indices = random.sample(self._indices,min(len(self._indices),5000))
+        for i in indices:
             step = np.random.randint(self._num_unrollings)
             x1 = self._get_feature_vector(i,step)
             x2 = self._get_aux_vector(i,step)
