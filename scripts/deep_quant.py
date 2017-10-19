@@ -80,6 +80,7 @@ def get_configs():
   configs.DEFINE_integer("max_epoch",0,"Stop after max_epochs")
   configs.DEFINE_integer("early_stop",None,"Early stop parameter")
   configs.DEFINE_integer("seed",None,"Seed for deterministic training")
+  configs.DEFINE_integer("cache_id",None,"A unique experiment key for traking a cahce")
 
   c = configs.ConfigValues()
 

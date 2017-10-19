@@ -14,9 +14,14 @@
 # ==============================================================================
 
 import os
+import time
+import sys
+import random
+import pickle
+import hashlib
+
 import numpy as np
 import pandas as pd
-import random
 import sklearn.preprocessing
 
 _MIN_SEQ_NORM = 1.0
@@ -182,7 +187,7 @@ class BatchGenerator(object):
             return x
         else:
             return np.zeros(shape=[len(self._aux_indices)])
-                
+
     def _next_step(self, step):
         """
         Get next step in current batch.
@@ -243,11 +248,18 @@ class BatchGenerator(object):
 
     def next_batch(self):
         b = None
+
+        # if batch_cache is empty, load it manually and same or from file
+        # if batch_cache[0] is None:
+        #   self._load_cache()
+        # b = self._batch_cache[self._batch_cursor]
+        
         if self._batch_cache[self._batch_cursor] is not None:
             b = self._batch_cache[self._batch_cursor]
         else:
             b = self._next_batch()
             self._batch_cache[self._batch_cursor] = b
+
         self._batch_cursor = (self._batch_cursor+1) % (self._num_batches)
 
         return b
@@ -278,7 +290,7 @@ class BatchGenerator(object):
 
     def normalize_features():
         pass
-    
+
     def get_raw_features(self,batch,idx,vec):
         len1 = len(self._feature_indices)
         len2 = len(self._aux_indices)
@@ -289,7 +301,44 @@ class BatchGenerator(object):
             assert(len(vec)==len1+len2)
             y = np.append( y, vec[len1:len1+len2] )
         return y
+
+    def _load_cache(self):
+        print("Caching batches ...",end=' '); sys.stdout.flush()
+        self.rewind()
+        for _ in range(self.num_batches):
+            b = self.next_batch()
+        print("done.")
+            
+    def _get_cache_filename(self):
+        key_list = list(set(self._data[self._config.key_field]))
+        key_list.sort()
+        keys = ''.join(key_list)
+        uid = "%d-%d-%d-%s"%(self._num_unrollings,self._stride,self._batch_size,keys)
+        hashed = hashlib.md5(uid.encode()).hexdigest()
+        filename = "bcache-%s.pkl"%hashed
+        # print(filename)
+        return filename
         
+    def cache(self):
+        if self._batch_cache[-1] is not None:
+            return
+        # cache is empty
+        if self._config.cache_id is None:
+            self._load_cache()
+        else:
+            filename = self._get_cache_filename()
+            dirname = './_bcache/'
+            filename = dirname+filename
+            if os.path.isdir(dirname) is not True:
+                os.makedirs(dirname)
+            if os.path.isfile(filename):
+                print("Reading cache from %s "%filename) 
+                self._batch_cache = pickle.load( open( filename, "rb" ) )
+            else:
+                self._load_cache()
+                print("Writing cache to %s "%filename)
+                pickle.dump( self._batch_cache, open( filename, "wb" ) )
+            
     def train_batches(self):
         valid_keys = list(self._validation_set.keys())
         indexes = self._data[self._config.key_field].isin(valid_keys)
