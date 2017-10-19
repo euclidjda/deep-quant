@@ -18,15 +18,15 @@ THE TODO LIST:
 
 - (DONE) In predict.py, make predictions even when there is no target data available
 
+- (DONE) Create file cache (pickle) for batch_generator
+
+- (DONE) Re-working scaling/unscaling implementation so it is more intuitive
+
 - In predict.py, output predictions timesteps less than t. I.e., t-1, t-2, 0
-
-- Re-working scaling/unscaling implementation so it is more intuitive
-
-- Set passes to 0.2 for next set of trainings
 
 - max-norm regularization for RNN and MLP (use tf.clip_by_norm)
 
-- Create file cache for batch_generator
+
 
 - Trainable ReLu units in MLP
 
