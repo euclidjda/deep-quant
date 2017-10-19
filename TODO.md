@@ -20,13 +20,13 @@ THE TODO LIST:
 
 - (DONE) Create file cache (pickle) for batch_generator
 
+- (DONE) Add auxilary input features -- ones that are not predicted/tagets (e.g., momentum)
+
 - (DONE) Re-working scaling/unscaling implementation so it is more intuitive
 
 - In predict.py, output predictions timesteps less than t. I.e., t-1, t-2, 0
 
 - max-norm regularization for RNN and MLP (use tf.clip_by_norm)
-
-
 
 - Trainable ReLu units in MLP
 

@@ -92,7 +92,6 @@ def train_model(config):
   train_path = model_utils.get_data_path(config.data_dir,config.datafile)
 
   print("Loading training data ...")
-
   batches = BatchGenerator(train_path,config)
 
   train_data = batches.train_batches()
@@ -110,12 +109,14 @@ def train_model(config):
       tf.set_random_seed(config.seed)
 
     print("Constructing model ...")
-
     model = model_utils.get_model(session, config, verbose=True)
 
     if config.data_scaler is not None:
+      start_time = time.time()
+      print("Calculating scaling paramters ...", end='')
       scaling_params = train_data.get_scaling_params('RobustScaler')
       model.set_scaling_params(session,**scaling_params)
+      print("done in %.2f seconds."%(time.time() - start_time))
       # print(scaling_params['center'])
       # print(scaling_params['scale'])
       
