@@ -303,11 +303,12 @@ class BatchGenerator(object):
         return y
 
     def _load_cache(self):
+        start_time = time.time()
         print("Caching batches ...",end=' '); sys.stdout.flush()
         self.rewind()
         for _ in range(self.num_batches):
             b = self.next_batch()
-        print("done.")
+        print("done in %.0f seconds."%(time.time() - start_time))
             
     def _get_cache_filename(self):
         key_list = list(set(self._data[self._config.key_field]))
@@ -326,19 +327,22 @@ class BatchGenerator(object):
         if self._config.cache_id is None:
             self._load_cache()
         else:
+            start_time = time.time()
             filename = self._get_cache_filename()
             dirname = './_bcache/'
             filename = dirname+filename
             if os.path.isdir(dirname) is not True:
                 os.makedirs(dirname)
             if os.path.isfile(filename):
-                print("Reading cache from %s "%filename) 
+                print("Reading cache from %s ..."%filename, end=' ') 
                 self._batch_cache = pickle.load( open( filename, "rb" ) )
+
             else:
                 self._load_cache()
-                print("Writing cache to %s "%filename)
+                print("Writing cache to %s ..."%filename, end=' ')
                 pickle.dump( self._batch_cache, open( filename, "wb" ) )
-            
+            print("done in %.0f seconds."%(time.time() - start_time))            
+
     def train_batches(self):
         valid_keys = list(self._validation_set.keys())
         indexes = self._data[self._config.key_field].isin(valid_keys)
