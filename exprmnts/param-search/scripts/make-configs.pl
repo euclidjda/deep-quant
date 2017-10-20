@@ -14,31 +14,35 @@ for my $model_type ('DeepMlpModel','DeepRnnModel') {
 
     for my $scaler ('StandardScaler','RobustScaler') {
 
-	for my $input_dropout ('True','False') {
+	for my $optimizer ('AdadeltaOptimizer','AdagradOptimizer','GradientDescentOptimizer') {
 
-	    for my $hidden_dropout ('True','False') {
+	    for my $input_dropout ('True','False') {
 
-		my @lambdas = $model_type eq 'DeepRnnModel' ? (0.5,0.7,0.9,1.0) : (1.0);
+		for my $hidden_dropout ('True','False') {
 
-		for my $rnn_lambda (@lambdas) {
+		    my @lambdas = $model_type eq 'DeepRnnModel' ? (0.5,0.7,0.9,1.0) : (1.0);
 
-		    for my $num_layers (1,2,4) {
+		    for my $rnn_lambda (@lambdas) {
 
-			for my $num_hidden (128,512,1024) {
+			for my $num_layers (1,2,4) {
 
-			    my @keep_prob_list = (1.0);
-			    
-			    push @keep_prob_list, (0.5,0.75)
-				if (($input_dropout eq 'True') || ($hidden_dropout eq 'True'));
+			    my @hidden_list = (512,1024);
+			    @hidden_list = (128,512) if $num_layers == 2;
+			    @hidden_list = (64,128)  if $num_layers == 4;
 
-			    for my $keep_prob (@keep_prob_list) {
-
-				for my $init_scale (0.01,0.1) {
-
-				    for my $max_norm (0,1,5,10,50,100) {
-
-					for my $optimizer ('AdadeltaOptimizer','AdagradOptimizer','GradientDescentOptimizer') {
-
+			    for my $num_hidden (@hidden_list) {
+				
+				my @keep_prob_list = (1.0);
+				
+				@keep_prob_list = (0.5,0.75)
+				    if (($input_dropout eq 'True') || ($hidden_dropout eq 'True'));
+				
+				for my $keep_prob (@keep_prob_list) {
+				    
+				    for my $init_scale (0.01,0.1) {
+					
+					for my $max_norm (0,1,5,10,50,100) {
+					    
 					    my $name = sprintf("%s-%s-%s-l%d-h%04d-r%02d-k%02d-i%02d-m%03d-%s%s",
 							       substr(lc($model_type),4,3),
 							       substr(lc($optimizer),0,4),
@@ -75,7 +79,7 @@ my $CONFIG_STR =<<"CONFIG_STR";
 --validation_size	0.30
 --seed                  521
 --max_epoch		10000
---early_stop		50
+--early_stop		25
 --keep_prob		$keep_prob
 --learning_rate         0.6
 --lr_decay		0.95

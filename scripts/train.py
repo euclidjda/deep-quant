@@ -65,7 +65,7 @@ def run_epoch(session, model, train_data, valid_data,
     train_mse += model.train_step(session, batch, keep_prob=keep_prob)
     if verbose: dot_count = pretty_progress(step,prog_int,dot_count)
 
-  exit()
+  #exit()
   # Look at train out
   #print()
   #batch = train_data.next_batch()
@@ -118,7 +118,7 @@ def train_model(config):
 
     if config.data_scaler is not None:
       start_time = time.time()
-      print("Calculating scaling paramters ...", end=' ')
+      print("Calculating scaling parameters ...", end=' '); sys.stdout.flush()
       scaling_params = train_data.get_scaling_params('RobustScaler')
       model.set_scaling_params(session,**scaling_params)
       print("done in %.2f seconds."%(time.time() - start_time))

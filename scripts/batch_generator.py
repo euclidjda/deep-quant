@@ -268,9 +268,8 @@ class BatchGenerator(object):
         return b
 
     def get_scaling_params(self,scaler_class):
-        
+
         if self._scaling_params is None:
-            print(); print("Random number in scaling: %d"%(random.randrange(1000)))
             stride = self._stride
             data = self._data
             sample = list()
@@ -285,7 +284,7 @@ class BatchGenerator(object):
                 scaler = getattr(sklearn.preprocessing,scaler_class)()
             else:
                 raise RuntimeError("Unknown scaler = %s"%scaler_class)
-
+            
             scaler.fit(sample)
 
             params = dict()
@@ -370,8 +369,12 @@ class BatchGenerator(object):
         # We cannot shuffle until the entire dataset is cached
         if (self._batch_cache[-1] is not None):
             random.shuffle(self._batch_cache)
-            (key,date) = self._batch_cache[0].attribs[0]
-            print(); print("First Key %s %s"%(key,date))
+            #print()
+            #for j in range(self._num_batches):
+            #    for i in range(self._batch_size):
+            #        (key,date) = self._batch_cache[j].attribs[i]
+            #        print("First Key %s %s"%(key,date))
+            #    print("----")
             self._batch_cusror = 0
          
     def rewind(self):
