@@ -42,6 +42,7 @@ class BatchGenerator(object):
         self._num_unrollings = num_unrollings = config.num_unrollings
         self._stride = config.stride
         self._batch_size = batch_size = config.batch_size
+        self._scaling_params = None
         
         assert( self._stride >= 1 )
 
@@ -67,6 +68,7 @@ class BatchGenerator(object):
             if config.seed is not None:
                 if verbose is True: print("setting random seed to "+str(config.seed))
                 random.seed( config.seed )
+                np.random.seed( config.seed )
             # get number of keys
             keys = list(set(data[config.key_field]))
             keys.sort()
@@ -137,7 +139,9 @@ class BatchGenerator(object):
             self._aux_indices =  self._get_indices_from_names( config.aux_input_fields )
             self._feature_names.extend( list(data.columns.values[self._aux_indices]) )
             
-        config.num_features = self._num_features = len(self._feature_names)
+        config.num_inputs = self._num_inputs = len(self._feature_names)
+        config.num_outputs = self._num_outputs = self._num_inputs - len( self._aux_indices )
+        assert( 0 <= self._num_outputs <= self._num_inputs )
         
         self._key_idx = list(data.columns.values).index(config.key_field)
         self._target_idx = list(data.columns.values).index(config.target_field)
@@ -192,8 +196,8 @@ class BatchGenerator(object):
         """
         Get next step in current batch.
         """
-        x = np.zeros(shape=(self._batch_size, self._num_features), dtype=np.float)
-        y = np.zeros(shape=(self._batch_size, self._num_features), dtype=np.float)
+        x = np.zeros(shape=(self._batch_size, self._num_inputs), dtype=np.float)
+        y = np.zeros(shape=(self._batch_size, self._num_outputs), dtype=np.float)
         
         attr = list()
         data = self._data
@@ -215,7 +219,6 @@ class BatchGenerator(object):
             y[b,0:len1] = self._get_feature_vector(start_idx,step+1)
             if len2 > 0:
                 x[b,len1:len1+len2] = self._get_aux_vector(start_idx,step)
-                y[b,len1:len1+len2] = self._get_aux_vector(start_idx,step)
             attr.append((key,date))
         return x, y, attr
 
@@ -265,27 +268,32 @@ class BatchGenerator(object):
         return b
 
     def get_scaling_params(self,scaler_class):
-        stride = self._stride
-        data = self._data
-        sample = list()
-        for i in self._indices:
-            step = np.random.randint(self._num_unrollings)
-            x1 = self._get_feature_vector(i,step)
-            x2 = self._get_aux_vector(i,step)
-            sample.append(np.append(x1,x2))
+        
+        if self._scaling_params is None:
+            print(); print("Random number in scaling: %d"%(random.randrange(1000)))
+            stride = self._stride
+            data = self._data
+            sample = list()
+            for i in self._indices:
+                step = random.randrange(self._num_unrollings)
+                x1 = self._get_feature_vector(i,step)
+                x2 = self._get_aux_vector(i,step)
+                sample.append(np.append(x1,x2))
 
-        scaler = None
-        if hasattr(sklearn.preprocessing,scaler_class):
-            scaler = getattr(sklearn.preprocessing,scaler_class)()
-        else:
-            raise RuntimeError("Unknown scaler = %s"%scaler_class)
+            scaler = None
+            if hasattr(sklearn.preprocessing,scaler_class):
+                scaler = getattr(sklearn.preprocessing,scaler_class)()
+            else:
+                raise RuntimeError("Unknown scaler = %s"%scaler_class)
 
-        scaler.fit(sample)
-        params = dict()
-        params['center'] = scaler.center_ if hasattr(scaler,'center_') else scaler.mean_
-        params['scale'] = scaler.scale_
+            scaler.fit(sample)
 
-        return params
+            params = dict()
+            params['center'] = scaler.center_ if hasattr(scaler,'center_') else scaler.mean_
+            params['scale'] = scaler.scale_
+            self._scaling_params = params
+        
+        return self._scaling_params
 
 
     def normalize_features():
@@ -297,7 +305,7 @@ class BatchGenerator(object):
         n = batch.normalizers[idx]
         x = vec[0:len1]
         y = n * np.multiply(np.sign(x),np.expm1(np.fabs(x)))
-        if len2 > 0:
+        if len2 > 0 and len(vec) > len1:
             assert(len(vec)==len1+len2)
             y = np.append( y, vec[len1:len1+len2] )
         return y
@@ -362,6 +370,8 @@ class BatchGenerator(object):
         # We cannot shuffle until the entire dataset is cached
         if (self._batch_cache[-1] is not None):
             random.shuffle(self._batch_cache)
+            (key,date) = self._batch_cache[0].attribs[0]
+            print(); print("First Key %s %s"%(key,date))
             self._batch_cusror = 0
          
     def rewind(self):
@@ -384,8 +394,12 @@ class BatchGenerator(object):
         return self._num_unrollings
 
     @property
-    def num_features(self):
-        return self._num_features
+    def num_inputs(self):
+        return self._num_inputs
+
+    @property
+    def num_outputs(self):
+        return self._num_outputs
     
 class Batch(object):
     """

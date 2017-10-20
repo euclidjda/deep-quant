@@ -39,8 +39,8 @@ class NaiveModel(DeepNNModel):
       """
 
       self._num_unrollings = num_unrollings = config.num_unrollings
-      self._num_inputs = num_inputs = config.num_features
-      num_outputs = num_inputs
+      self._num_inputs = num_inputs = config.num_inputs
+      self._num_outputs = num_outputs = config.num_outputs
       
       total_input_size = num_unrollings * num_inputs
 
@@ -61,13 +61,14 @@ class NaiveModel(DeepNNModel):
         self._targets.append( tf.placeholder(tf.float32,
                                               shape=[None,num_outputs]) )
 
-      outputs = self._inputs[-1]        
+      outputs = self._inputs[-1]
+      outputs = outputs[:,:num_outputs]
       targets = self._targets[-1]
       
       # center and scale
       if config.data_scaler is not None:
-        targets = tf.divide(targets - self._center, self._scale)
-        outputs = tf.divide(outputs - self._center, self._scale)
+        targets = self._center_and_scale( targets )
+        outputs = self._center_and_scale( outputs )
 
       self._o = outputs
       self._t = targets
@@ -75,7 +76,7 @@ class NaiveModel(DeepNNModel):
       self._mse = tf.losses.mean_squared_error(targets, outputs)
 
       if config.data_scaler is not None:
-        self._predictions = tf.multiply(outputs,self._scale) + self._center
+        self._predictions = self._reverse_center_and_scale( outputs )
       else:
         self._predictions = outputs
 

@@ -39,8 +39,8 @@ class ClvyntModel(DeepNNModel):
       """
 
       self._num_unrollings = num_unrollings = config.num_unrollings
-      self._num_inputs = num_inputs =config.num_features
-      num_outputs = num_inputs
+      self._num_inputs = num_inputs =config.num_inputs
+      self._num_outputs = num_outputs = config.num_outputs
       
       total_input_size = num_unrollings * num_inputs
 
@@ -65,7 +65,7 @@ class ClvyntModel(DeepNNModel):
       
       # center and scale
       if config.data_scaler is not None:
-        targets = tf.divide(targets - self._center, self._scale)
+        targets = self._center_and_scale( targets )
 
       self._t = targets
       outputs = targets
@@ -73,9 +73,11 @@ class ClvyntModel(DeepNNModel):
       self._mse = tf.losses.mean_squared_error(targets, outputs)
 
       if config.data_scaler is not None:
-        self._predictions = tf.multiply(outputs,self._scale) + self._center
+        self._predictions = self._reverse_center_and_scale( outputs )
       else:
         self._predictions = outputs
 
       self._lr = tf.Variable(0.0, trainable=False)
       self._train_op = tf.identity(self._lr)
+
+      

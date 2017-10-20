@@ -85,17 +85,18 @@ class DeepNNModel(object):
 
     feed_dict = self._get_feed_dict(batch,keep_prob=1.0,training=training)
     
-    (x,y,z) = sess.run([self._o,self._t,self._mse],feed_dict)
+    (x,y,z) = sess.run([self._w,self._t,self._mse],feed_dict)
 
     np.set_printoptions(suppress=True)
     np.set_printoptions(precision=3)
 
+    print()
     print(np.array(x))
     print("---------------")
-    print(np.array(y))
-    print("---------------")
-    print(z)
-    print("---------------")
+    #print(np.array(y))
+    #print("---------------")
+    #print(z)
+    #print("---------------")
 
     (mse) = sess.run([self._mse],feed_dict)
     # assert( train_evals > 0 )
@@ -116,6 +117,14 @@ class DeepNNModel(object):
     
     return feed_dict
 
+  def _center_and_scale(self, x):
+      n = tf.shape(x)[1]
+      return tf.divide( x - self._center[:n], self._scale[:n] )
+
+  def _reverse_center_and_scale(self, x):
+      n = tf.shape(x)[1]
+      return tf.multiply( x, self._scale[:n] ) + self._center[:n]
+  
   def set_scaling_params(self,session,center=None,scale=None):
     assert(center is not None)
     assert(scale is not None)

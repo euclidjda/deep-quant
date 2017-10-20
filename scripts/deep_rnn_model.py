@@ -38,9 +38,9 @@ class DeepRnnModel(DeepNNModel):
       """
 
       self._num_unrollings = num_unrollings = config.num_unrollings
-      self._num_inputs = num_inputs = config.num_features
+      self._num_inputs = num_inputs = config.num_inputs
+      self._num_outputs = num_outputs = config.num_outputs
       num_hidden = config.num_hidden
-      num_outputs = num_inputs
 
       # total_input_size = num_unrollings * num_inputs
       # input/target normalization params
@@ -82,7 +82,7 @@ class DeepRnnModel(DeepNNModel):
       
       outputs, state = tf.contrib.rnn.static_rnn(stacked_rnn, self._scaled_inputs, dtype=tf.float32)
 
-      softmax_w = tf.get_variable("softmax_w", [num_hidden, num_outputs])
+      self._w = softmax_w = tf.get_variable("softmax_w", [num_hidden, num_outputs])
       softmax_b = tf.get_variable("softmax_b", [num_outputs])
 
       self._outputs = list()
@@ -99,7 +99,7 @@ class DeepRnnModel(DeepNNModel):
       self._mse = tf.losses.mean_squared_error(self._scaled_targets[-1], self._outputs[-1])
       
       if config.data_scaler is not None:
-        self._predictions = tf.multiply(self._outputs[-1], self._scale) + self._center
+        self._predictions = self._reverse_center_and_scale( self._outputs[-1] )
       else:
         self._predictions = self._outputs[-1]
  
@@ -123,6 +123,4 @@ class DeepRnnModel(DeepNNModel):
  
       self._train_op = optimizer.apply_gradients(zip(grads, tvars))
 
-      
-  def _center_and_scale(self, x):
-      return tf.divide( x - self._center, self._scale )
+    

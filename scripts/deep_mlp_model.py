@@ -41,8 +41,8 @@ class DeepMlpModel(DeepNNModel):
       """
 
       self._num_unrollings = num_unrollings = config.num_unrollings
-      self._num_inputs = num_inputs = config.num_features
-      num_outputs = num_inputs
+      self._num_inputs = num_inputs = config.num_inputs
+      self._num_outputs = num_outputs = config.num_outputs
       
       total_input_size = num_unrollings * num_inputs
 
@@ -69,8 +69,8 @@ class DeepMlpModel(DeepNNModel):
       # center and scale
       if config.data_scaler is not None:
         inputs = tf.divide(inputs - tf.tile(self._center,[num_unrollings]),
-                             tf.tile(self._scale,[num_unrollings]))
-        targets = tf.divide(targets - self._center, self._scale)
+                          tf.tile(self._scale,[num_unrollings]))
+        targets = self._center_and_scale( targets )
 
       self._t = targets
       
@@ -99,7 +99,7 @@ class DeepMlpModel(DeepNNModel):
       self._mse = tf.losses.mean_squared_error(targets, outputs)
 
       if config.data_scaler is not None:
-        self._predictions = tf.multiply(outputs,self._scale) + self._center
+        self._predictions = self._reverse_center_and_scale( outputs )
       else:
         self._predictions = outputs
       
@@ -145,4 +145,3 @@ class DeepMlpModel(DeepNNModel):
                                         is_training=self._phase,
                                         scope='bn')
       return tf.nn.relu(h2, 'relu')
-
