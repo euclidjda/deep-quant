@@ -42,6 +42,8 @@ class DeepRnnModel(DeepNNModel):
       self._num_outputs = num_outputs = config.num_outputs
       num_hidden = config.num_hidden
 
+      key_target_idx = 3
+      
       # total_input_size = num_unrollings * num_inputs
       # input/target normalization params
       self._center = tf.get_variable('center',shape=[num_inputs],trainable=False)
@@ -91,22 +93,31 @@ class DeepRnnModel(DeepNNModel):
 
       outputs = tf.concat(self._outputs, 0)
       targets = tf.concat(self._scaled_targets, 0)
+      last_target = self._scaled_targets[-1]
+      last_output = self._outputs[-1]
 
-      self._o = outputs
-      self._t = targets
+      ktidx = config.target_idx
+      
+      self._o = last_output
+      self._t = last_target
+      self._o1 = last_output[:,ktidx]
+      self._t1 = last_target[:,ktidx]
             
       self._mse_all_steps = tf.losses.mean_squared_error(targets, outputs)
-      self._mse = tf.losses.mean_squared_error(self._scaled_targets[-1], self._outputs[-1])
-      
+      self._mse_last_step = tf.losses.mean_squared_error(last_target, last_output)
+      self._mse = tf.losses.mean_squared_error(last_target[:,ktidx], last_output[:,ktidx])
+
       if config.data_scaler is not None:
         self._predictions = self._reverse_center_and_scale( self._outputs[-1] )
       else:
         self._predictions = self._outputs[-1]
  
       # here is the learning part of the graph
-      loss = config.rnn_lambda*self._mse + (1.0-config.rnn_lambda)*self._mse_all_steps
+      p1 = config.target_lambda
+      p2 = config.rnn_lambda
+      loss = p1 * self._mse + (1.0-p1)*(p2*self._mse_last_step + (1.0-p2)*self._mse_all_steps)
       tvars = tf.trainable_variables()
-      grads = tf.gradients(loss ,tvars)
+      grads = tf.gradients(loss,tvars)
 
       if (config.max_grad_norm > 0):
         grads, self._grad_norm = tf.clip_by_global_norm(grads,config.max_grad_norm)

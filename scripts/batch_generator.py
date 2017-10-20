@@ -123,7 +123,7 @@ class BatchGenerator(object):
         assert(start_idx>=0)
         assert(start_idx <= end_idx )
         return [i for i in range(start_idx,end_idx+1)]
-        
+
     def _init_column_indices(self,config):
         data = self._data
 
@@ -144,11 +144,13 @@ class BatchGenerator(object):
         assert( 0 <= self._num_outputs <= self._num_inputs )
         
         self._key_idx = list(data.columns.values).index(config.key_field)
-        self._target_idx = list(data.columns.values).index(config.target_field)
         self._active_idx = list(data.columns.values).index(config.active_field)
         self._date_idx = list(data.columns.values).index('date')
 
-
+        idx = list(data.columns.values).index(config.target_field)
+        config.target_idx = idx - self._feature_indices[0]
+        assert(config.target_idx >= 0)
+        
     def _init_validation_set(self, config):
         pass
     

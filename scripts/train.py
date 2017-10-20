@@ -60,12 +60,9 @@ def run_epoch(session, model, train_data, valid_data,
   
   for step in range(train_steps):
     batch = train_data.next_batch()
-    if (step==0 or step==100):
-      model.test_step(session,batch)
     train_mse += model.train_step(session, batch, keep_prob=keep_prob)
     if verbose: dot_count = pretty_progress(step,prog_int,dot_count)
 
-  #exit()
   # Look at train out
   #print()
   #batch = train_data.next_batch()
@@ -104,7 +101,7 @@ def train_model(config):
 
   train_data.cache()
   valid_data.cache()
-  
+
   tf_config = tf.ConfigProto( allow_soft_placement=True  ,
                               log_device_placement=False )
 

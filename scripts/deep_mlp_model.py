@@ -95,8 +95,11 @@ class DeepMlpModel(DeepNNModel):
       linear_b = tf.get_variable("linear_b", [num_outputs])
       linear_w = tf.get_variable("linear_w", [num_prev, num_outputs])
       outputs = tf.nn.xw_plus_b(outputs, linear_w, linear_b)
-      
-      self._mse = tf.losses.mean_squared_error(targets, outputs)
+
+
+      ktidx = config.target_idx
+      self._mse = tf.losses.mean_squared_error(targets[:,ktidx], outputs[:,ktidx])
+      self._mse_all = tf.losses.mean_squared_error(targets, outputs)
 
       if config.data_scaler is not None:
         self._predictions = self._reverse_center_and_scale( outputs )
@@ -104,8 +107,10 @@ class DeepMlpModel(DeepNNModel):
         self._predictions = outputs
       
       # from here down is the learning part of the graph
+      L = config.target_lambda
+      loss = L * self._mse + (1.0 - L) * self._mse_all
       tvars = tf.trainable_variables()
-      grads = tf.gradients(self._mse,tvars)
+      grads = tf.gradients(loss,tvars)
 
       if (config.max_grad_norm > 0):
         grads, _ = tf.clip_by_global_norm(grads,config.max_grad_norm)
