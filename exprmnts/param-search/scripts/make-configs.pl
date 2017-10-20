@@ -26,15 +26,15 @@ for my $model_type ('DeepMlpModel','DeepRnnModel') {
 
 			for my $num_layers (1,2,4) {
 
-			    my @hidden_list = (1024);
-			    @hidden_list = (128,512,1024) if $num_layers == 2;
-			    @hidden_list = (64,128,512) if $num_layers == 4;
+			    my @hidden_list = (512,1024);
+			    @hidden_list = (128,512) if $num_layers == 2;
+			    @hidden_list = (64,128)  if $num_layers == 4;
 
 			    for my $num_hidden (@hidden_list) {
 				
 				my @keep_prob_list = (1.0);
 				
-				push @keep_prob_list, (0.5,0.75)
+				@keep_prob_list = (0.5,0.75)
 				    if (($input_dropout eq 'True') || ($hidden_dropout eq 'True'));
 				
 				for my $keep_prob (@keep_prob_list) {
