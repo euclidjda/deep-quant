@@ -72,8 +72,9 @@ class NaiveModel(DeepNNModel):
 
       self._o = outputs
       self._t = targets
-      
-      self._mse = tf.losses.mean_squared_error(targets, outputs)
+
+      ktidx = config.target_idx      
+      self._mse = tf.losses.mean_squared_error(targets[:,ktidx], outputs[:,ktidx])
 
       if config.data_scaler is not None:
         self._predictions = self._reverse_center_and_scale( outputs )

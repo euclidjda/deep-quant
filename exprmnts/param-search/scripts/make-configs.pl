@@ -20,49 +20,50 @@ for my $model_type ('DeepMlpModel','DeepRnnModel') {
 
 		for my $hidden_dropout ('True','False') {
 
-		    my @lambdas = $model_type eq 'DeepRnnModel' ? (0.5,0.7,0.9,1.0) : (1.0);
+		    for my $target_lambda (0.0,0.25,0.5,0.75,1.0) {
 
-		    for my $rnn_lambda (@lambdas) {
+			my @rnn_lambdas = (($model_type eq 'DeepRnnModel') && ($target_lambda < 1.0)) ? (0.5,0.7,0.9,1.0) : (1.0);
 
-			for my $num_layers (1,2,4) {
+			for my $rnn_lambda (@rnn_lambdas) {
+			
+			    for my $num_layers (1,2,4) {
 
-			    my @hidden_list = (512,1024);
-			    @hidden_list = (128,512) if $num_layers == 2;
-			    @hidden_list = (64,128)  if $num_layers == 4;
-
-			    for my $num_hidden (@hidden_list) {
+				my @hidden_list = (64,128,512,1024);
 				
-				my @keep_prob_list = (1.0);
-				
-				@keep_prob_list = (0.5,0.75)
-				    if (($input_dropout eq 'True') || ($hidden_dropout eq 'True'));
-				
-				for my $keep_prob (@keep_prob_list) {
+				for my $num_hidden (@hidden_list) {
 				    
-				    for my $init_scale (0.01,0.1) {
+				    my @keep_prob_list = (1.0);
+				    
+				    @keep_prob_list = (0.5,0.75)
+					if (($input_dropout eq 'True') || ($hidden_dropout eq 'True'));
+				    
+				    for my $keep_prob (@keep_prob_list) {
 					
-					for my $max_norm (0,1,5,10,50,100) {
+					for my $init_scale (0.01,0.1) {
 					    
-					    my $name = sprintf("%s-%s-%s-l%d-h%04d-r%02d-k%02d-i%02d-m%03d-%s%s",
-							       substr(lc($model_type),4,3),
-							       substr(lc($optimizer),0,4),
-							       substr(lc($scaler),0,4),
-							       $num_layers,
-							       $num_hidden,
-							       int($rnn_lambda*10),
-							       int($keep_prob*10),
-							       int($init_scale*100),
-							       $max_norm,
-							       lc(substr($input_dropout,0,1)),
-							       lc(substr($hidden_dropout,0,1)));
-					
-					    push(@names,$name);
+					    for my $max_norm (0,1,5,10,50,100) {
+						
+						my $name = sprintf("%s-%s-%s-l%d-h%04d-t%03d-r%02d-k%02d-i%02d-m%03d-%s%s",
+								   substr(lc($model_type),4,3),
+								   substr(lc($optimizer),0,4),
+								   substr(lc($scaler),0,4),
+								   $num_layers,
+								   $num_hidden,
+								   int($target_lambda*100),
+								   int($rnn_lambda*10),
+								   int($keep_prob*10),
+								   int($init_scale*100),
+								   $max_norm,
+								   lc(substr($input_dropout,0,1)),
+								   lc(substr($hidden_dropout,0,1)));
+						
+						push(@names,$name);
 
 my $CONFIG_STR =<<"CONFIG_STR";
 --default_gpu		/gpu:0
 --key_field             gvkey
 --active_field          active
---target_field		target
+--target_field		oiadpq_ttm
 --feature_fields        saleq_ttm-ltq_mrq
 --aux_input_fields      mom1m-mom9m
 --scale_field           mrkcap
@@ -91,6 +92,7 @@ my $CONFIG_STR =<<"CONFIG_STR";
 --input_dropout         $input_dropout
 --hidden_dropout        $hidden_dropout
 --rnn_lambda            $rnn_lambda
+--target_lambda         $target_lambda
 --cache_id              1024
 CONFIG_STR
 
@@ -100,6 +102,7 @@ my $fh = FileHandle->new("> $CONFIG_DIR/$name.conf");
 					print $fh $CONFIG_STR;
 					close($fh);
 
+					    }
 					}					
 				    }
 				}
