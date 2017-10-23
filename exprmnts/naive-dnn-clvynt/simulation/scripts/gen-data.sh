@@ -4,7 +4,7 @@ BIN=~/work/euclid2/bin
 # date gvkey ... mom1m mom3m mom6m mom9m mrkcap entval
 cut -d ' ' -f 1-18 datasets/source-data-100M.dat > datasets/merge-source-100M.dat
 
-for MODEL in "dnn" "clvynt" "naive"
+for MODEL in "mlp" "clvynt" "naive"
 do
     $BIN/rnn-merge-with-simdata.pl datasets/merge-source-100M.dat datasets/predicts-$MODEL.dat > datasets/merged-data-100M-$MODEL.dat; 
     # the cut cmd creates mom1m mom3m mom6m mom9m entval oiadpq_ttm niq_ttm, rescale then add ebit_entval and niq_entval

@@ -93,7 +93,7 @@ def batch_to_date(batch):
 def pretty_print_predictions(batches, batch, preds):
   key     = batch_to_key(batch)
   date    = batch_to_date(batch)
-  inputs0 = batch.inputs[-2][0]
+  inputs2 = batch.inputs[-2][0]
   inputs1 = batch.inputs[-1][0]
   targets = batch.targets[-1][0]
   outputs = preds[0]
@@ -106,11 +106,13 @@ def pretty_print_predictions(batches, batch, preds):
   #print_vector("input[t-1]", inputs1 )
   #print_vector("output[t ]", outputs )
   #print_vector("target[t ]", targets )
-
-  print_vector("input[t-2]", batches.get_raw_features(batch,0,inputs0) )
-  print_vector("input[t-1]", batches.get_raw_features(batch,0,inputs1) )
-  print_vector("output[t ]", batches.get_raw_features(batch,0,outputs) )
-  print_vector("target[t ]", batches.get_raw_features(batch,0,targets) )
+  
+  inputs = batch.inputs
+  l = len(inputs)
+  for i in range(l):
+    print_vector("input[t-%d]"%(l-i),batches.get_raw_features(batch,0,inputs[i][0]) )
+  print_vector("output[t]", batches.get_raw_features(batch,0,outputs) )
+  print_vector("target[t]", batches.get_raw_features(batch,0,targets) )
   print("--------------------------------")
   sys.stdout.flush()
   
