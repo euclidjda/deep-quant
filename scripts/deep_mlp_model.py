@@ -144,8 +144,9 @@ class DeepMlpModel(DeepNNModel):
     with tf.variable_scope(scope):
       h1 = tf.contrib.layers.fully_connected(x, size,
                                              activation_fn=None,
+                                             weights_regularizer=None,
                                              scope='dense')
-      h2 = tf.contrib.layers.batch_norm(h1, 
+      h2 = tf.contrib.layers.batch_norm(h1,
                                         center=True, scale=True,
                                         is_training=self._phase,
                                         scope='bn')

@@ -75,10 +75,19 @@ class DeepRnnModel(DeepNNModel):
             
       hkp = self._keep_prob if config.hidden_dropout is True else 1.0
       ikp = self._keep_prob if config.input_dropout is True else 1.0
-
+      rkp = self._keep_prob if config.rnn_dropout is True else 1.0
+      
       def rnn_cell():
-        cell = tf.contrib.rnn.GRUCell(num_hidden)
-        return tf.contrib.rnn.DropoutWrapper(cell,output_keep_prob=hkp,input_keep_prob=ikp)
+        cell = None
+        if config.rnn_cell == 'gru':
+          cell = tf.contrib.rnn.GRUCell(num_hidden)
+          # cell = tf.contrib.rnn.DropoutWrapper(cell,output_keep_prob=hkp,input_keep_prob=ikp)
+        elif config.rnn_cell == 'lstm':
+          cell = tf.contrib.rnn.LayerNormBasicLSTMCell(num_hidden,dropout_keep_prob=rkp,dropout_prob_seed=config.seed)
+          # cell = tf.contrib.rnn.LayerNormBasicLSTMCell(num_hidden,dropout_keep_prob=hkp,dropout_prob_seed=config.seed)
+        assert(cell is not None)
+        cell = tf.contrib.rnn.DropoutWrapper(cell,output_keep_prob=hkp,input_keep_prob=ikp,seed=config.seed)
+        return cell
 
       stacked_rnn = tf.contrib.rnn.MultiRNNCell([rnn_cell() for _ in range(config.num_layers)])
       
@@ -108,9 +117,9 @@ class DeepRnnModel(DeepNNModel):
       self._mse = tf.losses.mean_squared_error(last_target[:,ktidx], last_output[:,ktidx])
 
       if config.data_scaler is not None:
-        self._predictions = self._reverse_center_and_scale( self._outputs[-1] )
+        self._predictions = self._reverse_center_and_scale( last_output )
       else:
-        self._predictions = self._outputs[-1]
+        self._predictions = last_output
  
       # here is the learning part of the graph
       p1 = config.target_lambda
