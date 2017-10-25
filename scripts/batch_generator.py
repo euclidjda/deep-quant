@@ -316,16 +316,6 @@ class BatchGenerator(object):
             y = np.append( y, vec[len1:len1+len2] )
         return y
 
-    def _load_cache(self,verbose=False):
-        start_time = time.time()
-        if verbose is True:
-            print("Caching batches ...",end=' '); sys.stdout.flush()
-        self.rewind()
-        for _ in range(self.num_batches):
-            b = self.next_batch()
-        if verbose is True:
-            print("done in %.2f seconds."%(time.time() - start_time))
-            
     def _get_cache_filename(self):
         key_list = list(set(self._data[self._config.key_field]))
         key_list.sort()
@@ -343,6 +333,16 @@ class BatchGenerator(object):
         # print(filename)
         return filename
         
+    def _load_cache(self,verbose=False):
+        start_time = time.time()
+        if verbose is True:
+            print("Caching batches ...",end=' '); sys.stdout.flush()
+        self.rewind()
+        for _ in range(self.num_batches):
+            b = self.next_batch()
+        if verbose is True:
+            print("done in %.2f seconds."%(time.time() - start_time))
+            
     def cache(self,verbose=False):
         if self._batch_cache[-1] is not None:
             return
@@ -361,7 +361,7 @@ class BatchGenerator(object):
                 self._batch_cache = pickle.load( open( filename, "rb" ) )
                 if verbose is True: print("done in %.2f seconds."%(time.time() - start_time))            
             else:
-                self._load_cache()                
+                self._load_cache(verbose)                
                 start_time = time.time()
                 if verbose is True: print("Writing cache to %s ..."%filename, end=' ')
                 pickle.dump( self._batch_cache, open( filename, "wb" ) )
