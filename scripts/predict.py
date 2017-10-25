@@ -51,7 +51,7 @@ def predict(config):
   config.batch_size = 1  
   batches = BatchGenerator(path, config, 
                            require_targets=require_targets, verbose=False)
-  batches.cache()
+  batches.cache(verbose=False)
 
   tf_config = tf.ConfigProto( allow_soft_placement=True  ,
                               log_device_placement=False )

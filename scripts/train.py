@@ -96,6 +96,11 @@ def train_model(config):
   print("Loading training data ...")
   batches = BatchGenerator(train_path,config)
 
+  if config.start_date is not None:
+    print("Training start date: ",config.start_date)
+  if config.start_date is not None:
+    print("Training end date: ",config.end_date)
+  
   train_data = batches.train_batches()
   valid_data = batches.valid_batches()
 

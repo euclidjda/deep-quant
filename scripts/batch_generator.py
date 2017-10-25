@@ -43,6 +43,7 @@ class BatchGenerator(object):
         self._stride = config.stride
         self._batch_size = batch_size = config.batch_size
         self._scaling_params = None
+        self._start_date = config.start_date
         self._end_date = config.end_date
         
         assert( self._stride >= 1 )
@@ -317,22 +318,26 @@ class BatchGenerator(object):
 
     def _load_cache(self,verbose=False):
         start_time = time.time()
-        if verbose:
+        if verbose is True:
             print("Caching batches ...",end=' '); sys.stdout.flush()
         self.rewind()
         for _ in range(self.num_batches):
             b = self.next_batch()
-        if verbose:
+        if verbose is True:
             print("done in %.2f seconds."%(time.time() - start_time))
             
     def _get_cache_filename(self):
         key_list = list(set(self._data[self._config.key_field]))
         key_list.sort()
         keys = ''.join(key_list)
-        if self._end_date == 210001:
+        if self._end_date is None and self._start_date is None:
             uid = "%d-%d-%d-%s"%(self._num_unrollings,self._stride,self._batch_size,keys)
-        else:
+        elif self._start_date is None:
             uid = "%d-%d-%d-%d-%s"%(self._end_date,self._num_unrollings,self._stride,self._batch_size,keys)
+        else:
+            sd = self._start_date
+            ed = self._end_date if self._end_date is not None else '210012'
+            uid = "%d-%d-%d-%d-%d-%s"%(sd,ed,self._num_unrollings,self._stride,self._batch_size,keys)
         hashed = hashlib.md5(uid.encode()).hexdigest()
         filename = "bcache-%s.pkl"%hashed
         # print(filename)
@@ -352,15 +357,15 @@ class BatchGenerator(object):
                 os.makedirs(dirname)
             if os.path.isfile(filename):
                 start_time = time.time()
-                if verbose: print("Reading cache from %s ..."%filename, end=' ')
+                if verbose is True: print("Reading cache from %s ..."%filename, end=' ')
                 self._batch_cache = pickle.load( open( filename, "rb" ) )
-                if verbose: print("done in %.2f seconds."%(time.time() - start_time))            
+                if verbose is True: print("done in %.2f seconds."%(time.time() - start_time))            
             else:
                 self._load_cache()                
                 start_time = time.time()
-                if verbose: print("Writing cache to %s ..."%filename, end=' ')
+                if verbose is True: print("Writing cache to %s ..."%filename, end=' ')
                 pickle.dump( self._batch_cache, open( filename, "wb" ) )
-                if verbose: print("done in %.2f seconds."%(time.time() - start_time))            
+                if verbose is True: print("done in %.2f seconds."%(time.time() - start_time))            
 
     def train_batches(self):
         valid_keys = list(self._validation_set.keys())
