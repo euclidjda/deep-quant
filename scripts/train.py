@@ -99,8 +99,8 @@ def train_model(config):
   train_data = batches.train_batches()
   valid_data = batches.valid_batches()
 
-  train_data.cache()
-  valid_data.cache()
+  train_data.cache(verbose=True)
+  valid_data.cache(verbose=True)
 
   tf_config = tf.ConfigProto( allow_soft_placement=True  ,
                               log_device_placement=False )

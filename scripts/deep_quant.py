@@ -64,6 +64,7 @@ def get_configs():
   configs.DEFINE_integer("num_hidden",10,"Number of hidden layer units")
   configs.DEFINE_float("init_scale",0.1, "Initial scale for weights")
   configs.DEFINE_float("max_grad_norm",10.0,"Gradient clipping")
+  configs.DEFINE_integer("start_date",190001,"First date to train on as YYYYMM")
   configs.DEFINE_integer("end_date",210001,"Last date to train on as YYYYMM")
   configs.DEFINE_float("keep_prob",1.0,"Keep probability for dropout")
   configs.DEFINE_boolean("train",True,"Train model otherwise inference only")

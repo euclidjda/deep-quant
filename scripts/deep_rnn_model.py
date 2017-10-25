@@ -81,10 +81,8 @@ class DeepRnnModel(DeepNNModel):
         cell = None
         if config.rnn_cell == 'gru':
           cell = tf.contrib.rnn.GRUCell(num_hidden)
-          # cell = tf.contrib.rnn.DropoutWrapper(cell,output_keep_prob=hkp,input_keep_prob=ikp)
         elif config.rnn_cell == 'lstm':
           cell = tf.contrib.rnn.LayerNormBasicLSTMCell(num_hidden,dropout_keep_prob=rkp,dropout_prob_seed=config.seed)
-          # cell = tf.contrib.rnn.LayerNormBasicLSTMCell(num_hidden,dropout_keep_prob=hkp,dropout_prob_seed=config.seed)
         assert(cell is not None)
         cell = tf.contrib.rnn.DropoutWrapper(cell,output_keep_prob=hkp,input_keep_prob=ikp,seed=config.seed)
         return cell

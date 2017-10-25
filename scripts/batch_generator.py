@@ -51,6 +51,8 @@ class BatchGenerator(object):
             if not os.path.isfile(filename):
                 raise RuntimeError("The data file %s does not exists" % filename)
             data = pd.read_csv(filename,sep=' ', dtype={ config.key_field : str } )
+            if config.start_date is not None:
+                data = data.drop(data[data['date'] < config.start_date].index)
             if config.end_date is not None:
                 data = data.drop(data[data['date'] > config.end_date].index)
 
@@ -313,13 +315,15 @@ class BatchGenerator(object):
             y = np.append( y, vec[len1:len1+len2] )
         return y
 
-    def _load_cache(self):
+    def _load_cache(self,verbose=False):
         start_time = time.time()
-        print("Caching batches ...",end=' '); sys.stdout.flush()
+        if verbose:
+            print("Caching batches ...",end=' '); sys.stdout.flush()
         self.rewind()
         for _ in range(self.num_batches):
             b = self.next_batch()
-        print("done in %.2f seconds."%(time.time() - start_time))
+        if verbose:
+            print("done in %.2f seconds."%(time.time() - start_time))
             
     def _get_cache_filename(self):
         key_list = list(set(self._data[self._config.key_field]))
@@ -334,12 +338,12 @@ class BatchGenerator(object):
         # print(filename)
         return filename
         
-    def cache(self):
+    def cache(self,verbose=False):
         if self._batch_cache[-1] is not None:
             return
         # cache is empty
         if self._config.cache_id is None:
-            self._load_cache()
+            self._load_cache(verbose)
         else:
             filename = self._get_cache_filename()
             dirname = './_bcache/'
@@ -348,15 +352,15 @@ class BatchGenerator(object):
                 os.makedirs(dirname)
             if os.path.isfile(filename):
                 start_time = time.time()
-                print("Reading cache from %s ..."%filename, end=' ')
+                if verbose: print("Reading cache from %s ..."%filename, end=' ')
                 self._batch_cache = pickle.load( open( filename, "rb" ) )
-                print("done in %.2f seconds."%(time.time() - start_time))            
+                if verbose: print("done in %.2f seconds."%(time.time() - start_time))            
             else:
                 self._load_cache()                
                 start_time = time.time()
-                print("Writing cache to %s ..."%filename, end=' ')
+                if verbose: print("Writing cache to %s ..."%filename, end=' ')
                 pickle.dump( self._batch_cache, open( filename, "wb" ) )
-                print("done in %.2f seconds."%(time.time() - start_time))            
+                if verbose: print("done in %.2f seconds."%(time.time() - start_time))            
 
     def train_batches(self):
         valid_keys = list(self._validation_set.keys())
@@ -431,6 +435,10 @@ class Batch(object):
     @property
     def attribs(self):
         return self._attribs
+
+    @property
+    def size(self):
+        return len(self._attribs)
 
     @property
     def normalizers(self):
