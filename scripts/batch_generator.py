@@ -43,6 +43,7 @@ class BatchGenerator(object):
         self._stride = config.stride
         self._batch_size = batch_size = config.batch_size
         self._scaling_params = None
+        self._end_date = config.end_date
         
         assert( self._stride >= 1 )
 
@@ -324,7 +325,10 @@ class BatchGenerator(object):
         key_list = list(set(self._data[self._config.key_field]))
         key_list.sort()
         keys = ''.join(key_list)
-        uid = "%d-%d-%d-%s"%(self._num_unrollings,self._stride,self._batch_size,keys)
+        if self._end_date == 210001:
+            uid = "%d-%d-%d-%s"%(self._num_unrollings,self._stride,self._batch_size,keys)
+        else:
+            uid = "%d-%d-%d-%d-%s"%(self._end_date,self._num_unrollings,self._stride,self._batch_size,keys)
         hashed = hashlib.md5(uid.encode()).hexdigest()
         filename = "bcache-%s.pkl"%hashed
         # print(filename)
