@@ -76,13 +76,14 @@ def predict(config):
       else:
         print_predictions(batches, batch, preds)
 
-    if pretty_print is True:
-      for date in sorted(perfs):
-        mean = np.mean(perfs[date])
-        print("%s %.6f %d"%(date,mean,len(perfs[date])))
-      total_mean = np.mean( [x for v in perfs.values() for x in v] )
-
-      print("Total %.6f"%(total_mean))
+    if config.mse_outfile is not None:
+      with open(config.mse_outfile,"w") as f:
+        for date in sorted(perfs):
+          mean = np.mean(perfs[date])
+          print("%s %.6f %d"%(date,mean,len(perfs[date])),file=f)
+        total_mean = np.mean( [x for v in perfs.values() for x in v] )
+        print("Total %.6f"%(total_mean),file=f)
+      f.closed
 
 def batch_to_key(batch):
   return batch.attribs[0][0]

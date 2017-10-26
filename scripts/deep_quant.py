@@ -41,6 +41,7 @@ def get_configs():
   """Defines all configuration params passable to command line.
   """
   configs.DEFINE_string("datafile",'data.dat',"a datafile name.")
+  configs.DEFINE_string("mse_outfile",None,"A file write mse values during predict only phase.")
   configs.DEFINE_string("default_gpu",'',"The default GPU to use e.g., /gpu:0")
   configs.DEFINE_string("nn_type",'DeepRnnModel',"Model type")
   configs.DEFINE_string("active_field", 'active',"Key column name header for active indicator")
