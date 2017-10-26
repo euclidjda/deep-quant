@@ -1,0 +1,32 @@
+stdout-rnn-c03-l1-h064-k05-i0001-s0050-m001-w075
+stdout-rnn-c03-l1-h064-k05-i0001-s0050-m005-w100 Epoch: 32  Training stopped. 
+stdout-rnn-c03-l1-h064-k05-i0050-s0010-m005-w050 Epoch: 22  Training stopped. 
+stdout-rnn-c03-l1-h064-k10-i0010-s0050-m050-w100 Epoch: 11  Training stopped. 
+stdout-rnn-c03-l1-h064-k10-i0050-s0010-m000-w075 Epoch: 22  Training stopped. 
+stdout-rnn-c03-l1-h256-k05-i0100-s0050-m100-w100 Epoch: 55  Training stopped. 
+stdout-rnn-c03-l2-h064-k05-i0001-s0010-m050-w075 Epoch: 32  Training stopped. 
+stdout-rnn-c03-l2-h064-k05-i1000-s0050-m050-w100 Epoch: 51  Training killed. 
+stdout-rnn-c03-l2-h064-k10-i0050-s0010-m050-w050 Epoch: 19  Training stopped. 
+stdout-rnn-c03-l2-h256-k05-i0001-s0010-m005-w100 Epoch: 18  batches: 3041  ......................... 
+stdout-rnn-c03-l2-h256-k10-i0001-s0001-m100-w075 Epoch: 2 l batches: 3041  ......................................................................... 
+stdout-rnn-c03-l2-h256-k10-i0050-s0001-m000-w075 Epoch: 22  Training stopped. 
+stdout-rnn-c03-l2-h512-k05-i0001-s0050-m100-w050 Epoch: 11  Training stopped. 
+stdout-rnn-c03-l4-h064-k05-i0001-s0010-m000-w075 Epoch: 51  Training stopped. 
+stdout-rnn-c03-l4-h256-k05-i1000-s0050-m050-w050 Epoch: 17  Training stopped. 
+stdout-rnn-c03-l4-h256-k10-i0100-s0050-m001-w050 Epoch: 16  Training stopped. 
+stdout-rnn-c10-l1-h512-k05-i0010-s0001-m010-w050 Epoch: 12  Training stopped. 
+stdout-rnn-c10-l1-h512-k10-i0100-s0010-m050-w050 Epoch: 8 l batches: 3041  ......................... 
+stdout-rnn-c10-l2-h064-k05-i0100-s0001-m001-w075 Epoch: 22  Training stopped. 
+stdout-rnn-c10-l2-h256-k05-i0100-s0001-m000-w050 Epoch: 22  Training stopped. 
+stdout-rnn-c10-l2-h256-k10-i0050-s0001-m001-w075 Epoch: 22  Training stopped. 
+stdout-rnn-c10-l2-h256-k10-i0050-s0050-m010-w050 Epoch: 41  Training stopped. 
+stdout-rnn-c10-l2-h256-k10-i0100-s0010-m005-w100 Epoch: 47  Training stopped. 
+stdout-rnn-c10-l2-h256-k10-i1000-s0001-m050-w075 Epoch: 40  Training killed. 
+stdout-rnn-c10-l2-h512-k05-i0050-s0010-m005-w075 Epoch: 19  Training stopped. 
+stdout-rnn-c10-l4-h064-k05-i0001-s0050-m050-w075 Epoch: 137 Training stopped. 
+stdout-rnn-c10-l4-h064-k05-i0010-s0001-m010-w050 Epoch: 9 l batches: 3041  ............................. 
+stdout-rnn-c10-l4-h064-k05-i0010-s0050-m050-w075 Epoch: 31  Training stopped. 
+stdout-rnn-c10-l4-h064-k05-i0050-s0050-m050-w075 Epoch: 22  Training stopped. 
+stdout-rnn-c10-l4-h064-k10-i0001-s0010-m001-w075 Epoch: 81  Training stopped. 
+stdout-rnn-c10-l4-h256-k10-i1000-s0050-m010-w075 Epoch: 120 Training killed. 
+stdout-rnn-c10-l4-h512-k05-i0010-s0050-m001-w100 Epoch: 12  Training stopped. 
