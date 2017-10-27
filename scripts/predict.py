@@ -50,15 +50,15 @@ def predict(config):
 
   config.batch_size = 1  
   batches = BatchGenerator(path, config, 
-                           require_targets=require_targets, verbose=False)
-  batches.cache(verbose=False)
+                           require_targets=require_targets, verbose=True)
+  batches.cache(verbose=True)
 
   tf_config = tf.ConfigProto( allow_soft_placement=True  ,
                               log_device_placement=False )
 
   with tf.Graph().as_default(), tf.Session(config=tf_config) as session:
 
-    model = model_utils.get_model(session, config, verbose=False)
+    model = model_utils.get_model(session, config, verbose=True)
 
     perfs = dict()
     
