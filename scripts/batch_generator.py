@@ -216,13 +216,16 @@ class BatchGenerator(object):
             cursor = self._index_cursor[b]
             start_idx = self._indices[cursor]
             idx = start_idx + (step*stride)
-            date = None
-            key = None
+            next_idx = start_idx + ((step+1)*stride)
             assert( idx < self._data_len )
             date = data.iat[idx,date_idx]
             key = data.iat[idx,key_idx]
+            next_key = data.iat[next_idx,key_idx]
             x[b,0:len1] = self._get_feature_vector(start_idx,step)
-            y[b,0:len1] = self._get_feature_vector(start_idx,step+1)
+            if key == next_key:
+                y[b,:] = self._get_feature_vector(start_idx,step+1)
+            else:
+                y[b,:] = None
             if len2 > 0:
                 x[b,len1:len1+len2] = self._get_aux_vector(start_idx,step)
             attr.append((key,date))
@@ -326,7 +329,7 @@ class BatchGenerator(object):
             uid = "%d-%d-%d-%d-%s"%(self._end_date,self._num_unrollings,self._stride,self._batch_size,keys)
         else:
             sd = self._start_date
-            ed = self._end_date if self._end_date is not None else '210012'
+            ed = self._end_date if self._end_date is not None else 210012
             uid = "%d-%d-%d-%d-%d-%s"%(sd,ed,self._num_unrollings,self._stride,self._batch_size,keys)
         hashed = hashlib.md5(uid.encode()).hexdigest()
         filename = "bcache-%s.pkl"%hashed
@@ -359,6 +362,7 @@ class BatchGenerator(object):
                 start_time = time.time()
                 if verbose is True: print("Reading cache from %s ..."%filename, end=' ')
                 self._batch_cache = pickle.load( open( filename, "rb" ) )
+                self._num_batches = len(self._batch_cache)
                 if verbose is True: print("done in %.2f seconds."%(time.time() - start_time))            
             else:
                 self._load_cache(verbose)                

@@ -21,6 +21,7 @@ import time
 import os
 import sys
 import copy
+import math
 
 import numpy as np
 import tensorflow as tf
@@ -39,18 +40,11 @@ def print_vector(name,v):
             
 def predict(config):
 
-  pretty_print = False
-  require_targets = False
-
-  if hasattr(config,'pretty_print_preds') and config.pretty_print_preds is True:  
-    pretty_print = True 
-    require_targets = True
-
   path = model_utils.get_data_path(config.data_dir,config.datafile)
 
-  config.batch_size = 1  
+  config.batch_size = 1
   batches = BatchGenerator(path, config, 
-                           require_targets=require_targets, verbose=True)
+                           require_targets=True, verbose=False)
   batches.cache(verbose=True)
 
   tf_config = tf.ConfigProto( allow_soft_placement=True  ,
@@ -58,21 +52,23 @@ def predict(config):
 
   with tf.Graph().as_default(), tf.Session(config=tf_config) as session:
 
-    model = model_utils.get_model(session, config, verbose=True)
+    model = model_utils.get_model(session, config, verbose=False)
 
     perfs = dict()
     
     for i in range(batches.num_batches):
       batch = batches.next_batch()
+
       (mse, preds) = model.step(session, batch)
 
-      date = batch_to_date(batch)
-      if date not in perfs:
-        perfs[date] = list()
-      perfs[date].append(mse)
+      if math.isnan(mse) is False:
+        date = batch_to_date(batch)
+        if date not in perfs:
+          perfs[date] = list()
+        perfs[date].append(mse)
       
-      if pretty_print is True:
-        pretty_print_predictions(batches, batch, preds)
+      if config.pretty_print_preds is True:
+        pretty_print_predictions(batches, batch, preds, mse)
       else:
         print_predictions(batches, batch, preds)
 
@@ -84,6 +80,8 @@ def predict(config):
         total_mean = np.mean( [x for v in perfs.values() for x in v] )
         print("Total %.6f"%(total_mean),file=f)
       f.closed
+    else:
+      exit()
 
 def batch_to_key(batch):
   return batch.attribs[0][0]
@@ -91,7 +89,7 @@ def batch_to_key(batch):
 def batch_to_date(batch):
   return batch.attribs[0][1]
       
-def pretty_print_predictions(batches, batch, preds):
+def pretty_print_predictions(batches, batch, preds, mse):
   key     = batch_to_key(batch)
   date    = batch_to_date(batch)
   inputs2 = batch.inputs[-2][0]
@@ -102,12 +100,7 @@ def pretty_print_predictions(batches, batch, preds):
   np.set_printoptions(suppress=True)
   np.set_printoptions(precision=3)
       
-  print("%s %s "%(date,key))
-  #print_vector("input[t-2]", inputs0 )
-  #print_vector("input[t-1]", inputs1 )
-  #print_vector("output[t ]", outputs )
-  #print_vector("target[t ]", targets )
-  
+  print("%s %s mse=%.4f"%(date,key,mse))
   inputs = batch.inputs
   l = len(inputs)
   for i in range(l):
