@@ -59,6 +59,7 @@ class BatchGenerator(object):
 
         self._data = data
         self._data_len = len(data)
+        assert(self._data_len)
 
         self._init_column_indices(config)
         #self._init_validation_set(config)
@@ -125,7 +126,7 @@ class BatchGenerator(object):
         start_idx = list(data.columns.values).index(first)
         end_idx = list(data.columns.values).index(last)
         assert(start_idx>=0)
-        assert(start_idx <= end_idx )
+        assert(start_idx <= end_idx)
         return [i for i in range(start_idx,end_idx+1)]
 
     def _init_column_indices(self,config):
@@ -144,15 +145,21 @@ class BatchGenerator(object):
             self._feature_names.extend( list(data.columns.values[self._aux_indices]) )
             
         config.num_inputs = self._num_inputs = len(self._feature_names)
-        config.num_outputs = self._num_outputs = self._num_inputs - len( self._aux_indices )
-        assert( 0 <= self._num_outputs <= self._num_inputs )
-        
         self._key_idx = list(data.columns.values).index(config.key_field)
         self._active_idx = list(data.columns.values).index(config.active_field)
         self._date_idx = list(data.columns.values).index('date')
 
         idx = list(data.columns.values).index(config.target_field)
-        config.target_idx = idx - self._feature_indices[0]
+        if config.target_field != 'target':
+            config.target_idx = idx - self._feature_indices[0]
+            config.num_outputs = self._num_outputs = self._num_inputs - len( self._aux_indices )
+            self._price_target_idx = -1
+        else:
+            config.target_idx = 0
+            config.num_outputs = self._num_outputs = 1
+            self._price_target_idx = idx
+        # assert( 0 <= self._num_outputs <= self._num_inputs )
+
         assert(config.target_idx >= 0)
         
     def _init_validation_set(self, config):
@@ -223,9 +230,13 @@ class BatchGenerator(object):
             next_key = data.iat[next_idx,key_idx]
             x[b,0:len1] = self._get_feature_vector(start_idx,step)
             if key == next_key:
-                y[b,:] = self._get_feature_vector(start_idx,step+1)
+                if self._price_target_idx >= 0:
+                    y[b,0]  = data.iat[idx,self._price_target_idx]
+                else:
+                    y[b,:] = self._get_feature_vector(start_idx,step+1)
             else:
                 y[b,:] = None
+            # get aux fields
             if len2 > 0:
                 x[b,len1:len1+len2] = self._get_aux_vector(start_idx,step)
             attr.append((key,date))
@@ -308,7 +319,7 @@ class BatchGenerator(object):
     def normalize_features():
         pass
 
-    def get_raw_features(self,batch,idx,vec):
+    def get_raw_inputs(self,batch,idx,vec):
         len1 = len(self._feature_indices)
         len2 = len(self._aux_indices)
         n = batch.normalizers[idx]
@@ -319,18 +330,25 @@ class BatchGenerator(object):
             y = np.append( y, vec[len1:len1+len2] )
         return y
 
+    def get_raw_outputs(self,batch,idx,vec):
+        if self._price_target_idx >= 0:
+            return vec
+        else:
+            return self.get_raw_inputs(batch,idx,vec)
+
     def _get_cache_filename(self):
-        key_list = list(set(self._data[self._config.key_field]))
-        key_list.sort()
+        config = self._config
+        key_list = list(set(self._data[config.key_field]))
+        key_list.sort()        
         keys = ''.join(key_list)
         if self._end_date is None and self._start_date is None:
-            uid = "%d-%d-%d-%s"%(self._num_unrollings,self._stride,self._batch_size,keys)
+            uid = "%d-%d-%d-%d-%s"%(config.cache_id,self._num_unrollings,self._stride,self._batch_size,keys)
         elif self._start_date is None:
-            uid = "%d-%d-%d-%d-%s"%(self._end_date,self._num_unrollings,self._stride,self._batch_size,keys)
+            uid = "%d-%d-%d-%d-%d-%s"%(config.cache_id,self._end_date,self._num_unrollings,self._stride,self._batch_size,keys)
         else:
             sd = self._start_date
             ed = self._end_date if self._end_date is not None else 210012
-            uid = "%d-%d-%d-%d-%d-%s"%(sd,ed,self._num_unrollings,self._stride,self._batch_size,keys)
+            uid = "%d-%d-%d-%d-%d-%d-%s"%(config._cache_id,sd,ed,self._num_unrollings,self._stride,self._batch_size,keys)
         hashed = hashlib.md5(uid.encode()).hexdigest()
         filename = "bcache-%s.pkl"%hashed
         # print(filename)
@@ -347,6 +365,7 @@ class BatchGenerator(object):
             print("done in %.2f seconds."%(time.time() - start_time))
             
     def cache(self,verbose=False):
+        assert(len(self._batch_cache))
         if self._batch_cache[-1] is not None:
             return
         # cache is empty

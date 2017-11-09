@@ -70,7 +70,8 @@ class DeepMlpModel(DeepNNModel):
       if config.data_scaler is not None:
         inputs = tf.divide(inputs - tf.tile(self._center,[num_unrollings]),
                           tf.tile(self._scale,[num_unrollings]))
-        targets = self._center_and_scale( targets )
+        if config.scale_targets is True:
+          targets = self._center_and_scale( targets )
 
       self._t = targets
       
@@ -101,7 +102,7 @@ class DeepMlpModel(DeepNNModel):
       self._mse = tf.losses.mean_squared_error(targets[:,ktidx], outputs[:,ktidx])
       self._mse_all = tf.losses.mean_squared_error(targets, outputs)
 
-      if config.data_scaler is not None:
+      if config.data_scaler is not None and config.scale_targets is True:
         self._predictions = self._reverse_center_and_scale( outputs )
       else:
         self._predictions = outputs
