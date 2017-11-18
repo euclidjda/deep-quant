@@ -44,7 +44,7 @@ def predict(config):
 
   config.batch_size = 1
   batches = BatchGenerator(path, config, 
-                           require_targets=True, verbose=False)
+                           require_targets=False, verbose=True)
   batches.cache(verbose=True)
 
   tf_config = tf.ConfigProto( allow_soft_placement=True  ,
@@ -104,9 +104,9 @@ def pretty_print_predictions(batches, batch, preds, mse):
   inputs = batch.inputs
   l = len(inputs)
   for i in range(l):
-    print_vector("input[t-%d]"%(l-i),batches.get_raw_features(batch,0,inputs[i][0]) )
-  print_vector("output[t]", batches.get_raw_features(batch,0,outputs) )
-  print_vector("target[t]", batches.get_raw_features(batch,0,targets) )
+    print_vector("input[t-%d]"%(l-i-1),batches.get_raw_inputs(batch,0,inputs[i][0]) )
+  print_vector("output[t+1]", batches.get_raw_outputs(batch,0,outputs) )
+  print_vector("target[t+1]", batches.get_raw_outputs(batch,0,targets) )
   print("--------------------------------")
   sys.stdout.flush()
   
@@ -118,7 +118,7 @@ def print_predictions(batches, batch, preds):
       
   np.set_printoptions(suppress=True)
   np.set_printoptions(precision=3)
-  out = batches.get_raw_features(batch,0,outputs)
+  out = batches.get_raw_outputs(batch,0,outputs)
   out_str = ' '.join(["%.3f"%out[i] for i in range(len(out))])
 
   print("%s %s %s"%(date,key,out_str))

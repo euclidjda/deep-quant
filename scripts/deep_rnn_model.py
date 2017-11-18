@@ -42,8 +42,6 @@ class DeepRnnModel(DeepNNModel):
       self._num_outputs = num_outputs = config.num_outputs
       num_hidden = config.num_hidden
 
-      key_target_idx = 3
-      
       # total_input_size = num_unrollings * num_inputs
       # input/target normalization params
       self._center = tf.get_variable('center',shape=[num_inputs],trainable=False)
@@ -68,9 +66,11 @@ class DeepRnnModel(DeepNNModel):
       for i in range(num_unrollings):
         if config.data_scaler is not None:
           self._scaled_inputs[i] = self._center_and_scale( self._inputs[i] )
-          self._scaled_targets[i] = self._center_and_scale( self._targets[i] )
         else:
           self._scaled_inputs[i] = self._inputs[i]
+        if config.data_scaler is not None and config.scale_targets is True:
+          self._scaled_targets[i] = self._center_and_scale( self._targets[i] )
+        else:
           self._scaled_targets[i] = self._targets[i]
             
       hkp = self._keep_prob if config.hidden_dropout is True else 1.0
@@ -114,7 +114,7 @@ class DeepRnnModel(DeepNNModel):
       self._mse_last_step = tf.losses.mean_squared_error(last_target, last_output)
       self._mse = tf.losses.mean_squared_error(last_target[:,ktidx], last_output[:,ktidx])
 
-      if config.data_scaler is not None:
+      if config.data_scaler is not None and config.scale_targets is True:
         self._predictions = self._reverse_center_and_scale( last_output )
       else:
         self._predictions = last_output

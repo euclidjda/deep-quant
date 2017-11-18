@@ -64,9 +64,15 @@ do
 
     PROGRESS_FILE=${TRAIN_DIR}/stdout-${TEST_START}.txt
 
+    echo "Checking to see if there is a pre-train file."
+    if [ ! -e ${CHKPTS_NAME}-${TEST_START} ]; then
+        echo "Nope, copying to ${CHKPTS_NAME}-200001"
+    	cp -r ${CHKPTS_NAME}-200001 ${CHKPTS_NAME}-${TEST_START}
+    fi
+
     if [ ! -e $PROGRESS_FILE ]; then
 	echo -n `date +"[%m-%d %H:%M:%S]"`
-	echo ": Training model with ${START_DATE_FLAG} and --end_date=${TRAIN_END} for test set year of ${YEAR} progress in $PROGRESS_FILE"
+	echo ": Training model with ${START_DATE_FLAG} --end_date=${TRAIN_END} for test set year of ${YEAR} progress in $PROGRESS_FILE"
 	$BIN/deep_quant.py --config=${CONFIG_FILE} --cache_id=1024 --datafile=${TRAIN_FILE} --train=True \
     	    ${START_DATE_FLAG} --end_date=${TRAIN_END} --model_dir=${CHKPTS_NAME}-${TEST_START} > $PROGRESS_FILE
     fi
@@ -77,7 +83,7 @@ do
 	echo -n `date +"[%m-%d %H:%M:%S]"`
 	echo ": Creating predictions file for period ${TEST_START_PAD} to ${TEST_END_PAD}"
 	$BIN/deep_quant.py --config=${CONFIG_FILE} --cache_id=9999 --datafile=${TRAIN_FILE} --train=False \
-            --start_date=${TEST_START_PAD} --end_date=${TEST_END_PAD} \
+	    --start_date=199501 --end_date=201712 \
 	    --model_dir=${CHKPTS_NAME}-${TEST_START} --mse_outfile=${TRAIN_DIR}/tmp-mse-${TEST_START}.dat > ${TRAIN_DIR}/tmp-pred-${TEST_START}.dat
 	echo -n `date +"[%m-%d %H:%M:%S]"`
 	echo ": Slicing predictions file ${TEST_START} to ${TEST_END} to create ${FINAL_PREDICTIONS_FILE}"
