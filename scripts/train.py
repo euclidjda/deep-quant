@@ -124,9 +124,10 @@ def train_model(config):
       scaling_params = train_data.get_scaling_params('RobustScaler')
       model.set_scaling_params(session,**scaling_params)
       print("done in %.2f seconds."%(time.time() - start_time))
-      # print(scaling_params['center'])
-      # print(scaling_params['scale'])
-      
+      #print(scaling_params['center'])
+      #print(scaling_params['scale'])
+      #exit(0)
+
     if config.early_stop is not None:
       print("Training will early stop without "
         "improvement after %d epochs."%config.early_stop)

@@ -297,8 +297,9 @@ class BatchGenerator(object):
             for i in indices:
                 step = random.randrange(self._num_unrollings)
                 x1 = self._get_feature_vector(i,step)
-                x2 = self._get_aux_vector(i,step)
-                sample.append(np.append(x1,x2))
+                sample.append(x1)
+                #x2 = self._get_aux_vector(i,step)
+                #sample.append(np.append(x1,x2))
 
             scaler = None
             if hasattr(sklearn.preprocessing,scaler_class):
@@ -311,8 +312,14 @@ class BatchGenerator(object):
             params = dict()
             params['center'] = scaler.center_ if hasattr(scaler,'center_') else scaler.mean_
             params['scale'] = scaler.scale_
+
+            num_aux = len(self._aux_indices)
+            if num_aux > 0:
+                params['center'] = np.append(params['center'], np.full( (num_aux), 0.0 )) 
+                params['scale'] = np.append(params['scale'], np.full( (num_aux), 1.0 )) 
+            
             self._scaling_params = params
-        
+
         return self._scaling_params
 
 
