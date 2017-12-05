@@ -106,7 +106,7 @@ class DeepMlpModel(DeepNNModel):
         self._predictions = self._reverse_center_and_scale( outputs )
       else:
         self._predictions = outputs
-      
+
       # from here down is the learning part of the graph
       L = config.target_lambda
       loss = L * self._mse + (1.0 - L) * self._mse_all
