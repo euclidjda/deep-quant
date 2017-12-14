@@ -41,6 +41,7 @@ class BatchGenerator(object):
         self._scaling_feature = config.scale_field
         self._num_unrollings = num_unrollings = config.num_unrollings
         self._stride = config.stride
+        self._forecast_n = config.forecast_n
         self._batch_size = batch_size = config.batch_size
         self._scaling_params = None
         self._start_date = config.start_date
@@ -87,13 +88,14 @@ class BatchGenerator(object):
         # Setup indexes into the sequences
         min_seq_length = self._stride * (num_unrollings-1) + 1
         steps = self._stride
+        forecast_n = self._forecast_n
         self._indices = list()
         last_key = ""
         cur_length = 1
         for i in range(self._data_len):
             # get active value
             key = data.iat[i,self._key_idx]
-            pred_key = data.iat[i+steps, self._key_idx] if i+steps < len(data) else ""
+            pred_key = data.iat[i+forecast_n, self._key_idx] if i+forecast_n < len(data) else ""
             active = True if int(data.iat[i,self._active_idx]) else False
             if (key != last_key):
                 cur_length = 1
@@ -181,11 +183,9 @@ class BatchGenerator(object):
             s = self._get_normalizer(start_idx)
             normalizers.append(s)
         return np.array( normalizers )
-           
-    def _get_feature_vector(self,start_idx,cur_step):
-        stride = self._stride
+
+    def _get_feature_vector(self,start_idx,cur_idx):
         data = self._data
-        cur_idx = start_idx+cur_step*stride
         if cur_idx < self._data_len:
             s = self._get_normalizer(start_idx)
             x = data.iloc[cur_idx,self._feature_indices].as_matrix()
@@ -194,11 +194,9 @@ class BatchGenerator(object):
             return np.multiply(np.sign(y),np.log1p(y_abs))
         else:
             return np.zeros(shape=[len(self._feature_indices)])
-
-    def _get_aux_vector(self,start_idx,cur_step):
-        stride = self._stride
+           
+    def _get_aux_vector(self,start_idx,cur_idx):
         data = self._data
-        cur_idx = start_idx+cur_step*stride
         if cur_idx < self._data_len:
             x = data.iloc[cur_idx,self._aux_indices].as_matrix()
             return x
@@ -217,28 +215,29 @@ class BatchGenerator(object):
         key_idx = self._key_idx
         date_idx = self._date_idx
         stride = self._stride
+        forecast_n = self._forecast_n
         len1 = len(self._feature_indices)
         len2 = len(self._aux_indices)
         for b in range(self._batch_size):
             cursor = self._index_cursor[b]
             start_idx = self._indices[cursor]
-            idx = start_idx + (step*stride)
-            next_idx = start_idx + ((step+1)*stride)
+            idx = start_idx + step*stride
+            next_idx = idx + forecast_n
             assert( idx < self._data_len )
             date = data.iat[idx,date_idx]
             key = data.iat[idx,key_idx]
             next_key = data.iat[next_idx,key_idx]
-            x[b,0:len1] = self._get_feature_vector(start_idx,step)
+            x[b,0:len1] = self._get_feature_vector(start_idx,idx)
             if key == next_key:
                 if self._price_target_idx >= 0:
                     y[b,0]  = data.iat[idx,self._price_target_idx]
                 else:
-                    y[b,:] = self._get_feature_vector(start_idx,step+1)
+                    y[b,:] = self._get_feature_vector(start_idx,next_idx)
             else:
                 y[b,:] = None
             # get aux fields
             if len2 > 0:
-                x[b,len1:len1+len2] = self._get_aux_vector(start_idx,step)
+                x[b,len1:len1+len2] = self._get_aux_vector(start_idx,idx)
             attr.append((key,date))
         return x, y, attr
 
@@ -296,9 +295,10 @@ class BatchGenerator(object):
             indices = random.sample(self._indices,min(len(self._indices),5000))
             for i in indices:
                 step = random.randrange(self._num_unrollings)
-                x1 = self._get_feature_vector(i,step)
+                idx = i+step*stride
+                x1 = self._get_feature_vector(i,idx)
                 sample.append(x1)
-                #x2 = self._get_aux_vector(i,step)
+                #x2 = self._get_aux_vector(i,idx)
                 #sample.append(np.append(x1,x2))
 
             scaler = None
@@ -355,7 +355,7 @@ class BatchGenerator(object):
         else:
             sd = self._start_date
             ed = self._end_date if self._end_date is not None else 210012
-            uid = "%d-%d-%d-%d-%d-%d-%s"%(config._cache_id,sd,ed,self._num_unrollings,self._stride,self._batch_size,keys)
+            uid = "%d-%d-%d-%d-%d-%d-%s"%(config.cache_id,sd,ed,self._num_unrollings,self._stride,self._batch_size,keys)
         hashed = hashlib.md5(uid.encode()).hexdigest()
         filename = "bcache-%s.pkl"%hashed
         # print(filename)
