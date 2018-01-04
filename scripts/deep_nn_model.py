@@ -108,6 +108,7 @@ class DeepNNModel(object):
     feed_dict = dict()
 
     feed_dict[self._batch_size] = batch.inputs[0].shape[0]
+    feed_dict[self._seq_lengths] = batch.seq_lengths
     feed_dict[self._keep_prob] = keep_prob
     feed_dict[self._phase] = 1 if training is True else 0
     

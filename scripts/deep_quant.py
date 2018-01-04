@@ -57,6 +57,7 @@ def get_configs():
   configs.DEFINE_integer("num_inputs", -1,"")
   configs.DEFINE_integer("num_outputs", -1,"")
   configs.DEFINE_integer("target_idx",None,"")
+  configs.DEFINE_integer("min_unrollings",4,"Min number of unrolling steps")
   configs.DEFINE_integer("num_unrollings",4,"Number of unrolling steps")
   configs.DEFINE_integer("stride",1,"How many steps to skip per unrolling")
   configs.DEFINE_integer("forecast_n",1,"How many steps to forecast into the future")

@@ -44,8 +44,8 @@ def predict(config):
 
   config.batch_size = 1
   batches = BatchGenerator(path, config, 
-                           require_targets=False, verbose=True)
-  batches.cache(verbose=True)
+                           require_targets=False, verbose=False)
+  batches.cache(verbose=False)
 
   tf_config = tf.ConfigProto( allow_soft_placement=True  ,
                               log_device_placement=False )
@@ -84,17 +84,26 @@ def predict(config):
       exit()
 
 def batch_to_key(batch):
-  return batch.attribs[0][0]
+  idx = batch.seq_lengths[0]-1
+  assert( 0<= idx )
+  assert( idx < len(batch.attribs) )
+  return batch.attribs[idx][0][0]
       
 def batch_to_date(batch):
-  return batch.attribs[0][1]
+  idx = batch.seq_lengths[0]-1
+  assert( 0<= idx )
+  assert( idx < len(batch.attribs) )
+  if (batch.attribs[idx][0] is None):
+    print(idx)
+    exit()
+  return batch.attribs[idx][0][1]
       
 def pretty_print_predictions(batches, batch, preds, mse):
   key     = batch_to_key(batch)
   date    = batch_to_date(batch)
-  inputs2 = batch.inputs[-2][0]
-  inputs1 = batch.inputs[-1][0]
-  targets = batch.targets[-1][0]
+
+  L = batch.seq_lengths[0]
+  targets = batch.targets[L-1][0]
   outputs = preds[0]
       
   np.set_printoptions(suppress=True)
@@ -102,9 +111,8 @@ def pretty_print_predictions(batches, batch, preds, mse):
       
   print("%s %s mse=%.4f"%(date,key,mse))
   inputs = batch.inputs
-  l = len(inputs)
-  for i in range(l):
-    print_vector("input[t-%d]"%(l-i-1),batches.get_raw_inputs(batch,0,inputs[i][0]) )
+  for i in range(L):
+    print_vector("input[t-%d]"%(L-i-1),batches.get_raw_inputs(batch,0,inputs[i][0]) )
   print_vector("output[t+1]", batches.get_raw_outputs(batch,0,outputs) )
   print_vector("target[t+1]", batches.get_raw_outputs(batch,0,targets) )
   print("--------------------------------")

@@ -55,8 +55,6 @@ def run_epoch(session, model, train_data, valid_data,
   valid_data.rewind()  # make sure we start a beggining
 
   print("Steps: %d "%total_steps,end=' ')
-
-
   
   for step in range(train_steps):
     batch = train_data.next_batch()

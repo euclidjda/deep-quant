@@ -86,10 +86,13 @@ class BatchGenerator(object):
                 print("Num validation entities: %d"%sample_size)
 
         # Setup indexes into the sequences
-        min_seq_length = self._stride * (num_unrollings-1) + 1
-        steps = self._stride
+        stride = self._stride
+        min_unrollings = config.min_unrollings
+        min_seq_length = stride * (min_unrollings-1) + 1
+        max_seq_length = stride * (num_unrollings-1) + 1
         forecast_n = self._forecast_n
-        self._indices = list()
+        self._start_indices = list()
+        self._end_indices = list()
         last_key = ""
         cur_length = 1
         for i in range(self._data_len):
@@ -102,18 +105,27 @@ class BatchGenerator(object):
             if ( (cur_length >= min_seq_length) and (active is True) ):
                 # If targets are not required, we don't need the future
                 # sequences to be there, otherwise we do
+                seq_len = min(cur_length - (cur_length-1)%stride, max_seq_length)
                 if (not require_targets) or (key == pred_key):
-                    self._indices.append(i-min_seq_length+1)
+                    self._start_indices.append(i-seq_len+1)
+                    self._end_indices.append(i)
             cur_length += 1
             last_key = key
 
+        #for i in range(len(self._start_indices)):
+        #    si = self._start_indices[i]
+        #    ei = self._end_indices[i]
+        #    sl = ((ei-si)//self._stride) + 1
+        #    print("%d %d %d"%(si,ei,sl))
+        #exit()
+
         if verbose is True:
-            print("Number of batch indices: %d"%(len(self._indices)))
+            print("Number of batch indices: %d"%(len(self._start_indices)))
         # Create a cursor of equally spaced indices into the dataset. Each index
         # in the cursor points to one sequence in a batch and is used to keep
         # track of where we are in the dataset.
         batch_size = self._batch_size
-        num_batches = len(self._indices) // batch_size
+        num_batches = len(self._start_indices) // batch_size
         self._index_cursor = [ offset * num_batches for offset in range(batch_size) ]
         self._init_index_cursor = self._index_cursor[:]
         self._num_batches = num_batches
@@ -179,7 +191,7 @@ class BatchGenerator(object):
         normalizers = list()
         for b in range(self._batch_size):
             cursor = self._index_cursor[b]
-            start_idx = self._indices[cursor]
+            start_idx = self._start_indices[cursor]
             s = self._get_normalizer(start_idx)
             normalizers.append(s)
         return np.array( normalizers )
@@ -203,7 +215,7 @@ class BatchGenerator(object):
         else:
             return np.zeros(shape=[len(self._aux_indices)])
 
-    def _next_step(self, step):
+    def _next_step(self, step, seq_lengths):
         """
         Get next step in current batch.
         """
@@ -218,27 +230,32 @@ class BatchGenerator(object):
         forecast_n = self._forecast_n
         len1 = len(self._feature_indices)
         len2 = len(self._aux_indices)
+
         for b in range(self._batch_size):
             cursor = self._index_cursor[b]
-            start_idx = self._indices[cursor]
+            start_idx = self._start_indices[cursor]
+            end_idx = self._end_indices[cursor]
+            seq_lengths[b] = ((end_idx-start_idx)//stride)+1
             idx = start_idx + step*stride
-            next_idx = idx + forecast_n
             assert( idx < self._data_len )
             date = data.iat[idx,date_idx]
             key = data.iat[idx,key_idx]
-            next_key = data.iat[next_idx,key_idx]
-            x[b,0:len1] = self._get_feature_vector(start_idx,idx)
-            if key == next_key:
-                if self._price_target_idx >= 0:
-                    y[b,0]  = data.iat[idx,self._price_target_idx]
-                else:
-                    y[b,:] = self._get_feature_vector(start_idx,next_idx)
+            next_idx = idx + forecast_n
+            next_key = data.iat[next_idx,key_idx] if next_idx < len(data) else ""
+            if idx > end_idx:
+                attr.append(None)
+                x[b,:] = 0.0
+                y[b,:] = 0.0
             else:
-                y[b,:] = None
-            # get aux fields
-            if len2 > 0:
-                x[b,len1:len1+len2] = self._get_aux_vector(start_idx,idx)
-            attr.append((key,date))
+                attr.append((key,date))
+                x[b,0:len1] = self._get_feature_vector(start_idx,idx)
+                if len2 > 0:
+                    x[b,len1:len1+len2] = self._get_aux_vector(start_idx,idx)
+                if key == next_key: # targets exist
+                    y[b,:] = self._get_feature_vector(start_idx,next_idx)
+                else: # no targets exist
+                    y[b,:] = None
+                
         return x, y, attr
 
     def _next_batch(self):
@@ -247,15 +264,15 @@ class BatchGenerator(object):
           A batch of type Batch (see class def below)
         """
         normalizers = self._get_batch_normalizers( )
-        
+        seq_lengths = np.full(self._batch_size, self._num_unrollings, dtype=int) 
         inputs = list()
         targets = list()
-        attribs = None
+        attribs = list()
         for i in range(self._num_unrollings):
-            x, y, attr = self._next_step(i)
+            x, y, attr = self._next_step(i, seq_lengths)
             inputs.append(x)
             targets.append(y)
-            attribs = attr
+            attribs.append(attr)
 
         assert(len(inputs)==len(targets))
         
@@ -263,19 +280,14 @@ class BatchGenerator(object):
         #   Set cursor for next batch
         #############################################################################
         batch_size = self._batch_size
-        num_idxs = len(self._indices)
+        num_idxs = len(self._start_indices)
         self._index_cursor = [ (self._index_cursor[b]+1)%num_idxs for b in range(batch_size) ]
 
-        return Batch(inputs, targets, attribs, normalizers)
+        return Batch(inputs, targets, attribs, normalizers, seq_lengths)
 
     def next_batch(self):
         b = None
 
-        # if batch_cache is empty, load it manually and same or from file
-        # if batch_cache[0] is None:
-        #   self._load_cache()
-        # b = self._batch_cache[self._batch_cursor]
-        
         if self._batch_cache[self._batch_cursor] is not None:
             b = self._batch_cache[self._batch_cursor]
         else:
@@ -292,7 +304,7 @@ class BatchGenerator(object):
             stride = self._stride
             data = self._data
             sample = list()
-            indices = random.sample(self._indices,min(len(self._indices),5000))
+            indices = random.sample(self._start_indices,min(len(self._start_indices),5000))
             for i in indices:
                 step = random.randrange(self._num_unrollings)
                 idx = i+step*stride
@@ -348,14 +360,9 @@ class BatchGenerator(object):
         key_list = list(set(self._data[config.key_field]))
         key_list.sort()        
         keys = ''.join(key_list)
-        if self._end_date is None and self._start_date is None:
-            uid = "%d-%d-%d-%d-%s"%(config.cache_id,self._num_unrollings,self._stride,self._batch_size,keys)
-        elif self._start_date is None:
-            uid = "%d-%d-%d-%d-%d-%s"%(config.cache_id,self._end_date,self._num_unrollings,self._stride,self._batch_size,keys)
-        else:
-            sd = self._start_date
-            ed = self._end_date if self._end_date is not None else 210012
-            uid = "%d-%d-%d-%d-%d-%d-%s"%(config.cache_id,sd,ed,self._num_unrollings,self._stride,self._batch_size,keys)
+        sd = self._start_date if self._start_date is not None else 199001
+        ed = self._end_date if self._end_date is not None else 210012
+        uid = "%d-%d-%d-%d-%d-%d-%s"%(config.cache_id,sd,ed,self._num_unrollings,self._stride,self._batch_size,keys)
         hashed = hashlib.md5(uid.encode()).hexdigest()
         filename = "bcache-%s.pkl"%hashed
         # print(filename)
@@ -415,12 +422,6 @@ class BatchGenerator(object):
         # We cannot shuffle until the entire dataset is cached
         if (self._batch_cache[-1] is not None):
             random.shuffle(self._batch_cache)
-            #print()
-            #for j in range(self._num_batches):
-            #    for i in range(self._batch_size):
-            #        (key,date) = self._batch_cache[j].attribs[i]
-            #        print("First Key %s %s"%(key,date))
-            #    print("----")
             self._batch_cusror = 0
          
     def rewind(self):
@@ -451,13 +452,12 @@ class BatchGenerator(object):
         return self._num_outputs
     
 class Batch(object):
-    """
-    """
-    def __init__(self, inputs, targets, attribs, normalizers):
+    def __init__(self, inputs, targets, attribs, normalizers, seq_lengths):
         self._inputs = inputs
         self._targets = targets
         self._attribs = attribs
         self._normalizers = normalizers
+        self._seq_lengths = seq_lengths
 
     @property
     def inputs(self):
@@ -471,11 +471,15 @@ class Batch(object):
     def attribs(self):
         return self._attribs
 
-    @property
-    def size(self):
-        return len(self._attribs)
+    #@property
+    #def size(self):
+    #    return len(self._attribs)
 
     @property
     def normalizers(self):
         return self._normalizers
+
+    @property
+    def seq_lengths(self):
+        return self._seq_lengths
     

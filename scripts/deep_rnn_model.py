@@ -48,6 +48,7 @@ class DeepRnnModel(DeepNNModel):
       self._scale  = tf.get_variable('scale',shape=[num_inputs],trainable=False)
       
       batch_size = self._batch_size = tf.placeholder(tf.int32, shape=[])
+      self._seq_lengths = tf.placeholder(tf.int32, shape=[None])
       self._keep_prob = tf.placeholder(tf.float32, shape=[])
       self._phase = tf.placeholder(tf.bool, name='phase')
 
@@ -82,14 +83,21 @@ class DeepRnnModel(DeepNNModel):
         if config.rnn_cell == 'gru':
           cell = tf.contrib.rnn.GRUCell(num_hidden)
         elif config.rnn_cell == 'lstm':
-          cell = tf.contrib.rnn.LayerNormBasicLSTMCell(num_hidden,dropout_keep_prob=rkp,dropout_prob_seed=config.seed)
+          cell = tf.contrib.rnn.LayerNormBasicLSTMCell(num_hidden,
+                                                       dropout_keep_prob=rkp,
+                                                       dropout_prob_seed=config.seed)
         assert(cell is not None)
-        cell = tf.contrib.rnn.DropoutWrapper(cell,output_keep_prob=hkp,input_keep_prob=ikp,seed=config.seed)
+        cell = tf.contrib.rnn.DropoutWrapper(cell,
+                                             output_keep_prob=hkp,
+                                             input_keep_prob=ikp,seed=config.seed)
         return cell
 
       stacked_rnn = tf.contrib.rnn.MultiRNNCell([rnn_cell() for _ in range(config.num_layers)])
       
-      outputs, state = tf.contrib.rnn.static_rnn(stacked_rnn, self._scaled_inputs, dtype=tf.float32)
+      outputs, state = tf.contrib.rnn.static_rnn(stacked_rnn, 
+                                                 self._scaled_inputs, 
+                                                 dtype=tf.float32,
+                                                 sequence_length=self._seq_lengths)
 
       self._w = softmax_w = tf.get_variable("softmax_w", [num_hidden, num_outputs])
       softmax_b = tf.get_variable("softmax_b", [num_outputs])
@@ -100,8 +108,22 @@ class DeepRnnModel(DeepNNModel):
 
       outputs = tf.concat(self._outputs, 0)
       targets = tf.concat(self._scaled_targets, 0)
-      last_target = self._scaled_targets[-1]
-      last_output = self._outputs[-1]
+
+      # last_target = self._scaled_targets[-1]
+      # last_output = self._outputs[-1]
+
+      last_output = tf.unstack(
+        tf.reverse_sequence(
+          tf.reshape(
+            tf.concat(self._outputs, 1),[batch_size,num_unrollings,num_outputs] ), 
+          self._seq_lengths,seq_axis=1,batch_axis=0),axis=1)[0]
+
+      last_target = tf.unstack(
+        tf.reverse_sequence(
+          tf.reshape(
+            tf.concat(self._scaled_targets, 1),[batch_size,num_unrollings,num_outputs] ), 
+          self._seq_lengths,seq_axis=1,batch_axis=0),axis=1)[0]
+
 
       ktidx = config.target_idx
       
