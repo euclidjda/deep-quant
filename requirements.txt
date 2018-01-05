@@ -1,8 +1,0 @@
-numpy
-pandas
-boto
-requests
-scipy
-scikit-learn
-
-

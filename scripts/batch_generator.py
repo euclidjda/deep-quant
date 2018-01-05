@@ -105,7 +105,7 @@ class BatchGenerator(object):
             if ( (cur_length >= min_seq_length) and (active is True) ):
                 # If targets are not required, we don't need the future
                 # sequences to be there, otherwise we do
-                seq_len = min(cur_length - (cur_length-1)%stride, max_seq_length)
+                seq_len = min(cur_length-(cur_length-1)%stride, max_seq_length)
                 if (not require_targets) or (key == pred_key):
                     self._start_indices.append(i-seq_len+1)
                     self._end_indices.append(i)
@@ -365,7 +365,6 @@ class BatchGenerator(object):
         uid = "%d-%d-%d-%d-%d-%d-%s"%(config.cache_id,sd,ed,self._num_unrollings,self._stride,self._batch_size,keys)
         hashed = hashlib.md5(uid.encode()).hexdigest()
         filename = "bcache-%s.pkl"%hashed
-        # print(filename)
         return filename
         
     def _load_cache(self,verbose=False):
