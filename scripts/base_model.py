@@ -23,14 +23,14 @@ import sys
 import numpy as np
 import tensorflow as tf
 
-class DeepNNModel(object):
+class BaseModel(object):
   """
   """
 
   def train_step(self, sess, batch, keep_prob=1.0):
     """
     Take one step through the data set. A step contains a sequences of batches
-    where the sequence is of size num_unrollings. The batches are size
+    where the sequence is of size max_unrollings. The batches are size
     batch_size. 
     Args:
       sess: current tf session the model is being run in
@@ -50,7 +50,7 @@ class DeepNNModel(object):
   def step(self, sess, batch):
      """
      Take one step through the data set. A step contains a sequences of batches
-     where the sequence is of size num_unrollings. The batches are size
+     where the sequence is of size max_unrollings. The batches are size
      batch_size. 
      Args:
        sess: current tf session the model is being run in
@@ -68,7 +68,7 @@ class DeepNNModel(object):
   def test_step(self, sess, batch, training=False):
     """
     Take one step through the data set. A step contains a sequences of batches
-    where the sequence is of size num_unrollings. The batches are size
+    where the sequence is of size max_unrollings. The batches are size
     batch_size. 
     Args:
       sess: current tf session the model is being run in
@@ -83,25 +83,34 @@ class DeepNNModel(object):
       valid_evals:
     """
 
+    print()
+    print("////////////////////////////////////////////////////////////////////////////////////")
+    print(batch.targets)
+
     feed_dict = self._get_feed_dict(batch,keep_prob=1.0,training=training)
     
-    (x,y,z) = sess.run([self._t,self._t1,self._o1],feed_dict)
+    (y,z,s) = sess.run([self._outs,self._tars,self._seq_lengths],feed_dict)
 
     np.set_printoptions(suppress=True)
     np.set_printoptions(precision=3)
 
-    print()
-    print(np.array(x))
-    print("---------------")
-    print(np.array(y))
-    print("---------------")
-    print(np.array(z))
-    print("---------------")
+    n = batch.normalizers[0]
+    
+    def unnorm(n,x):
+      return n * np.multiply(np.sign(x),np.expm1(np.fabs(x)))
 
-    (mse) = sess.run([self._mse],feed_dict)
+    print("////////////////////////////////////////////////////////////////////////////////////")
+    print(np.array(s))
+    print("////////////////////////////////////////////////////////////////////////////////////")
+    print(np.array(y))
+    print("////////////////////////////////////////////////////////////////////////////////////")
+    print(np.array(z))
+    print("////////////////////////////////////////////////////////////////////////////////////")
+
+    (mse, preds) = sess.run([self._mse,self._predictions],feed_dict)
     # assert( train_evals > 0 )
 
-    return mse
+    return mse, preds
 
   def _get_feed_dict(self,batch, keep_prob=1.0, training=False):
 
@@ -112,17 +121,19 @@ class DeepNNModel(object):
     feed_dict[self._keep_prob] = keep_prob
     feed_dict[self._phase] = 1 if training is True else 0
     
-    for i in range(self._num_unrollings):
+    for i in range(self._max_unrollings):
       feed_dict[self._inputs[i]]  = batch.inputs[i]
       feed_dict[self._targets[i]] = batch.targets[i]
     
     return feed_dict
 
   def _center_and_scale(self, x):
+      # only center/scale up to the width of x
       n = tf.shape(x)[1]
       return tf.divide( x - self._center[:n], self._scale[:n] )
 
   def _reverse_center_and_scale(self, x):
+      # only center/scale up to the width of x
       n = tf.shape(x)[1]
       return tf.multiply( x, self._scale[:n] ) + self._center[:n]
   
@@ -153,5 +164,5 @@ class DeepNNModel(object):
     return self._lr
 
   @property
-  def num_unrollings(self):
-    return self._num_unrollings
+  def max_unrollings(self):
+    return self._max_unrollings

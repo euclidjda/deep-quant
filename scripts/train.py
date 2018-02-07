@@ -40,7 +40,7 @@ def run_epoch(session, model, train_data, valid_data,
                 keep_prob=1.0, passes=1.0, verbose=False):
 
   if not train_data.num_batches > 0:
-    raise RuntimeError("batch_size*num_unrollings is larger "
+    raise RuntimeError("batch_size*max_unrollings is larger "
                          "than the training set size.")
 
   start_time = time.time()
@@ -97,9 +97,6 @@ def train_model(config):
   train_data = batches.train_batches()
   valid_data = batches.valid_batches()
 
-  train_data.cache(verbose=True)
-  valid_data.cache(verbose=True)
-
   if config.start_date is not None:
     print("Training start date: ",config.start_date)
   if config.start_date is not None:
@@ -119,7 +116,7 @@ def train_model(config):
     if config.data_scaler is not None:
       start_time = time.time()
       print("Calculating scaling parameters ...", end=' '); sys.stdout.flush()
-      scaling_params = train_data.get_scaling_params('RobustScaler')
+      scaling_params = train_data.get_scaling_params(config.data_scaler)
       model.set_scaling_params(session,**scaling_params)
       print("done in %.2f seconds."%(time.time() - start_time))
       #print(scaling_params['center'])
@@ -134,7 +131,10 @@ def train_model(config):
     valid_history = list()
 
     lr = model.set_learning_rate(session,config.learning_rate)
-    
+
+    train_data.cache(verbose=True)
+    valid_data.cache(verbose=True)
+
     for i in range(config.max_epoch):
 
       (train_mse, valid_mse) = run_epoch(session, model, train_data, valid_data,

@@ -44,8 +44,8 @@ def predict(config):
 
   config.batch_size = 1
   batches = BatchGenerator(path, config, 
-                           require_targets=False, verbose=False)
-  batches.cache(verbose=False)
+                           require_targets=False, verbose=True)
+  batches.cache(verbose=True)
 
   tf_config = tf.ConfigProto( allow_soft_placement=True  ,
                               log_device_placement=False )
@@ -60,6 +60,7 @@ def predict(config):
       batch = batches.next_batch()
 
       (mse, preds) = model.step(session, batch)
+      # (mse, preds) = model.test_step(session, batch)
 
       if math.isnan(mse) is False:
         date = batch_to_date(batch)

@@ -24,11 +24,11 @@ import sys
 import numpy as np
 import tensorflow as tf
 
-from deep_nn_model import DeepNNModel
+from base_model import BaseModel
 from tensorflow.python.ops import math_ops
 from tensorflow.python.ops import random_ops
 
-class DeepMlpModel(DeepNNModel):
+class DeepMlpModel(BaseModel):
   """
   A Deep MLP Model that supports a mult-class output with an
   arbitrary number of fixed width hidden layers.
@@ -40,45 +40,55 @@ class DeepMlpModel(DeepNNModel):
         config
       """
 
-      self._num_unrollings = num_unrollings = config.num_unrollings
+      self._max_unrollings = max_unrollings = config.max_unrollings
       self._num_inputs = num_inputs = config.num_inputs
       self._num_outputs = num_outputs = config.num_outputs
       
-      total_input_size = num_unrollings * num_inputs
+      total_input_size = max_unrollings * num_inputs
 
       # input/target normalization params
       self._center = tf.get_variable('center',shape=[num_inputs],trainable=False)
       self._scale  = tf.get_variable('scale',shape=[num_inputs],trainable=False)
       
       batch_size = self._batch_size = tf.placeholder(tf.int32, shape=[])
+      self._seq_lengths = tf.placeholder(tf.int64, shape=[None])
       self._keep_prob = tf.placeholder(tf.float32, shape=[])
       self._phase = tf.placeholder(tf.bool, name='phase')
       
       self._inputs = list()
       self._targets = list()
 
-      for _ in range(num_unrollings):
+      for _ in range(max_unrollings):
         self._inputs.append( tf.placeholder(tf.float32,
                                               shape=[None,num_inputs]) )
         self._targets.append( tf.placeholder(tf.float32,
                                               shape=[None,num_outputs]) )
-        
-      inputs = tf.concat( self._inputs, 1 )
-      targets = self._targets[-1]
+
+      inputs = tf.reverse_sequence(tf.concat( self._inputs, 1 ),
+                                   self._seq_lengths*num_inputs,
+                                   seq_axis=1,batch_axis=0)
+      # inputs = tf.concat( self._inputs, 1 )
+
+      targets = tf.unstack(tf.reverse_sequence(tf.reshape(
+        tf.concat(self._targets, 1),[batch_size,max_unrollings,num_outputs]),
+        self._seq_lengths,seq_axis=1,batch_axis=0),axis=1)[0]
+      # targets = self._targets[-1]
       
       # center and scale
       if config.data_scaler is not None:
-        inputs = tf.divide(inputs - tf.tile(self._center,[num_unrollings]),
-                          tf.tile(self._scale,[num_unrollings]))
+        inputs = tf.divide(inputs - tf.tile(self._center,[max_unrollings]),
+                          tf.tile(self._scale,[max_unrollings]))
         if config.scale_targets is True:
           targets = self._center_and_scale( targets )
 
-      self._t = targets
-      
-      if config.input_dropout is True: inputs = self._input_dropout(inputs)
+      if config.input_dropout is True:
+        inputs = self._input_dropout(inputs)
 
       num_prev = total_input_size
- 
+
+      seq_mask = tf.sequence_mask(self._seq_lengths*num_inputs, 
+                                  total_input_size, dtype=tf.float32)
+      inputs = tf.multiply(seq_mask, inputs)
       outputs = inputs
 
       for i in range(config.num_layers):
@@ -97,6 +107,9 @@ class DeepMlpModel(DeepNNModel):
       linear_w = tf.get_variable("linear_w", [num_prev, num_outputs])
       outputs = tf.nn.xw_plus_b(outputs, linear_w, linear_b)
 
+      self._inps = inputs
+      self._tars = targets
+      self._outs = outputs
 
       ktidx = config.target_idx
       self._mse = tf.losses.mean_squared_error(targets[:,ktidx], outputs[:,ktidx])
@@ -133,7 +146,7 @@ class DeepMlpModel(DeepNNModel):
     random_tensor = self._keep_prob
     random_tensor += random_ops.random_uniform([self._batch_size,self._num_inputs],
                                                dtype=inputs.dtype)
-    random_tensor = tf.tile(random_tensor,[1,self._num_unrollings])
+    random_tensor = tf.tile(random_tensor,[1,self._max_unrollings])
     binary_tensor = math_ops.floor(random_tensor)
 
     ret = math_ops.div(inputs, self._keep_prob) * binary_tensor

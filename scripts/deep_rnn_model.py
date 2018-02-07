@@ -23,9 +23,9 @@ import sys
 import numpy as np
 import tensorflow as tf
 
-from deep_nn_model import DeepNNModel
+from base_model import BaseModel
 
-class DeepRnnModel(DeepNNModel):
+class DeepRnnModel(BaseModel):
   """
   A Deep Rnn Model that supports a binary (two class) output with an
   arbitrary number of fixed width hidden layers.
@@ -37,12 +37,11 @@ class DeepRnnModel(DeepNNModel):
         config
       """
 
-      self._num_unrollings = num_unrollings = config.num_unrollings
+      self._max_unrollings = max_unrollings = config.max_unrollings
       self._num_inputs = num_inputs = config.num_inputs
       self._num_outputs = num_outputs = config.num_outputs
       num_hidden = config.num_hidden
 
-      # total_input_size = num_unrollings * num_inputs
       # input/target normalization params
       self._center = tf.get_variable('center',shape=[num_inputs],trainable=False)
       self._scale  = tf.get_variable('scale',shape=[num_inputs],trainable=False)
@@ -55,16 +54,16 @@ class DeepRnnModel(DeepNNModel):
       self._inputs = list()
       self._targets = list()
  
-      for _ in range(num_unrollings):
+      for _ in range(max_unrollings):
         inp = tf.placeholder(tf.float32, shape=[None,num_inputs])
         tar =  tf.placeholder(tf.float32, shape=[None,num_outputs])
         self._inputs.append( inp )
         self._targets.append( tar )
 
-      self._scaled_inputs = [None]*num_unrollings
-      self._scaled_targets = [None]*num_unrollings
+      self._scaled_inputs = [None]*max_unrollings
+      self._scaled_targets = [None]*max_unrollings
         
-      for i in range(num_unrollings):
+      for i in range(max_unrollings):
         if config.data_scaler is not None:
           self._scaled_inputs[i] = self._center_and_scale( self._inputs[i] )
         else:
@@ -94,44 +93,49 @@ class DeepRnnModel(DeepNNModel):
 
       stacked_rnn = tf.contrib.rnn.MultiRNNCell([rnn_cell() for _ in range(config.num_layers)])
       
-      outputs, state = tf.contrib.rnn.static_rnn(stacked_rnn, 
-                                                 self._scaled_inputs, 
-                                                 dtype=tf.float32,
-                                                 sequence_length=self._seq_lengths)
+      rnn_outputs, state = tf.contrib.rnn.static_rnn(stacked_rnn,
+                                                     self._scaled_inputs, 
+                                                     dtype=tf.float32,
+                                                     sequence_length=self._seq_lengths)
 
-      self._w = softmax_w = tf.get_variable("softmax_w", [num_hidden, num_outputs])
-      softmax_b = tf.get_variable("softmax_b", [num_outputs])
+      self._w = output_w = tf.get_variable("output_w", [num_hidden, num_outputs])
+      output_b = tf.get_variable("output_b", [num_outputs])
 
       self._outputs = list()
-      for i in range(num_unrollings):
-        self._outputs.append( tf.nn.xw_plus_b( outputs[i], softmax_w, softmax_b ) )
+      for i in range(max_unrollings):
+        self._outputs.append( tf.nn.xw_plus_b( rnn_outputs[i], output_w, output_b ) )
 
-      outputs = tf.concat(self._outputs, 0)
-      targets = tf.concat(self._scaled_targets, 0)
-
-      # last_target = self._scaled_targets[-1]
-      # last_output = self._outputs[-1]
+      #last_target = self._scaled_targets[-1]
+      #last_output = self._outputs[-1]
 
       last_output = tf.unstack(
         tf.reverse_sequence(
           tf.reshape(
-            tf.concat(self._outputs, 1),[batch_size,num_unrollings,num_outputs] ), 
+            tf.concat(self._outputs, 1),[batch_size,max_unrollings,num_outputs] ), 
           self._seq_lengths,seq_axis=1,batch_axis=0),axis=1)[0]
 
       last_target = tf.unstack(
         tf.reverse_sequence(
           tf.reshape(
-            tf.concat(self._scaled_targets, 1),[batch_size,num_unrollings,num_outputs] ), 
+            tf.concat(self._scaled_targets, 1),[batch_size,max_unrollings,num_outputs] ), 
           self._seq_lengths,seq_axis=1,batch_axis=0),axis=1)[0]
-
 
       ktidx = config.target_idx
       
-      self._o = last_output
-      self._t = last_target
-      self._o1 = last_output[:,ktidx]
-      self._t1 = last_target[:,ktidx]
-            
+      self._o = self._reverse_center_and_scale( last_output )
+      self._t = self._reverse_center_and_scale( last_target )
+      self._o1 = self._o[:,ktidx]
+      self._t1 = self._t[:,ktidx]
+
+      seq_mask = tf.sequence_mask(self._seq_lengths*num_outputs, 
+                                  max_unrollings*num_outputs, dtype=tf.float32)
+
+      # self._inps = tf.multiply(seq_mask,tf.concat(self._scaled_inputs, 1))
+      self._outs = outputs = tf.multiply(seq_mask,tf.concat(self._outputs, 1))
+      self._tars = targets = tf.multiply(seq_mask,tf.concat(self._scaled_targets, 1))
+      # outputs = tf.concat(self._outputs, 0)
+      # targets = tf.concat(self._scaled_targets, 0)
+
       self._mse_all_steps = tf.losses.mean_squared_error(targets, outputs)
       self._mse_last_step = tf.losses.mean_squared_error(last_target, last_output)
       self._mse = tf.losses.mean_squared_error(last_target[:,ktidx], last_output[:,ktidx])

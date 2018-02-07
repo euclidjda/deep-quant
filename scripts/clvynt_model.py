@@ -24,11 +24,11 @@ import sys
 import numpy as np
 import tensorflow as tf
 
-from deep_nn_model import DeepNNModel
+from base_model import BaseModel
 from tensorflow.python.ops import math_ops
 from tensorflow.python.ops import random_ops
 
-class ClvyntModel(DeepNNModel):
+class ClvyntModel(BaseModel):
   """
   """
   def __init__(self, config):
@@ -38,11 +38,11 @@ class ClvyntModel(DeepNNModel):
         config
       """
 
-      self._num_unrollings = num_unrollings = config.num_unrollings
+      self._max_unrollings = max_unrollings = config.max_unrollings
       self._num_inputs = num_inputs =config.num_inputs
       self._num_outputs = num_outputs = config.num_outputs
       
-      total_input_size = num_unrollings * num_inputs
+      total_input_size = max_unrollings * num_inputs
 
       # input/target normalization params
       self._center = tf.get_variable('center',shape=[num_inputs],trainable=False)
@@ -55,7 +55,7 @@ class ClvyntModel(DeepNNModel):
       self._inputs = list()
       self._targets = list()
 
-      for _ in range(num_unrollings):
+      for _ in range(max_unrollings):
         self._inputs.append( tf.placeholder(tf.float32,
                                               shape=[None,num_inputs]) )
         self._targets.append( tf.placeholder(tf.float32,

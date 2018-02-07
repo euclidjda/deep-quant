@@ -28,6 +28,12 @@ THE TODO LIST:
 
 - (DONE) In predict.py, output predictions timesteps less than t. I.e., t-1, t-2, 0
 
+- (DONE) Implement variable length sequences
+
+- Configurable validation/holdout set methodology (holdout time window or companies)
+
+- RNN cost function upweight last k time steps instead of just last time step
+
 - max-norm regularization for RNN and MLP (use tf.clip_by_norm)
 
 - Trainable ReLu units in MLP

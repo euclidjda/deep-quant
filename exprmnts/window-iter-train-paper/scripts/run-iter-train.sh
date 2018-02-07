@@ -5,11 +5,11 @@ date
 CONFIG_FILE=config/iter-default-model.conf
 TRAIN_DIR=default-train
 GPU=0
-ORIGIN_YEAR=1970
-START_YEAR=2000
+ORIGIN_YEAR=1980
+START_YEAR=2005
 END_YEAR=2017
 PREDICT_TRAIN_DATA=yes
-NUM_UNROLLINGS=10
+NUM_UNROLLINGS=5
 
 while getopts c:t:s:e:p:w: option
 do
@@ -34,7 +34,7 @@ echo "Predict Train Data: ${PREDICT_TRAIN_DATA}"
 ROOT=$DEEP_QUANT_ROOT
 BIN=$ROOT/scripts
 DATA_DIR=$ROOT/datasets
-TRAIN_FILE=source-ml-data-v2-100M-train.dat
+TRAIN_FILE=source-ml-data-400M.dat
 
 CHKPTS_NAME=${TRAIN_DIR}/chkpts-train
 
@@ -58,7 +58,7 @@ do
 	echo -n `date +"[%m-%d %H:%M:%S]"`
 	echo ": Training model with --end_date=${TRAIN_END} for test set year of ${YEAR} progress in $PROGRESS_FILE"
 	$BIN/deep_quant.py --config=${CONFIG_FILE} --cache_id=1024 --datafile=${TRAIN_FILE} --train=True \
-    	    --end_date=${TRAIN_END} --model_dir=${CHKPTS_NAME}-${TEST_START} > $PROGRESS_FILE
+    	    --start_date=${ORIGIN_YEAR}01 --end_date=${TRAIN_END} --model_dir=${CHKPTS_NAME}-${TEST_START} > $PROGRESS_FILE
     fi
 
     FINAL_PREDICTIONS_FILE=${TRAIN_DIR}/test-preds-${TEST_START}.dat
@@ -86,7 +86,7 @@ if [ $PREDICT_TRAIN_DATA == yes ]; then
     echo -n `date +"[%m-%d %H:%M:%S] "`
     echo ": Creating predictions for training dataset MODEL=${MODEL_DIR} TEST_END=${TEST_END}"
     $BIN/deep_quant.py --config=${CONFIG_FILE} --cache_id=9999 --datafile=${TRAIN_FILE} --train=False \
-    	--end_date=${TEST_END} --model_dir=${MODEL_DIR} \
+    	--start_date=${ORIGIN_YEAR}01 --end_date=${TEST_END} --model_dir=${MODEL_DIR} \
     	--mse_outfile=${TRAIN_DIR}/tmp-train-mse.dat > ${TRAIN_DIR}/tmp-train-preds.dat
     SLICE_START=${ORIGIN_YEAR}01
     SLICE_END=`expr ${START_YEAR} - 1`12

@@ -41,14 +41,13 @@ def get_configs():
   """Defines all configuration params passable to command line.
   """
   configs.DEFINE_string("datafile",'data.dat',"a datafile name.")
-  configs.DEFINE_string("mse_outfile",None,"A file write mse values during predict only phase.")
+  configs.DEFINE_string("mse_outfile",None,"A file to write mse values during predict phase.")
   configs.DEFINE_string("default_gpu",'',"The default GPU to use e.g., /gpu:0")
   configs.DEFINE_string("nn_type",'DeepRnnModel',"Model type")
   configs.DEFINE_string("active_field", 'active',"Key column name header for active indicator")
   configs.DEFINE_string("key_field", 'gvkey',"Key column name header in datafile")
   configs.DEFINE_string("target_field", 'oiadpq_ttm',"Target column name header in datafile")
   configs.DEFINE_string("scale_field", 'mrkcap',"Feature to scale inputs by")
-  configs.DEFINE_string("first_feature_field", '',"First feature")
   configs.DEFINE_string("feature_fields", '',"shared input and target field names")
   configs.DEFINE_string("aux_input_fields", None,"non-target, input only fields")
   configs.DEFINE_string("data_dir",'',"The data directory")
@@ -57,10 +56,12 @@ def get_configs():
   configs.DEFINE_integer("num_inputs", -1,"")
   configs.DEFINE_integer("num_outputs", -1,"")
   configs.DEFINE_integer("target_idx",None,"")
-  configs.DEFINE_integer("min_unrollings",4,"Min number of unrolling steps")
+  configs.DEFINE_integer("min_unrollings",None,"Min number of unrolling steps")
+  configs.DEFINE_integer("max_unrollings",None,"Max number of unrolling steps")
+  # num_unrollings is being depricated by max_unrollings
   configs.DEFINE_integer("num_unrollings",4,"Number of unrolling steps")
-  configs.DEFINE_integer("stride",1,"How many steps to skip per unrolling")
-  configs.DEFINE_integer("forecast_n",1,"How many steps to forecast into the future")
+  configs.DEFINE_integer("stride",12,"How many steps to skip per unrolling")
+  configs.DEFINE_integer("forecast_n",12,"How many steps to forecast into the future")
   configs.DEFINE_integer("batch_size",1,"Size of each batch")
   configs.DEFINE_integer("num_layers",1, "Numer of RNN layers")
   configs.DEFINE_integer("num_hidden",10,"Number of hidden layer units")
@@ -80,9 +81,9 @@ def get_configs():
   configs.DEFINE_string("data_scaler",None,'sklearn scaling algorithm or None if no scaling')
   configs.DEFINE_string("optimizer", 'GradientDescentOptimizer', 'Any tensorflow optimizer in tf.train')
   configs.DEFINE_string("optimizer_params",None, 'Additional optimizer params such as momentum')
-  configs.DEFINE_float("learning_rate",0.6,"")
+  configs.DEFINE_float("learning_rate",0.6,"The initial starting learning rate")
   configs.DEFINE_float("lr_decay",0.9, "Learning rate decay")
-  configs.DEFINE_float("validation_size",0.0,"Size of validation set as %")
+  configs.DEFINE_float("validation_size",0.0,"Size of validation set as %, ie. .3 = 30% of data")
   configs.DEFINE_float("passes",1.0,"Passes through day per epoch")
   configs.DEFINE_float("target_lambda",0.5,"How much to weight last step vs. all steps in loss")
   configs.DEFINE_float("rnn_lambda",0.5,"How much to weight last step vs. all steps in loss")
@@ -92,6 +93,12 @@ def get_configs():
   configs.DEFINE_integer("cache_id",None,"A unique experiment key for traking a cahce")
 
   c = configs.ConfigValues()
+
+  if c.min_unrollings is None:
+      c.min_unrollings = c.num_unrollings
+
+  if c.max_unrollings is None:
+      c.max_unrollings = c.num_unrollings
 
   # optimizer_params is a string of the form "param1=value1,param2=value2,..."
   # this maps it to dictionary { param1 : value1, param2 : value2, ...}

@@ -31,7 +31,7 @@ class BatchGenerator(object):
     BatchGenerator object takes a data file are returns an object with
     a next_batch() function. The next_batch() function yields a batch of data
     sequences from the datafile whose shape is specified by config.batch_size
-    and config.num_unrollings.
+    and config.max_unrollings.
     """
     def __init__(self, filename, config, validation=True, require_targets=True,
                      data=None, verbose=True):
@@ -39,7 +39,8 @@ class BatchGenerator(object):
         Init a BatchGenerator
         """
         self._scaling_feature = config.scale_field
-        self._num_unrollings = num_unrollings = config.num_unrollings
+        self._max_unrollings = max_unrollings = config.max_unrollings
+        self._min_unrollings = min_unrollings = config.min_unrollings
         self._stride = config.stride
         self._forecast_n = config.forecast_n
         self._batch_size = batch_size = config.batch_size
@@ -53,8 +54,9 @@ class BatchGenerator(object):
             if not os.path.isfile(filename):
                 raise RuntimeError("The data file %s does not exists" % filename)
             data = pd.read_csv(filename,sep=' ', dtype={ config.key_field : str } )
-            if config.start_date is not None:
-                data = data.drop(data[data['date'] < config.start_date].index)
+            # Moved this to proper location in indices gen code below
+            #if config.start_date is not None:
+            #    data = data.drop(data[data['date'] < config.start_date].index)
             if config.end_date is not None:
                 data = data.drop(data[data['date'] > config.end_date].index)
 
@@ -87,12 +89,14 @@ class BatchGenerator(object):
 
         # Setup indexes into the sequences
         stride = self._stride
-        min_unrollings = config.min_unrollings
-        min_seq_length = stride * (min_unrollings-1) + 1
-        max_seq_length = stride * (num_unrollings-1) + 1
+        min_steps = stride * (min_unrollings-1) + 1
+        max_steps = stride * (max_unrollings-1) + 1
         forecast_n = self._forecast_n
         self._start_indices = list()
         self._end_indices = list()
+        start_date = 100001
+        if config.start_date is not None:
+            start_date = config.start_date
         last_key = ""
         cur_length = 1
         for i in range(self._data_len):
@@ -100,24 +104,20 @@ class BatchGenerator(object):
             key = data.iat[i,self._key_idx]
             pred_key = data.iat[i+forecast_n, self._key_idx] if i+forecast_n < len(data) else ""
             active = True if int(data.iat[i,self._active_idx]) else False
+            date = data.iat[i,self._date_idx]
             if (key != last_key):
                 cur_length = 1
-            if ( (cur_length >= min_seq_length) and (active is True) ):
+            if ( (cur_length >= min_steps) 
+                 and (active is True) 
+                 and (date >= start_date) ):
                 # If targets are not required, we don't need the future
                 # sequences to be there, otherwise we do
-                seq_len = min(cur_length-(cur_length-1)%stride, max_seq_length)
+                seq_len = min(cur_length-(cur_length-1)%stride, max_steps)
                 if (not require_targets) or (key == pred_key):
                     self._start_indices.append(i-seq_len+1)
                     self._end_indices.append(i)
             cur_length += 1
             last_key = key
-
-        #for i in range(len(self._start_indices)):
-        #    si = self._start_indices[i]
-        #    ei = self._end_indices[i]
-        #    sl = ((ei-si)//self._stride) + 1
-        #    print("%d %d %d"%(si,ei,sl))
-        #exit()
 
         if verbose is True:
             print("Number of batch indices: %d"%(len(self._start_indices)))
@@ -182,24 +182,24 @@ class BatchGenerator(object):
     def _init_batch_cursor(self, config):
         pass
 
-    def _get_normalizer(self,start_idx):
-        idx = start_idx + (self._num_unrollings-1)*self._stride
-        val = max(self._data.iloc[idx][self._scaling_feature],_MIN_SEQ_NORM)
+    def _get_normalizer(self,end_idx):
+        val = max(self._data.iloc[end_idx][self._scaling_feature],_MIN_SEQ_NORM)
         return val
         
     def _get_batch_normalizers(self):
         normalizers = list()
         for b in range(self._batch_size):
             cursor = self._index_cursor[b]
-            start_idx = self._start_indices[cursor]
-            s = self._get_normalizer(start_idx)
+            end_idx = self._end_indices[cursor]
+            s = self._get_normalizer(end_idx)
             normalizers.append(s)
         return np.array( normalizers )
 
-    def _get_feature_vector(self,start_idx,cur_idx):
+    def _get_feature_vector(self,end_idx,cur_idx):
         data = self._data
         if cur_idx < self._data_len:
-            s = self._get_normalizer(start_idx)
+            s = self._get_normalizer(end_idx)
+            assert(s>0)
             x = data.iloc[cur_idx,self._feature_indices].as_matrix()
             y = np.divide(x,s)
             y_abs = np.absolute(y).astype(float)
@@ -207,7 +207,7 @@ class BatchGenerator(object):
         else:
             return np.zeros(shape=[len(self._feature_indices)])
            
-    def _get_aux_vector(self,start_idx,cur_idx):
+    def _get_aux_vector(self,cur_idx):
         data = self._data
         if cur_idx < self._data_len:
             x = data.iloc[cur_idx,self._aux_indices].as_matrix()
@@ -248,11 +248,11 @@ class BatchGenerator(object):
                 y[b,:] = 0.0
             else:
                 attr.append((key,date))
-                x[b,0:len1] = self._get_feature_vector(start_idx,idx)
+                x[b,0:len1] = self._get_feature_vector(end_idx,idx)
                 if len2 > 0:
-                    x[b,len1:len1+len2] = self._get_aux_vector(start_idx,idx)
+                    x[b,len1:len1+len2] = self._get_aux_vector(idx)
                 if key == next_key: # targets exist
-                    y[b,:] = self._get_feature_vector(start_idx,next_idx)
+                    y[b,:] = self._get_feature_vector(end_idx,next_idx)
                 else: # no targets exist
                     y[b,:] = None
                 
@@ -264,11 +264,11 @@ class BatchGenerator(object):
           A batch of type Batch (see class def below)
         """
         normalizers = self._get_batch_normalizers( )
-        seq_lengths = np.full(self._batch_size, self._num_unrollings, dtype=int) 
+        seq_lengths = np.full(self._batch_size, self._max_unrollings, dtype=int) 
         inputs = list()
         targets = list()
         attribs = list()
-        for i in range(self._num_unrollings):
+        for i in range(self._max_unrollings):
             x, y, attr = self._next_step(i, seq_lengths)
             inputs.append(x)
             targets.append(y)
@@ -304,11 +304,15 @@ class BatchGenerator(object):
             stride = self._stride
             data = self._data
             sample = list()
-            indices = random.sample(self._start_indices,min(len(self._start_indices),5000))
-            for i in indices:
-                step = random.randrange(self._num_unrollings)
-                idx = i+step*stride
-                x1 = self._get_feature_vector(i,idx)
+            z = zip(self._start_indices,self._end_indices)
+            indices = random.sample(list(z),
+                                    int(0.10*len(self._start_indices)))
+            for idx in indices:
+                start_idx = idx[0]
+                end_idx = idx[1]
+                step = random.randrange(self._min_unrollings)
+                cur_idx = start_idx+step*stride
+                x1 = self._get_feature_vector(end_idx,cur_idx)
                 sample.append(x1)
                 #x2 = self._get_aux_vector(i,idx)
                 #sample.append(np.append(x1,x2))
@@ -360,9 +364,12 @@ class BatchGenerator(object):
         key_list = list(set(self._data[config.key_field]))
         key_list.sort()        
         keys = ''.join(key_list)
-        sd = self._start_date if self._start_date is not None else 199001
-        ed = self._end_date if self._end_date is not None else 210012
-        uid = "%d-%d-%d-%d-%d-%d-%s"%(config.cache_id,sd,ed,self._num_unrollings,self._stride,self._batch_size,keys)
+        sd = self._start_date if self._start_date is not None else 100001
+        ed = self._end_date if self._end_date is not None else 999912
+        uid = "%d-%d-%d-%d-%d-%d-%d-%s"%(config.cache_id,sd,ed,
+                                         self._max_unrollings,
+                                         self._min_unrollings,
+                                         self._stride,self._batch_size,keys)
         hashed = hashlib.md5(uid.encode()).hexdigest()
         filename = "bcache-%s.pkl"%hashed
         return filename
@@ -403,17 +410,41 @@ class BatchGenerator(object):
                 pickle.dump( self._batch_cache, open( filename, "wb" ) )
                 if verbose is True: print("done in %.2f seconds."%(time.time() - start_time))            
 
+    def _train_dates(self):
+        data = self._data
+        dates = list(set(data['date']))
+        dates.sort()
+        i = int(len(dates)*(1.0-self._config.validation_size))-1
+        assert(i < len(dates))
+        train_dates = [d for d in dates if d < dates[i]]
+        return train_dates
+
+    def _valid_dates(self):
+        data = self._data
+        dates = list(set(data['date']))
+        dates.sort()
+        i = int(len(dates)*(1.0-self._config.validation_size))-1
+        i = max(i - (self._min_unrollings-1)*self._stride-1,0) 
+        assert(i < len(dates))
+        valid_dates = [d for d in dates if d >= dates[i]]
+        return valid_dates
+
     def train_batches(self):
         valid_keys = list(self._validation_set.keys())
         indexes = self._data[self._config.key_field].isin(valid_keys)
+        # indexes = self._data['date'].isin(self._train_dates())
         train_data = self._data[~indexes]
+        #sd = max(self._config.start_date,min(train_data['date']))
+        #print("Train period: %d to %d"%(sd,max(train_data['date'])))
         return BatchGenerator("", self._config, validation=False,
                                   data=train_data)
 
     def valid_batches(self):
         valid_keys = list(self._validation_set.keys())
         indexes = self._data[self._config.key_field].isin(valid_keys)
+        # indexes = self._data['date'].isin(self._valid_dates())
         valid_data = self._data[indexes]
+        #print("Validation period: %d to %d"%(min(valid_data['date']),max(valid_data['date'])))
         return BatchGenerator("", self._config, validation=False,
                                   data=valid_data)
 
@@ -439,8 +470,8 @@ class BatchGenerator(object):
         return self._num_batches
 
     @property
-    def num_unrollings(self):
-        return self._num_unrollings
+    def max_unrollings(self):
+        return self._max_unrollings
 
     @property
     def num_inputs(self):
