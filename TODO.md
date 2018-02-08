@@ -30,9 +30,11 @@ THE TODO LIST:
 
 - (DONE) Implement variable length sequences
 
+- (DONE) RNN cost function upweight last k time steps instead of just last time step
+
 - Configurable validation/holdout set methodology (holdout time window or companies)
 
-- RNN cost function upweight last k time steps instead of just last time step
+- Implement a genetic aglorithm for hyper-parameter space search
 
 - max-norm regularization for RNN and MLP (use tf.clip_by_norm)
 

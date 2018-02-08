@@ -38,6 +38,7 @@ class DeepRnnModel(BaseModel):
       """
 
       self._max_unrollings = max_unrollings = config.max_unrollings
+      self._min_unrollings = min_unrollings = config.min_unrollings
       self._num_inputs = num_inputs = config.num_inputs
       self._num_outputs = num_outputs = config.num_outputs
       num_hidden = config.num_hidden
@@ -105,50 +106,40 @@ class DeepRnnModel(BaseModel):
       for i in range(max_unrollings):
         self._outputs.append( tf.nn.xw_plus_b( rnn_outputs[i], output_w, output_b ) )
 
-      #last_target = self._scaled_targets[-1]
-      #last_output = self._outputs[-1]
-
-      last_output = tf.unstack(
-        tf.reverse_sequence(
-          tf.reshape(
-            tf.concat(self._outputs, 1),[batch_size,max_unrollings,num_outputs] ), 
-          self._seq_lengths,seq_axis=1,batch_axis=0),axis=1)[0]
-
-      last_target = tf.unstack(
-        tf.reverse_sequence(
-          tf.reshape(
-            tf.concat(self._scaled_targets, 1),[batch_size,max_unrollings,num_outputs] ), 
-          self._seq_lengths,seq_axis=1,batch_axis=0),axis=1)[0]
-
-      ktidx = config.target_idx
-      
-      self._o = self._reverse_center_and_scale( last_output )
-      self._t = self._reverse_center_and_scale( last_target )
-      self._o1 = self._o[:,ktidx]
-      self._t1 = self._t[:,ktidx]
-
       seq_mask = tf.sequence_mask(self._seq_lengths*num_outputs, 
                                   max_unrollings*num_outputs, dtype=tf.float32)
-
-      # self._inps = tf.multiply(seq_mask,tf.concat(self._scaled_inputs, 1))
       self._outs = outputs = tf.multiply(seq_mask,tf.concat(self._outputs, 1))
       self._tars = targets = tf.multiply(seq_mask,tf.concat(self._scaled_targets, 1))
-      # outputs = tf.concat(self._outputs, 0)
-      # targets = tf.concat(self._scaled_targets, 0)
 
-      self._mse_all_steps = tf.losses.mean_squared_error(targets, outputs)
-      self._mse_last_step = tf.losses.mean_squared_error(last_target, last_output)
-      self._mse = tf.losses.mean_squared_error(last_target[:,ktidx], last_output[:,ktidx])
+      minlen = max_unrollings-min_unrollings+1
+
+      last_k_outputs = tf.reverse_sequence(
+        tf.reshape(outputs, [batch_size,max_unrollings,num_outputs]),
+        self._seq_lengths,seq_axis=1,batch_axis=0)[:,0:minlen,:]
+
+      last_k_targets = tf.reverse_sequence( 
+        tf.reshape(targets, [batch_size,max_unrollings,num_outputs] ), 
+        self._seq_lengths,seq_axis=1,batch_axis=0)[:,0:minlen,:]
+
+      last_output = tf.unstack(last_k_outputs, axis=1)[0]
+      last_target = tf.unstack(last_k_targets, axis=1)[0]
 
       if config.data_scaler is not None and config.scale_targets is True:
         self._predictions = self._reverse_center_and_scale( last_output )
       else:
         self._predictions = last_output
+
+      ktidx = config.target_idx
+      self._mse_0 = tf.losses.mean_squared_error(last_k_targets[:,:,ktidx], last_k_outputs[:,:,ktidx])
+      self._mse_1 = tf.losses.mean_squared_error(last_k_targets, last_k_outputs)
+      self._mse_2 = tf.losses.mean_squared_error(targets, outputs)
+
+      self._mse = tf.losses.mean_squared_error(last_target[:,ktidx], last_output[:,ktidx])
  
       # here is the learning part of the graph
       p1 = config.target_lambda
       p2 = config.rnn_lambda
-      loss = p1 * self._mse + (1.0-p1)*(p2*self._mse_last_step + (1.0-p2)*self._mse_all_steps)
+      loss = p1 * self._mse_0 + (1.0-p1)*(p2*self._mse_1 + (1.0-p2)*self._mse_2)
       tvars = tf.trainable_variables()
       grads = tf.gradients(loss,tvars)
 
