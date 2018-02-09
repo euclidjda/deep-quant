@@ -37,7 +37,8 @@ class BaseModel(object):
       batch: batch of data of type Batch (see batch_generator.py)
       keep_prob: keep_prob for dropout
     Returns:
-      mse
+       mse: mean squared error scalar for batch
+       predictions: the model predictions for each data point in batch
     """
 
     feed_dict = self._get_feed_dict(batch,keep_prob=keep_prob,training=True)
@@ -56,6 +57,7 @@ class BaseModel(object):
        sess: current tf session the model is being run in
        batch: batch of data of type Batch
      Returns:
+       mse: mean squared error scalar for batch
        predictions: the model predictions for each data point in batch
      """
 
@@ -65,7 +67,7 @@ class BaseModel(object):
 
      return mse, preds
 
-  def test_step(self, sess, batch, training=False):
+  def debug_step(self, sess, batch, training=False):
     """
     Take one step through the data set. A step contains a sequences of batches
     where the sequence is of size max_unrollings. The batches are size
@@ -75,12 +77,8 @@ class BaseModel(object):
       batch: batch of data of type Batch (see batch_generator.py)
       keep_prob: keep_prob for dropout
     Returns:
-      train_cost: cross entropy cost function for the next batch in batches
-      train_accy: binary classifcation accuracy for the next batch in batches
-      train_evals:
-      valid_cost: 
-      valid_accy:
-      valid_evals:
+       mse: mean squared error scalar for batch
+       predictions: the model predictions for each data point in batch
     """
 
     print()
