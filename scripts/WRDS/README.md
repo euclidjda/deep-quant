@@ -88,11 +88,12 @@ Total Number of Equities in the dataset : 3
 Total Execution Time: 21.29
 ```
 
-build_data.py uses three arguments as below:\n
-N : Number of equities sorted by market cap. Top N equities are considered.\n
-exclude_gics : Excludes the industries with list of GICS codes\n
-filename : Name of the output file\n
-test_mode : Run in test mode when N is smaller. Default value is no
+build_data.py uses three arguments as below:
+
+- N : Number of equities sorted by market cap. Top N equities are considered.
+- exclude_gics : Excludes the industries with list of GICS codes
+- filename : Name of the output file
+- test_mode : Run in test mode when N is smaller. Default value is no
 
 *Note: Companies from previous runs are retained for continuation. It is recommended to run in test_mode if not building the actual dataset*
 
