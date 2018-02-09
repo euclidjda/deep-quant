@@ -29,8 +29,6 @@ lcoq_mrq,   ltq_mrq,	csho_1yr_avg
 	N = Number of securities sorted by market cap
 	
 	Exclude GICS Codes - GICS industry codes to be removed for analysis
-
-	*No need to edit gvkey_config.ini*
 	
 2. gvkey_config.ini
 
