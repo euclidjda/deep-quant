@@ -23,18 +23,30 @@ import pickle
 from time import time
 from wrds_data_processing import data_processing
 from ConfigParser import SafeConfigParser, NoOptionError
+import argparse as ap
 import sys
 
 
 start_time = time()
 
-# Read the data config file
-config_data = SafeConfigParser()
-config_data.read('build_data_config.ini')
-# Top N equities by market cap are considered
-N = int(config_data.get('main', 'N'))
-# Exclude following GICS industries from analysis
-exclude_gics = config_data.get('main', 'exclude_gics').split(',')
+# Parse arguments
+parser = ap.ArgumentParser(description="Build Data from WRDS")
+parser.add_argument("--N",default=10,type=int,
+                    help="Number of equities sorted by market cap")
+parser.add_argument("--exclude_gics", default=[],
+                    help="Excludes the industries with list of GICS codes")
+parser.add_argument("--filename", help="Name of the output data file",
+                    required = True)
+parser.add_argument("--test_mode",default='no',help="Test mode with small N")
+
+args = vars(parser.parse_args())
+N = args['N']
+try:
+    exclude_gics = args['exclude_gics'].split(',')
+except AttributeError:
+    exclude_gics = args['exclude_gics']
+out_filename = args['filename']
+test_mode = args['test_mode']
 
 # Connect to WRDS data engine
 db = wrds.Connection()
@@ -76,28 +88,29 @@ top_N_eq_gvkey_list = [k for k in top_N_eq_gvkey_list_all if k not in exclude_gv
 config_gvkey = SafeConfigParser()
 config_gvkey.read('gvkey_config.ini')
 config_gvkey.set('gvkey_list','# Used to keep track of most recent requity list. No need to edit','')
-try:
-    mr_gvk_list = config_gvkey.get('gvkey_list','most_recent_list').split(',')
-    inactive_list = [k for k in mr_gvk_list if k not in top_N_eq_gvkey_list]
 
-    # Initialize active dict
-    active = {key:1 for key in top_N_eq_gvkey_list}
-    # Add inactive gvkey
-    for inactive_gvk in inactive_list:
-        active[inactive_gvk] = 0
+# Initialize active dict
+active = {key:1 for key in top_N_eq_gvkey_list}
 
-    # Update the current gvkey list with the inactive ones
-    top_N_eq_gvkey_list = list(set().union(top_N_eq_gvkey_list,inactive_list))
+if test_mode != 'yes':
+    try:
+        mr_gvk_list = config_gvkey.get('gvkey_list','most_recent_list').split(',')
+        inactive_list = [k for k in mr_gvk_list if k not in top_N_eq_gvkey_list]
 
-    # create the most recent list in the config file if it doesn't exist
-    config_gvkey.set('gvkey_list','most_recent_list',','.join(top_N_eq_gvkey_list))
+        # Add inactive gvkey
+        for inactive_gvk in inactive_list:
+            active[inactive_gvk] = 0
 
-except NoOptionError:
-    # Initialize active dict
-    active = {key:1 for key in top_N_eq_gvkey_list}
-    
-    # create the most recent list in the config file if it doesn't exist
-    config_gvkey.set('gvkey_list','most_recent_list',','.join(top_N_eq_gvkey_list))
+        # Update the current gvkey list with the inactive ones
+        top_N_eq_gvkey_list = list(set().union(top_N_eq_gvkey_list,inactive_list))
+
+        # create the most recent list in the config file if it doesn't exist
+        config_gvkey.set('gvkey_list','most_recent_list',','.join(top_N_eq_gvkey_list))
+
+    except NoOptionError:
+        # create the most recent list in the config file if it doesn't exist
+        config_gvkey.set('gvkey_list','most_recent_list',','.join(top_N_eq_gvkey_list))
+
 
 # save to a file
 with open('gvkey_config.ini', 'w') as configfile:
@@ -139,8 +152,7 @@ blnc_sheet_list = ['cheq','rectq','invtq','acoq','ppentq','aoq',
 income_list = ['saleq','cogsq','xsgaq','oiadpq','niq']
 
 gvkey_list = top_N_eq_gvkey_list
-print("Total Number of Equities in the dataset")
-print len(gvkey_list)
+print("Total Number of Equities in the dataset: %i"%len(gvkey_list))
 print('\n')
 
 df_all = fundq_df[['gvkey','datadate'] + income_list + blnc_sheet_list]
@@ -243,7 +255,7 @@ df_all_eq.rename(columns={'datadate':'date'},inplace=True)
 df_all_eq['date'] = df_all_eq['date'].dt.strftime('%Y%m%d')
 
 # Output the csv
-df_all_eq.to_csv("top_N_eq_w_3mo_lag.csv",sep=' ',index=False)
+df_all_eq.to_csv(out_filename,sep=' ',index=False)
 
 exec_time = time() -start_time
 
