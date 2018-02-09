@@ -68,6 +68,7 @@ Approximately 58957 rows in crsp.stocknames.
 ## Building data
 Build data as follows:
 ```shell
+$ cd deep-quant/scripts/WRDS
 $ python build_data.py --N 10 --exclude_gics 40,45 --filename out.dat --test_mode yes
 ```
 
@@ -87,6 +88,8 @@ Total Number of Equities in the dataset : 3
 
 Total Execution Time: 21.29
 ```
+
+To avoid entering username and password everytime, you can setup your username and password in .pgpass file. Details can be found [here](https://www.postgresql.org/docs/9.3/static/libpq-pgpass.html).
 
 build_data.py uses arguments as below:
 
