@@ -88,7 +88,7 @@ Total Number of Equities in the dataset : 3
 Total Execution Time: 21.29
 ```
 
-build_data.py uses three arguments as below:
+build_data.py uses arguments as below:
 
 - N : Number of equities sorted by market cap. Top N equities are considered.
 - exclude_gics : Excludes the industries with list of GICS codes
