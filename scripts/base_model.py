@@ -24,143 +24,143 @@ import numpy as np
 import tensorflow as tf
 
 class BaseModel(object):
-  """
-  """
-
-  def train_step(self, sess, batch, keep_prob=1.0):
     """
-    Take one step through the data set. A step contains a sequences of batches
-    where the sequence is of size max_unrollings. The batches are size
-    batch_size. 
-    Args:
-      sess: current tf session the model is being run in
-      batch: batch of data of type Batch (see batch_generator.py)
-      keep_prob: keep_prob for dropout
-    Returns:
-       mse: mean squared error scalar for batch
-       predictions: the model predictions for each data point in batch
     """
 
-    feed_dict = self._get_feed_dict(batch,keep_prob=keep_prob,training=True)
+    def train_step(self, sess, batch, keep_prob=1.0):
+        """
+        Take one step through the data set. A step contains a sequences of batches
+        where the sequence is of size max_unrollings. The batches are size
+        batch_size.
+        Args:
+          sess: current tf session the model is being run in
+          batch: batch of data of type Batch (see batch_generator.py)
+          keep_prob: keep_prob for dropout
+        Returns:
+           mse: mean squared error scalar for batch
+           predictions: the model predictions for each data point in batch
+        """
 
-    (mse, _) = sess.run([self._mse,self._train_op],feed_dict)
-    # assert( train_evals > 0 )
+        feed_dict = self._get_feed_dict(batch,keep_prob=keep_prob,training=True)
 
-    return mse
+        (mse, _) = sess.run([self._mse,self._train_op],feed_dict)
+        # assert( train_evals > 0 )
 
-  def step(self, sess, batch):
-     """
-     Take one step through the data set. A step contains a sequences of batches
-     where the sequence is of size max_unrollings. The batches are size
-     batch_size. 
-     Args:
-       sess: current tf session the model is being run in
-       batch: batch of data of type Batch
-     Returns:
-       mse: mean squared error scalar for batch
-       predictions: the model predictions for each data point in batch
-     """
+        return mse
 
-     feed_dict = self._get_feed_dict(batch,keep_prob=1.0,training=False)
+    def step(self, sess, batch):
+        """
+        Take one step through the data set. A step contains a sequences of batches
+        where the sequence is of size max_unrollings. The batches are size
+        batch_size.
+        Args:
+          sess: current tf session the model is being run in
+          batch: batch of data of type Batch
+        Returns:
+          mse: mean squared error scalar for batch
+          predictions: the model predictions for each data point in batch
+        """
 
-     (mse, preds) = sess.run([self._mse,self._predictions],feed_dict)
+        feed_dict = self._get_feed_dict(batch,keep_prob=1.0,training=False)
 
-     return mse, preds
+        (mse, preds) = sess.run([self._mse,self._predictions],feed_dict)
 
-  def debug_step(self, sess, batch, training=False):
-    """
-    Take one step through the data set. A step contains a sequences of batches
-    where the sequence is of size max_unrollings. The batches are size
-    batch_size. 
-    Args:
-      sess: current tf session the model is being run in
-      batch: batch of data of type Batch (see batch_generator.py)
-      keep_prob: keep_prob for dropout
-    Returns:
-       mse: mean squared error scalar for batch
-       predictions: the model predictions for each data point in batch
-    """
+        return mse, preds
 
-    print()
-    print("////////////////////////////////////////////////////////////////////////////////////")
-    print(batch.targets)
+    def debug_step(self, sess, batch, training=False):
+        """
+        Take one step through the data set. A step contains a sequences of batches
+        where the sequence is of size max_unrollings. The batches are size
+        batch_size.
+        Args:
+          sess: current tf session the model is being run in
+          batch: batch of data of type Batch (see batch_generator.py)
+          keep_prob: keep_prob for dropout
+        Returns:
+           mse: mean squared error scalar for batch
+           predictions: the model predictions for each data point in batch
+        """
 
-    feed_dict = self._get_feed_dict(batch,keep_prob=1.0,training=training)
-    
-    (y,z,s) = sess.run([self._outs,self._tars,self._seq_lengths],feed_dict)
+        print()
+        print("////////////////////////////////////////////////////////////////////////////////////")
+        print(batch.targets)
 
-    np.set_printoptions(suppress=True)
-    np.set_printoptions(precision=3)
+        feed_dict = self._get_feed_dict(batch,keep_prob=1.0,training=training)
 
-    n = batch.normalizers[0]
-    
-    def unnorm(n,x):
-      return n * np.multiply(np.sign(x),np.expm1(np.fabs(x)))
+        (y,z,s) = sess.run([self._outs,self._tars,self._seq_lengths],feed_dict)
 
-    print("////////////////////////////////////////////////////////////////////////////////////")
-    print(np.array(s))
-    print("////////////////////////////////////////////////////////////////////////////////////")
-    print(np.array(y))
-    print("////////////////////////////////////////////////////////////////////////////////////")
-    print(np.array(z))
-    print("////////////////////////////////////////////////////////////////////////////////////")
+        np.set_printoptions(suppress=True)
+        np.set_printoptions(precision=3)
 
-    (mse, preds) = sess.run([self._mse,self._predictions],feed_dict)
-    # assert( train_evals > 0 )
+        n = batch.normalizers[0]
 
-    return mse, preds
+        def unnorm(n,x):
+            return n * np.multiply(np.sign(x),np.expm1(np.fabs(x)))
 
-  def _get_feed_dict(self,batch, keep_prob=1.0, training=False):
+        print("////////////////////////////////////////////////////////////////////////////////////")
+        print(np.array(s))
+        print("////////////////////////////////////////////////////////////////////////////////////")
+        print(np.array(y))
+        print("////////////////////////////////////////////////////////////////////////////////////")
+        print(np.array(z))
+        print("////////////////////////////////////////////////////////////////////////////////////")
 
-    feed_dict = dict()
+        (mse, preds) = sess.run([self._mse,self._predictions],feed_dict)
+        # assert( train_evals > 0 )
 
-    feed_dict[self._batch_size] = batch.inputs[0].shape[0]
-    feed_dict[self._seq_lengths] = batch.seq_lengths
-    feed_dict[self._keep_prob] = keep_prob
-    feed_dict[self._phase] = 1 if training is True else 0
-    
-    for i in range(self._max_unrollings):
-      feed_dict[self._inputs[i]]  = batch.inputs[i]
-      feed_dict[self._targets[i]] = batch.targets[i]
-    
-    return feed_dict
+        return mse, preds
 
-  def _center_and_scale(self, x):
-      # only center/scale up to the width of x
-      n = tf.shape(x)[1]
-      return tf.divide( x - self._center[:n], self._scale[:n] )
+    def _get_feed_dict(self,batch, keep_prob=1.0, training=False):
 
-  def _reverse_center_and_scale(self, x):
-      # only center/scale up to the width of x
-      n = tf.shape(x)[1]
-      return tf.multiply( x, self._scale[:n] ) + self._center[:n]
-  
-  def set_scaling_params(self,session,center=None,scale=None):
-    assert(center is not None)
-    assert(scale is not None)
-    session.run(tf.assign(self._center,center))
-    session.run(tf.assign(self._scale,scale))
-    
-  def set_learning_rate(self, session, lr_value):
-    session.run(tf.assign(self._lr, lr_value))
-    return lr_value
-  
-  @property
-  def inputs(self):
-    return self._inputs
+        feed_dict = dict()
 
-  @property
-  def targets(self):
-    return self._targets
+        feed_dict[self._batch_size] = batch.inputs[0].shape[0]
+        feed_dict[self._seq_lengths] = batch.seq_lengths
+        feed_dict[self._keep_prob] = keep_prob
+        feed_dict[self._phase] = 1 if training is True else 0
 
-  @property
-  def cost(self):
-    return self._cost
+        for i in range(self._max_unrollings):
+            feed_dict[self._inputs[i]]  = batch.inputs[i]
+            feed_dict[self._targets[i]] = batch.targets[i]
 
-  @property
-  def lr(self):
-    return self._lr
+        return feed_dict
 
-  @property
-  def max_unrollings(self):
-    return self._max_unrollings
+    def _center_and_scale(self, x):
+            # only center/scale up to the width of x
+        n = tf.shape(x)[1]
+        return tf.divide( x - self._center[:n], self._scale[:n] )
+
+    def _reverse_center_and_scale(self, x):
+        # only center/scale up to the width of x
+        n = tf.shape(x)[1]
+        return tf.multiply( x, self._scale[:n] ) + self._center[:n]
+
+    def set_scaling_params(self,session,center=None,scale=None):
+        assert(center is not None)
+        assert(scale is not None)
+        session.run(tf.assign(self._center,center))
+        session.run(tf.assign(self._scale,scale))
+
+    def set_learning_rate(self, session, lr_value):
+        session.run(tf.assign(self._lr, lr_value))
+        return lr_value
+
+    @property
+    def inputs(self):
+        return self._inputs
+
+    @property
+    def targets(self):
+        return self._targets
+
+    @property
+    def cost(self):
+        return self._cost
+
+    @property
+    def lr(self):
+        return self._lr
+
+    @property
+    def max_unrollings(self):
+        return self._max_unrollings

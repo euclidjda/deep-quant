@@ -33,102 +33,102 @@ from batch_generator import BatchGenerator
 import model_utils
 
 def print_vector(name,v):
-  print("%s: "%name,end='')
-  for i in range(len(v)):
-    print("%.2f "%v[i],end=' ')
-  print()
-            
+    print("%s: "%name,end='')
+    for i in range(len(v)):
+        print("%.2f "%v[i],end=' ')
+    print()
+
 def predict(config):
 
-  path = model_utils.get_data_path(config.data_dir,config.datafile)
+    path = model_utils.get_data_path(config.data_dir,config.datafile)
 
-  config.batch_size = 1
-  batches = BatchGenerator(path, config, 
-                           require_targets=False, verbose=True)
-  batches.cache(verbose=True)
+    config.batch_size = 1
+    batches = BatchGenerator(path, config,
+                             require_targets=False, verbose=True)
+    batches.cache(verbose=True)
 
-  tf_config = tf.ConfigProto( allow_soft_placement=True  ,
-                              log_device_placement=False )
+    tf_config = tf.ConfigProto( allow_soft_placement=True  ,
+                                log_device_placement=False )
 
-  with tf.Graph().as_default(), tf.Session(config=tf_config) as session:
+    with tf.Graph().as_default(), tf.Session(config=tf_config) as session:
 
-    model = model_utils.get_model(session, config, verbose=False)
+        model = model_utils.get_model(session, config, verbose=False)
 
-    perfs = dict()
-    
-    for i in range(batches.num_batches):
-      batch = batches.next_batch()
+        perfs = dict()
 
-      (mse, preds) = model.step(session, batch)
-      # (mse, preds) = model.test_step(session, batch)
+        for i in range(batches.num_batches):
+            batch = batches.next_batch()
 
-      if math.isnan(mse) is False:
-        date = batch_to_date(batch)
-        if date not in perfs:
-          perfs[date] = list()
-        perfs[date].append(mse)
-      
-      if config.pretty_print_preds is True:
-        pretty_print_predictions(batches, batch, preds, mse)
-      else:
-        print_predictions(batches, batch, preds)
+            (mse, preds) = model.step(session, batch)
+            # (mse, preds) = model.test_step(session, batch)
 
-    if config.mse_outfile is not None:
-      with open(config.mse_outfile,"w") as f:
-        for date in sorted(perfs):
-          mean = np.mean(perfs[date])
-          print("%s %.6f %d"%(date,mean,len(perfs[date])),file=f)
-        total_mean = np.mean( [x for v in perfs.values() for x in v] )
-        print("Total %.6f"%(total_mean),file=f)
-      f.closed
-    else:
-      exit()
+            if math.isnan(mse) is False:
+                date = batch_to_date(batch)
+                if date not in perfs:
+                    perfs[date] = list()
+                perfs[date].append(mse)
+
+            if config.pretty_print_preds is True:
+                pretty_print_predictions(batches, batch, preds, mse)
+            else:
+                print_predictions(batches, batch, preds)
+
+        if config.mse_outfile is not None:
+            with open(config.mse_outfile,"w") as f:
+                for date in sorted(perfs):
+                    mean = np.mean(perfs[date])
+                    print("%s %.6f %d"%(date,mean,len(perfs[date])),file=f)
+                total_mean = np.mean( [x for v in perfs.values() for x in v] )
+                print("Total %.6f"%(total_mean),file=f)
+            f.closed
+        else:
+            exit()
 
 def batch_to_key(batch):
-  idx = batch.seq_lengths[0]-1
-  assert( 0<= idx )
-  assert( idx < len(batch.attribs) )
-  return batch.attribs[idx][0][0]
-      
+    idx = batch.seq_lengths[0]-1
+    assert( 0<= idx )
+    assert( idx < len(batch.attribs) )
+    return batch.attribs[idx][0][0]
+
 def batch_to_date(batch):
-  idx = batch.seq_lengths[0]-1
-  assert( 0<= idx )
-  assert( idx < len(batch.attribs) )
-  if (batch.attribs[idx][0] is None):
-    print(idx)
-    exit()
-  return batch.attribs[idx][0][1]
-      
+    idx = batch.seq_lengths[0]-1
+    assert( 0<= idx )
+    assert( idx < len(batch.attribs) )
+    if (batch.attribs[idx][0] is None):
+        print(idx)
+        exit()
+    return batch.attribs[idx][0][1]
+
 def pretty_print_predictions(batches, batch, preds, mse):
-  key     = batch_to_key(batch)
-  date    = batch_to_date(batch)
+    key     = batch_to_key(batch)
+    date    = batch_to_date(batch)
 
-  L = batch.seq_lengths[0]
-  targets = batch.targets[L-1][0]
-  outputs = preds[0]
-      
-  np.set_printoptions(suppress=True)
-  np.set_printoptions(precision=3)
-      
-  print("%s %s mse=%.4f"%(date,key,mse))
-  inputs = batch.inputs
-  for i in range(L):
-    print_vector("input[t-%d]"%(L-i-1),batches.get_raw_inputs(batch,0,inputs[i][0]) )
-  print_vector("output[t+1]", batches.get_raw_outputs(batch,0,outputs) )
-  print_vector("target[t+1]", batches.get_raw_outputs(batch,0,targets) )
-  print("--------------------------------")
-  sys.stdout.flush()
-  
+    L = batch.seq_lengths[0]
+    targets = batch.targets[L-1][0]
+    outputs = preds[0]
+
+    np.set_printoptions(suppress=True)
+    np.set_printoptions(precision=3)
+
+    print("%s %s mse=%.4f"%(date,key,mse))
+    inputs = batch.inputs
+    for i in range(L):
+        print_vector("input[t-%d]"%(L-i-1),batches.get_raw_inputs(batch,0,inputs[i][0]) )
+    print_vector("output[t+1]", batches.get_raw_outputs(batch,0,outputs) )
+    print_vector("target[t+1]", batches.get_raw_outputs(batch,0,targets) )
+    print("--------------------------------")
+    sys.stdout.flush()
+
 def print_predictions(batches, batch, preds):
-  key     = batch_to_key(batch)
-  date    = batch_to_date(batch)
-  inputs  = batch.inputs[-1][0]
-  outputs = preds[0]
-      
-  np.set_printoptions(suppress=True)
-  np.set_printoptions(precision=3)
-  out = batches.get_raw_outputs(batch,0,outputs)
-  out_str = ' '.join(["%.3f"%out[i] for i in range(len(out))])
+    key     = batch_to_key(batch)
+    date    = batch_to_date(batch)
+    inputs  = batch.inputs[-1][0]
+    outputs = preds[0]
 
-  print("%s %s %s"%(date,key,out_str))
-  sys.stdout.flush()
+    np.set_printoptions(suppress=True)
+    np.set_printoptions(precision=3)
+    out = batches.get_raw_outputs(batch,0,outputs)
+    out_str = ' '.join(["%.3f"%out[i] for i in range(len(out))])
+
+    print("%s %s %s"%(date,key,out_str))
+    sys.stdout.flush()

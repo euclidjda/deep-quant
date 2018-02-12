@@ -47,7 +47,7 @@ class BatchGenerator(object):
         self._scaling_params = None
         self._start_date = config.start_date
         self._end_date = config.end_date
-        
+
         assert( self._stride >= 1 )
 
         if data is None:
@@ -69,7 +69,7 @@ class BatchGenerator(object):
         #self._init_batch_cursor(config)
 
         self._config = config # save this around for train_batches() method
-        
+
         # Setup the validation data
         self._validation_set = dict()
         if validation is True:
@@ -107,8 +107,8 @@ class BatchGenerator(object):
             date = data.iat[i,self._date_idx]
             if (key != last_key):
                 cur_length = 1
-            if ( (cur_length >= min_steps) 
-                 and (active is True) 
+            if ( (cur_length >= min_steps)
+                 and (active is True)
                  and (date >= start_date) ):
                 # If targets are not required, we don't need the future
                 # sequences to be there, otherwise we do
@@ -150,14 +150,14 @@ class BatchGenerator(object):
         assert( len(config.feature_fields) > 0 )
 
         self._feature_indices = self._get_indices_from_names( config.feature_fields )
-        
+
         self._feature_names = list(data.columns.values[self._feature_indices])
 
         self._aux_indices = list()
         if config.aux_input_fields is not None:
             self._aux_indices =  self._get_indices_from_names( config.aux_input_fields )
             self._feature_names.extend( list(data.columns.values[self._aux_indices]) )
-            
+
         config.num_inputs = self._num_inputs = len(self._feature_names)
         self._key_idx = list(data.columns.values).index(config.key_field)
         self._active_idx = list(data.columns.values).index(config.active_field)
@@ -175,17 +175,17 @@ class BatchGenerator(object):
         # assert( 0 <= self._num_outputs <= self._num_inputs )
 
         assert(config.target_idx >= 0)
-        
+
     def _init_validation_set(self, config):
         pass
-    
+
     def _init_batch_cursor(self, config):
         pass
 
     def _get_normalizer(self,end_idx):
         val = max(self._data.iloc[end_idx][self._scaling_feature],_MIN_SEQ_NORM)
         return val
-        
+
     def _get_batch_normalizers(self):
         normalizers = list()
         for b in range(self._batch_size):
@@ -206,7 +206,7 @@ class BatchGenerator(object):
             return np.multiply(np.sign(y),np.log1p(y_abs))
         else:
             return np.zeros(shape=[len(self._feature_indices)])
-           
+
     def _get_aux_vector(self,cur_idx):
         data = self._data
         if cur_idx < self._data_len:
@@ -221,7 +221,7 @@ class BatchGenerator(object):
         """
         x = np.zeros(shape=(self._batch_size, self._num_inputs), dtype=np.float)
         y = np.zeros(shape=(self._batch_size, self._num_outputs), dtype=np.float)
-        
+
         attr = list()
         data = self._data
         key_idx = self._key_idx
@@ -255,7 +255,7 @@ class BatchGenerator(object):
                     y[b,:] = self._get_feature_vector(end_idx,next_idx)
                 else: # no targets exist
                     y[b,:] = None
-                
+
         return x, y, attr
 
     def _next_batch(self):
@@ -264,7 +264,7 @@ class BatchGenerator(object):
           A batch of type Batch (see class def below)
         """
         normalizers = self._get_batch_normalizers( )
-        seq_lengths = np.full(self._batch_size, self._max_unrollings, dtype=int) 
+        seq_lengths = np.full(self._batch_size, self._max_unrollings, dtype=int)
         inputs = list()
         targets = list()
         attribs = list()
@@ -275,7 +275,7 @@ class BatchGenerator(object):
             attribs.append(attr)
 
         assert(len(inputs)==len(targets))
-        
+
         #############################################################################
         #   Set cursor for next batch
         #############################################################################
@@ -322,7 +322,7 @@ class BatchGenerator(object):
                 scaler = getattr(sklearn.preprocessing,scaler_class)()
             else:
                 raise RuntimeError("Unknown scaler = %s"%scaler_class)
-            
+
             scaler.fit(sample)
 
             params = dict()
@@ -331,9 +331,9 @@ class BatchGenerator(object):
 
             num_aux = len(self._aux_indices)
             if num_aux > 0:
-                params['center'] = np.append(params['center'], np.full( (num_aux), 0.0 )) 
-                params['scale'] = np.append(params['scale'], np.full( (num_aux), 1.0 )) 
-            
+                params['center'] = np.append(params['center'], np.full( (num_aux), 0.0 ))
+                params['scale'] = np.append(params['scale'], np.full( (num_aux), 1.0 ))
+
             self._scaling_params = params
 
         return self._scaling_params
@@ -362,7 +362,7 @@ class BatchGenerator(object):
     def _get_cache_filename(self):
         config = self._config
         key_list = list(set(self._data[config.key_field]))
-        key_list.sort()        
+        key_list.sort()
         keys = ''.join(key_list)
         sd = self._start_date if self._start_date is not None else 100001
         ed = self._end_date if self._end_date is not None else 999912
@@ -373,7 +373,7 @@ class BatchGenerator(object):
         hashed = hashlib.md5(uid.encode()).hexdigest()
         filename = "bcache-%s.pkl"%hashed
         return filename
-        
+
     def _load_cache(self,verbose=False):
         start_time = time.time()
         if verbose is True:
@@ -383,7 +383,7 @@ class BatchGenerator(object):
             b = self.next_batch()
         if verbose is True:
             print("done in %.2f seconds."%(time.time() - start_time))
-            
+
     def cache(self,verbose=False):
         assert(len(self._batch_cache))
         if self._batch_cache[-1] is not None:
@@ -402,13 +402,13 @@ class BatchGenerator(object):
                 if verbose is True: print("Reading cache from %s ..."%filename, end=' ')
                 self._batch_cache = pickle.load( open( filename, "rb" ) )
                 self._num_batches = len(self._batch_cache)
-                if verbose is True: print("done in %.2f seconds."%(time.time() - start_time))            
+                if verbose is True: print("done in %.2f seconds."%(time.time() - start_time))
             else:
-                self._load_cache(verbose)                
+                self._load_cache(verbose)
                 start_time = time.time()
                 if verbose is True: print("Writing cache to %s ..."%filename, end=' ')
                 pickle.dump( self._batch_cache, open( filename, "wb" ) )
-                if verbose is True: print("done in %.2f seconds."%(time.time() - start_time))            
+                if verbose is True: print("done in %.2f seconds."%(time.time() - start_time))
 
     def _train_dates(self):
         data = self._data
@@ -424,7 +424,7 @@ class BatchGenerator(object):
         dates = list(set(data['date']))
         dates.sort()
         i = int(len(dates)*(1.0-self._config.validation_size))-1
-        i = max(i - (self._min_unrollings-1)*self._stride-1,0) 
+        i = max(i - (self._min_unrollings-1)*self._stride-1,0)
         assert(i < len(dates))
         valid_dates = [d for d in dates if d >= dates[i]]
         return valid_dates
@@ -453,14 +453,14 @@ class BatchGenerator(object):
         if (self._batch_cache[-1] is not None):
             random.shuffle(self._batch_cache)
             self._batch_cusror = 0
-         
+
     def rewind(self):
         self._batch_cusror = 0
 
     @property
     def feature_names(self):
         return self._feature_names
-        
+
     @property
     def dataframe(self):
         return self._data
@@ -480,7 +480,7 @@ class BatchGenerator(object):
     @property
     def num_outputs(self):
         return self._num_outputs
-    
+
 class Batch(object):
     def __init__(self, inputs, targets, attribs, normalizers, seq_lengths):
         self._inputs = inputs
@@ -512,4 +512,3 @@ class Batch(object):
     @property
     def seq_lengths(self):
         return self._seq_lengths
-    

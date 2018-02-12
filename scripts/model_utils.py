@@ -45,7 +45,7 @@ def get_data_path(data_dir, filename):
       If DEEP_QUANT_ROOT is defined, the fully qualified data path is returned
       Otherwise a path relative to the working directory is returned
     """
-    path = os.path.join( data_dir, filename ) 
+    path = os.path.join( data_dir, filename )
     if data_dir != '.' and 'DEEP_QUANT_ROOT' in os.environ:
         path = os.path.join(os.environ['DEEP_QUANT_ROOT'], path)
     return path
@@ -78,34 +78,34 @@ def rewrite_chkpt(model_dir,chkpt_name):
     path = model_dir+"/checkpoint"
     # write file as tensorflow expects
     with open(path, "w") as outfile:
-      outfile.write("model_checkpoint_path: \"%s\"\n"%chkpt_name)
-      outfile.write("all_model_checkpoint_paths: \"%s\"\n"%chkpt_name)
+        outfile.write("model_checkpoint_path: \"%s\"\n"%chkpt_name)
+        outfile.write("all_model_checkpoint_paths: \"%s\"\n"%chkpt_name)
 
-def adjust_learning_rate(session, model, 
+def adjust_learning_rate(session, model,
                          learning_rate, lr_decay, cost_history, lookback=5):
-  """
-  Systematically decrease learning rate if current performance is not at
-  least 1% better than the moving average performance
+    """
+    Systematically decrease learning rate if current performance is not at
+    least 1% better than the moving average performance
 
-  Args:
-    session: the current tf session for training
-    model: the model being trained
-    learning_rate: the current learning rate
-    lr_decay: the learning rate decay factor
-    cost_history: list of historical performance
-  Returns:
-    the updated learning rate being used by the model for training
-  """
-  lookback += 1
-  if len(cost_history) >= lookback:
-    mean = np.mean(cost_history[-lookback:-2])
-    curr = cost_history[-1]
-    # If performance has dropped by less than 1%, decay learning_rate
-    if ((learning_rate >= 0.0001) and (mean > 0.0)
-        and (mean >= curr) and (curr/mean >= 0.98)):
-        learning_rate = learning_rate * lr_decay
-  model.set_learning_rate(session, learning_rate)
-  return learning_rate
+    Args:
+      session: the current tf session for training
+      model: the model being trained
+      learning_rate: the current learning rate
+      lr_decay: the learning rate decay factor
+      cost_history: list of historical performance
+    Returns:
+      the updated learning rate being used by the model for training
+    """
+    lookback += 1
+    if len(cost_history) >= lookback:
+        mean = np.mean(cost_history[-lookback:-2])
+        curr = cost_history[-1]
+        # If performance has dropped by less than 1%, decay learning_rate
+        if ((learning_rate >= 0.0001) and (mean > 0.0)
+            and (mean >= curr) and (curr/mean >= 0.98)):
+            learning_rate = learning_rate * lr_decay
+    model.set_learning_rate(session, learning_rate)
+    return learning_rate
 
 def get_model(session, config, verbose=False):
     """
@@ -117,28 +117,28 @@ def get_model(session, config, verbose=False):
       the model
     """
     if config.nn_type == 'logreg':
-      model_file = os.path.join(config.model_dir, "logreg.pkl" )
-      clf = LogRegModel(load_from=model_file)
-      mtrain, mdeploy = clf, clf
+        model_file = os.path.join(config.model_dir, "logreg.pkl" )
+        clf = LogRegModel(load_from=model_file)
+        mtrain, mdeploy = clf, clf
 
     else:
-      model = _create_model(session, config, verbose)
+        model = _create_model(session, config, verbose)
 
-      ckpt = tf.train.get_checkpoint_state(config.model_dir)
-      start_time = time.time()
-      if ckpt and gfile.Exists(ckpt.model_checkpoint_path+".index"):
-        if verbose:
-          print("Reading model parameters from %s ..."%ckpt.model_checkpoint_path, end=' ')
-        tf.train.Saver(max_to_keep=200).restore(session,
-                                                  ckpt.model_checkpoint_path)
-        if verbose:
-          print("done in %.2f seconds."%(time.time() - start_time))
-      else:
-        if verbose:
-          print("Creating model with fresh parameters ...", end=' ')
-        session.run(tf.global_variables_initializer())
-        if verbose:
-          print("done in %.2f seconds."%(time.time() - start_time))
+        ckpt = tf.train.get_checkpoint_state(config.model_dir)
+        start_time = time.time()
+        if ckpt and gfile.Exists(ckpt.model_checkpoint_path+".index"):
+            if verbose:
+                print("Reading model parameters from %s ..."%ckpt.model_checkpoint_path, end=' ')
+            tf.train.Saver(max_to_keep=200).restore(session,
+                                                      ckpt.model_checkpoint_path)
+            if verbose:
+                print("done in %.2f seconds."%(time.time() - start_time))
+        else:
+            if verbose:
+                print("Creating model with fresh parameters ...", end=' ')
+            session.run(tf.global_variables_initializer())
+            if verbose:
+                print("done in %.2f seconds."%(time.time() - start_time))
 
     return model
 
@@ -149,26 +149,26 @@ def _create_model(session,config,verbose=False):
     if config.nn_type in all_objects:
         ModelConstructor = all_objects[config.nn_type]
     else:
-      raise RuntimeError("Unknown net_type = %s"%config.nn_type)
+        raise RuntimeError("Unknown net_type = %s"%config.nn_type)
 
     if verbose is True:
-      print("Model has the following geometry:")
-      print("  model_type  = %s"% config.nn_type)
-      print("  min_unroll  = %d"% config.min_unrollings)
-      print("  max_unroll  = %d"% config.max_unrollings)
-      print("  batch_size  = %d"% config.batch_size)
-      print("  num_inputs  = %d"% config.num_inputs)
-      print("  num_outputs = %d"% config.num_outputs)
-      print("  num_hidden  = %d"% config.num_hidden)
-      print("  num_layers  = %d"% config.num_layers)
-      print("  optimizer   = %s"% config.optimizer)
-      print("  device      = %s"% config.default_gpu)
+        print("Model has the following geometry:")
+        print("  model_type  = %s"% config.nn_type)
+        print("  min_unroll  = %d"% config.min_unrollings)
+        print("  max_unroll  = %d"% config.max_unrollings)
+        print("  batch_size  = %d"% config.batch_size)
+        print("  num_inputs  = %d"% config.num_inputs)
+        print("  num_outputs = %d"% config.num_outputs)
+        print("  num_hidden  = %d"% config.num_hidden)
+        print("  num_layers  = %d"% config.num_layers)
+        print("  optimizer   = %s"% config.optimizer)
+        print("  device      = %s"% config.default_gpu)
 
     initer = tf.random_uniform_initializer(-config.init_scale,config.init_scale,seed=config.seed)
-      
+
     with tf.variable_scope("model", reuse=None, initializer=initer), \
         tf.device(config.default_gpu):
 
-      model = ModelConstructor(config)
+        model = ModelConstructor(config)
 
     return model

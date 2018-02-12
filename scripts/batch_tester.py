@@ -57,7 +57,7 @@ def main():
     batches = BatchGenerator(train_path,config,require_targets=True)
 
     print("Num batches %d"%batches.num_batches)
-    
+
     #train_data = batches.train_batches()
 
     #print("Steps per epoch: %d"%train_data.num_batches)
@@ -74,7 +74,7 @@ def main():
             inputs  = batch.inputs[-1][0]
             targets = batch.targets[-1][0]
             scale   = batch.seq_scales[0]
-      
+
             print("%s %s %s %s %d %d %d"%
                       (key,ndate,pdate,edate,len(batch.attribs),len(batch.inputs),len(batch.targets)))
             sys.stdout.flush()
@@ -86,6 +86,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-    

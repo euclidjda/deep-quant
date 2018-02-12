@@ -29,139 +29,139 @@ from tensorflow.python.ops import math_ops
 from tensorflow.python.ops import random_ops
 
 class DeepMlpModel(BaseModel):
-  """
-  A Deep MLP regression model with an
-  arbitrary number of fixed width hidden layers.
-  """
-  def __init__(self, config):
-      """
-      Initialize the model
-      Args:
-        config
-      """
+    """
+    A Deep MLP regression model with an
+    arbitrary number of fixed width hidden layers.
+    """
+    def __init__(self, config):
+        """
+        Initialize the model
+        Args:
+          config
+        """
 
-      self._max_unrollings = max_unrollings = config.max_unrollings
-      self._num_inputs = num_inputs = config.num_inputs
-      self._num_outputs = num_outputs = config.num_outputs
-      
-      total_input_size = max_unrollings * num_inputs
+        self._max_unrollings = max_unrollings = config.max_unrollings
+        self._num_inputs = num_inputs = config.num_inputs
+        self._num_outputs = num_outputs = config.num_outputs
 
-      # input/target normalization params
-      self._center = tf.get_variable('center',shape=[num_inputs],trainable=False)
-      self._scale  = tf.get_variable('scale',shape=[num_inputs],trainable=False)
-      
-      batch_size = self._batch_size = tf.placeholder(tf.int32, shape=[])
-      self._seq_lengths = tf.placeholder(tf.int64, shape=[None])
-      self._keep_prob = tf.placeholder(tf.float32, shape=[])
-      self._phase = tf.placeholder(tf.bool, name='phase')
-      
-      self._inputs = list()
-      self._targets = list()
+        total_input_size = max_unrollings * num_inputs
 
-      for _ in range(max_unrollings):
-        self._inputs.append( tf.placeholder(tf.float32,
-                                              shape=[None,num_inputs]) )
-        self._targets.append( tf.placeholder(tf.float32,
-                                              shape=[None,num_outputs]) )
+        # input/target normalization params
+        self._center = tf.get_variable('center',shape=[num_inputs],trainable=False)
+        self._scale  = tf.get_variable('scale',shape=[num_inputs],trainable=False)
 
-      inputs = tf.reverse_sequence(tf.concat( self._inputs, 1 ),
-                                   self._seq_lengths*num_inputs,
-                                   seq_axis=1,batch_axis=0)
-      # inputs = tf.concat( self._inputs, 1 )
+        batch_size = self._batch_size = tf.placeholder(tf.int32, shape=[])
+        self._seq_lengths = tf.placeholder(tf.int64, shape=[None])
+        self._keep_prob = tf.placeholder(tf.float32, shape=[])
+        self._phase = tf.placeholder(tf.bool, name='phase')
 
-      targets = tf.unstack(tf.reverse_sequence(tf.reshape(
-        tf.concat(self._targets, 1),[batch_size,max_unrollings,num_outputs]),
-        self._seq_lengths,seq_axis=1,batch_axis=0),axis=1)[0]
-      # targets = self._targets[-1]
-      
-      # center and scale
-      if config.data_scaler is not None:
-        inputs = tf.divide(inputs - tf.tile(self._center,[max_unrollings]),
-                          tf.tile(self._scale,[max_unrollings]))
-        if config.scale_targets is True:
-          targets = self._center_and_scale( targets )
+        self._inputs = list()
+        self._targets = list()
 
-      if config.input_dropout is True:
-        inputs = self._input_dropout(inputs)
+        for _ in range(max_unrollings):
+            self._inputs.append( tf.placeholder(tf.float32,
+                                                  shape=[None,num_inputs]) )
+            self._targets.append( tf.placeholder(tf.float32,
+                                                  shape=[None,num_outputs]) )
 
-      num_prev = total_input_size
+        inputs = tf.reverse_sequence(tf.concat( self._inputs, 1 ),
+                                     self._seq_lengths*num_inputs,
+                                     seq_axis=1,batch_axis=0)
+        # inputs = tf.concat( self._inputs, 1 )
 
-      seq_mask = tf.sequence_mask(self._seq_lengths*num_inputs, 
-                                  total_input_size, dtype=tf.float32)
-      inputs = tf.multiply(seq_mask, inputs)
-      outputs = inputs
+        targets = tf.unstack(tf.reverse_sequence(tf.reshape(
+          tf.concat(self._targets, 1),[batch_size,max_unrollings,num_outputs]),
+          self._seq_lengths,seq_axis=1,batch_axis=0),axis=1)[0]
+        # targets = self._targets[-1]
 
-      for i in range(config.num_layers):
-        outputs = self._batch_relu_layer(outputs, config.num_hidden, "layer_%d"%i)
-        if config.hidden_dropout is True:
-          outputs = tf.nn.dropout(outputs, self._keep_prob)
-        num_prev = config.num_hidden
+        # center and scale
+        if config.data_scaler is not None:
+            inputs = tf.divide(inputs - tf.tile(self._center,[max_unrollings]),
+                              tf.tile(self._scale,[max_unrollings]))
+            if config.scale_targets is True:
+                targets = self._center_and_scale( targets )
 
-      if config.skip_connections is True:
-        num_prev = num_inputs+num_prev
-        skip_inputs = tf.slice(inputs, [0, 0], [batch_size, num_inputs] )
-        outputs  = tf.concat( [ skip_inputs, outputs], 1)
+        if config.input_dropout is True:
+            inputs = self._input_dropout(inputs)
 
-      # final regression layer  
-      linear_b = tf.get_variable("linear_b", [num_outputs])
-      linear_w = tf.get_variable("linear_w", [num_prev, num_outputs])
-      outputs = tf.nn.xw_plus_b(outputs, linear_w, linear_b)
+        num_prev = total_input_size
 
-      self._inps = inputs
-      self._tars = targets
-      self._outs = outputs
+        seq_mask = tf.sequence_mask(self._seq_lengths*num_inputs,
+                                    total_input_size, dtype=tf.float32)
+        inputs = tf.multiply(seq_mask, inputs)
+        outputs = inputs
 
-      ktidx = config.target_idx
-      self._mse = tf.losses.mean_squared_error(targets[:,ktidx], outputs[:,ktidx])
-      self._mse_all = tf.losses.mean_squared_error(targets, outputs)
+        for i in range(config.num_layers):
+            outputs = self._batch_relu_layer(outputs, config.num_hidden, "layer_%d"%i)
+            if config.hidden_dropout is True:
+                outputs = tf.nn.dropout(outputs, self._keep_prob)
+            num_prev = config.num_hidden
 
-      if config.data_scaler is not None and config.scale_targets is True:
-        self._predictions = self._reverse_center_and_scale( outputs )
-      else:
-        self._predictions = outputs
+        if config.skip_connections is True:
+            num_prev = num_inputs+num_prev
+            skip_inputs = tf.slice(inputs, [0, 0], [batch_size, num_inputs] )
+            outputs  = tf.concat( [ skip_inputs, outputs], 1)
 
-      # from here down is the learning part of the graph
-      L = config.target_lambda
-      loss = L * self._mse + (1.0 - L) * self._mse_all
-      tvars = tf.trainable_variables()
-      grads = tf.gradients(loss,tvars)
+        # final regression layer
+        linear_b = tf.get_variable("linear_b", [num_outputs])
+        linear_w = tf.get_variable("linear_w", [num_prev, num_outputs])
+        outputs = tf.nn.xw_plus_b(outputs, linear_w, linear_b)
 
-      if (config.max_grad_norm > 0):
-        grads, _ = tf.clip_by_global_norm(grads,config.max_grad_norm)
+        self._inps = inputs
+        self._tars = targets
+        self._outs = outputs
 
-      self._lr = tf.Variable(0.0, trainable=False)
-      optimizer = None
-      args = config.optimizer_params
-      if hasattr(tf.train,config.optimizer):
-        optimizer = getattr(tf.train, config.optimizer)(learning_rate=self._lr,**args)
-      else:
-        raise RuntimeError("Unknown optimizer = %s"%config.optimizer)
-     
-      update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
-      with tf.control_dependencies(update_ops):
-        self._train_op = optimizer.apply_gradients(zip(grads, tvars))
+        ktidx = config.target_idx
+        self._mse = tf.losses.mean_squared_error(targets[:,ktidx], outputs[:,ktidx])
+        self._mse_all = tf.losses.mean_squared_error(targets, outputs)
 
-  def _input_dropout(self,inputs):
-    # This implementation of dropout dropouts an entire feature along the time dim
-    random_tensor = self._keep_prob
-    random_tensor += random_ops.random_uniform([self._batch_size,self._num_inputs],
-                                               dtype=inputs.dtype)
-    random_tensor = tf.tile(random_tensor,[1,self._max_unrollings])
-    binary_tensor = math_ops.floor(random_tensor)
+        if config.data_scaler is not None and config.scale_targets is True:
+            self._predictions = self._reverse_center_and_scale( outputs )
+        else:
+            self._predictions = outputs
 
-    ret = math_ops.div(inputs, self._keep_prob) * binary_tensor
-    ret.set_shape(inputs.get_shape())
-    
-    return ret
+        # from here down is the learning part of the graph
+        L = config.target_lambda
+        loss = L * self._mse + (1.0 - L) * self._mse_all
+        tvars = tf.trainable_variables()
+        grads = tf.gradients(loss,tvars)
 
-  def _batch_relu_layer(self, x, size, scope):
-    with tf.variable_scope(scope):
-      h1 = tf.contrib.layers.fully_connected(x, size,
-                                             activation_fn=None,
-                                             weights_regularizer=None,
-                                             scope='dense')
-      h2 = tf.contrib.layers.batch_norm(h1,
-                                        center=True, scale=True,
-                                        is_training=self._phase,
-                                        scope='bn')
-      return tf.nn.relu(h2, 'relu')
+        if (config.max_grad_norm > 0):
+            grads, _ = tf.clip_by_global_norm(grads,config.max_grad_norm)
+
+        self._lr = tf.Variable(0.0, trainable=False)
+        optimizer = None
+        args = config.optimizer_params
+        if hasattr(tf.train,config.optimizer):
+            optimizer = getattr(tf.train, config.optimizer)(learning_rate=self._lr,**args)
+        else:
+            raise RuntimeError("Unknown optimizer = %s"%config.optimizer)
+
+        update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+        with tf.control_dependencies(update_ops):
+            self._train_op = optimizer.apply_gradients(zip(grads, tvars))
+
+    def _input_dropout(self,inputs):
+        # This implementation of dropout dropouts an entire feature along the time dim
+        random_tensor = self._keep_prob
+        random_tensor += random_ops.random_uniform([self._batch_size,self._num_inputs],
+                                                   dtype=inputs.dtype)
+        random_tensor = tf.tile(random_tensor,[1,self._max_unrollings])
+        binary_tensor = math_ops.floor(random_tensor)
+
+        ret = math_ops.div(inputs, self._keep_prob) * binary_tensor
+        ret.set_shape(inputs.get_shape())
+
+        return ret
+
+    def _batch_relu_layer(self, x, size, scope):
+        with tf.variable_scope(scope):
+            h1 = tf.contrib.layers.fully_connected(x, size,
+                                                   activation_fn=None,
+                                                   weights_regularizer=None,
+                                                   scope='dense')
+            h2 = tf.contrib.layers.batch_norm(h1,
+                                              center=True, scale=True,
+                                              is_training=self._phase,
+                                              scope='bn')
+            return tf.nn.relu(h2, 'relu')

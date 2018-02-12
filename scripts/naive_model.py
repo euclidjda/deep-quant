@@ -29,68 +29,68 @@ from tensorflow.python.ops import math_ops
 from tensorflow.python.ops import random_ops
 
 class NaiveModel(BaseModel):
-  """
-  """
-  def __init__(self, config):
-      """
-      Initialize the model
-      Args:
-        config
-      """
+    """
+    """
+    def __init__(self, config):
+        """
+        Initialize the model
+        Args:
+          config
+        """
 
-      self._max_unrollings = max_unrollings = config.max_unrollings
-      self._num_inputs = num_inputs = config.num_inputs
-      self._num_outputs = num_outputs = config.num_outputs
-      
-      # input/target normalization params
-      self._center = tf.get_variable('center',shape=[num_inputs],trainable=False)
-      self._scale  = tf.get_variable('scale',shape=[num_inputs],trainable=False)
-      
-      batch_size = self._batch_size = tf.placeholder(tf.int32, shape=[])
-      self._seq_lengths = tf.placeholder(tf.int32, shape=[None])
-      self._keep_prob = tf.placeholder(tf.float32, shape=[])
-      self._phase = tf.placeholder(tf.bool, name='phase')
-      
-      self._inputs = list()
-      self._outputs = list()
-      self._targets = list()
+        self._max_unrollings = max_unrollings = config.max_unrollings
+        self._num_inputs = num_inputs = config.num_inputs
+        self._num_outputs = num_outputs = config.num_outputs
 
-      for _ in range(max_unrollings):
-        self._inputs.append( tf.placeholder(tf.float32,
-                                              shape=[None,num_inputs]) )
-        self._targets.append( tf.placeholder(tf.float32,
-                                              shape=[None,num_outputs]) )
+        # input/target normalization params
+        self._center = tf.get_variable('center',shape=[num_inputs],trainable=False)
+        self._scale  = tf.get_variable('scale',shape=[num_inputs],trainable=False)
 
-      for i in range(max_unrollings):
-        self._outputs.append( self._inputs[i][:,:num_outputs] )
+        batch_size = self._batch_size = tf.placeholder(tf.int32, shape=[])
+        self._seq_lengths = tf.placeholder(tf.int32, shape=[None])
+        self._keep_prob = tf.placeholder(tf.float32, shape=[])
+        self._phase = tf.placeholder(tf.bool, name='phase')
 
-      targets = tf.unstack(
-        tf.reverse_sequence(
-          tf.reshape(
-            tf.concat(self._targets, 1),[batch_size,max_unrollings,num_outputs] ), 
-          self._seq_lengths,seq_axis=1,batch_axis=0),axis=1)[0]
-      
-      outputs = tf.unstack(
-        tf.reverse_sequence(
-          tf.reshape(
-            tf.concat(self._outputs, 1),[batch_size,max_unrollings,num_outputs] ), 
-          self._seq_lengths,seq_axis=1,batch_axis=0),axis=1)[0]
+        self._inputs = list()
+        self._outputs = list()
+        self._targets = list()
 
-      # center and scale
-      if config.data_scaler is not None:
-        targets = self._center_and_scale( targets )
-        outputs = self._center_and_scale( outputs )
+        for _ in range(max_unrollings):
+            self._inputs.append( tf.placeholder(tf.float32,
+                                                  shape=[None,num_inputs]) )
+            self._targets.append( tf.placeholder(tf.float32,
+                                                  shape=[None,num_outputs]) )
 
-      self._t = targets
-      self._o = outputs
+        for i in range(max_unrollings):
+            self._outputs.append( self._inputs[i][:,:num_outputs] )
 
-      ktidx = config.target_idx      
-      self._mse = tf.losses.mean_squared_error(targets[:,ktidx], outputs[:,ktidx])
+        targets = tf.unstack(
+          tf.reverse_sequence(
+            tf.reshape(
+              tf.concat(self._targets, 1),[batch_size,max_unrollings,num_outputs] ),
+            self._seq_lengths,seq_axis=1,batch_axis=0),axis=1)[0]
 
-      if config.data_scaler is not None:
-        self._predictions = self._reverse_center_and_scale( outputs )
-      else:
-        self._predictions = outputs
+        outputs = tf.unstack(
+          tf.reverse_sequence(
+            tf.reshape(
+              tf.concat(self._outputs, 1),[batch_size,max_unrollings,num_outputs] ),
+            self._seq_lengths,seq_axis=1,batch_axis=0),axis=1)[0]
 
-      self._lr = tf.Variable(0.0, trainable=False)
-      self._train_op = tf.identity(self._lr)
+        # center and scale
+        if config.data_scaler is not None:
+            targets = self._center_and_scale( targets )
+            outputs = self._center_and_scale( outputs )
+
+        self._t = targets
+        self._o = outputs
+
+        ktidx = config.target_idx
+        self._mse = tf.losses.mean_squared_error(targets[:,ktidx], outputs[:,ktidx])
+
+        if config.data_scaler is not None:
+            self._predictions = self._reverse_center_and_scale( outputs )
+        else:
+            self._predictions = outputs
+
+        self._lr = tf.Variable(0.0, trainable=False)
+        self._train_op = tf.identity(self._lr)

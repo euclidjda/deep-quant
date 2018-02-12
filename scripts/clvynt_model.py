@@ -29,56 +29,54 @@ from tensorflow.python.ops import math_ops
 from tensorflow.python.ops import random_ops
 
 class ClvyntModel(BaseModel):
-  """
-  """
-  def __init__(self, config):
-      """
-      Initialize the model
-      Args:
-        config
-      """
+    """
+    """
+    def __init__(self, config):
+        """
+        Initialize the model
+        Args:
+          config
+        """
 
-      self._max_unrollings = max_unrollings = config.max_unrollings
-      self._num_inputs = num_inputs =config.num_inputs
-      self._num_outputs = num_outputs = config.num_outputs
-      
-      total_input_size = max_unrollings * num_inputs
+        self._max_unrollings = max_unrollings = config.max_unrollings
+        self._num_inputs = num_inputs =config.num_inputs
+        self._num_outputs = num_outputs = config.num_outputs
 
-      # input/target normalization params
-      self._center = tf.get_variable('center',shape=[num_inputs],trainable=False)
-      self._scale  = tf.get_variable('scale',shape=[num_inputs],trainable=False)
-      
-      batch_size = self._batch_size = tf.placeholder(tf.int32, shape=[])
-      self._keep_prob = tf.placeholder(tf.float32, shape=[])
-      self._phase = tf.placeholder(tf.bool, name='phase')
-      
-      self._inputs = list()
-      self._targets = list()
+        total_input_size = max_unrollings * num_inputs
 
-      for _ in range(max_unrollings):
-        self._inputs.append( tf.placeholder(tf.float32,
-                                              shape=[None,num_inputs]) )
-        self._targets.append( tf.placeholder(tf.float32,
-                                              shape=[None,num_outputs]) )
-        
-      targets = self._targets[-1]
-      
-      # center and scale
-      if config.data_scaler is not None:
-        targets = self._center_and_scale( targets )
+        # input/target normalization params
+        self._center = tf.get_variable('center',shape=[num_inputs],trainable=False)
+        self._scale  = tf.get_variable('scale',shape=[num_inputs],trainable=False)
 
-      self._t = targets
-      outputs = targets
+        batch_size = self._batch_size = tf.placeholder(tf.int32, shape=[])
+        self._keep_prob = tf.placeholder(tf.float32, shape=[])
+        self._phase = tf.placeholder(tf.bool, name='phase')
 
-      ktidx = config.target_idx      
-      self._mse = tf.losses.mean_squared_error(targets[:,ktidx], outputs[:,ktidx])
+        self._inputs = list()
+        self._targets = list()
 
-      if config.data_scaler is not None:
-        self._predictions = self._reverse_center_and_scale( outputs )
-      else:
-        self._predictions = outputs
+        for _ in range(max_unrollings):
+            self._inputs.append( tf.placeholder(tf.float32,
+                                                  shape=[None,num_inputs]) )
+            self._targets.append( tf.placeholder(tf.float32,
+                                                  shape=[None,num_outputs]) )
 
-      self._lr = tf.Variable(0.0, trainable=False)
-      self._train_op = tf.identity(self._lr)
+        targets = self._targets[-1]
 
-      
+        # center and scale
+        if config.data_scaler is not None:
+            targets = self._center_and_scale( targets )
+
+        self._t = targets
+        outputs = targets
+
+        ktidx = config.target_idx
+        self._mse = tf.losses.mean_squared_error(targets[:,ktidx], outputs[:,ktidx])
+
+        if config.data_scaler is not None:
+            self._predictions = self._reverse_center_and_scale( outputs )
+        else:
+            self._predictions = outputs
+
+        self._lr = tf.Variable(0.0, trainable=False)
+        self._train_op = tf.identity(self._lr)
