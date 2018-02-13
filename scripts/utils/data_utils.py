@@ -31,7 +31,7 @@ def get_data_path(data_dir, filename):
     return path
 
 
-def get_gvkeys_from_tkrlist(tkrlist):
+def get_gvkeys_from_tkrlist(tkrlist):  #TODO: use actual gvkeys
     """
     Returns 'gvkeys' from tkrlist.csv as a sorted list.
 
