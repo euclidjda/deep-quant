@@ -75,7 +75,8 @@ class BatchGenerator(object):
         self._validation_set = dict()
         if validation is True:
             if config.seed is not None:
-                if verbose is True: print("setting random seed to "+str(config.seed))
+                if verbose is True:
+                    print("\nSetting random seed to "+str(config.seed))
                 random.seed( config.seed )
                 np.random.seed( config.seed )
             # get number of keys

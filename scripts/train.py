@@ -89,7 +89,7 @@ def run_epoch(session, model, train_data, valid_data,
     return (train_mse/train_steps,valid_mse/valid_steps)
 
 def train_model(config):
-    print("Loading training data ...")
+    print("\nLoading training data ...")
     train_data, valid_data = data_utils.load_train_valid_data(config)
 
     if config.start_date is not None:
@@ -104,7 +104,7 @@ def train_model(config):
         if config.seed is not None:
             tf.set_random_seed(config.seed)
 
-        print("Constructing model ...")
+        print("\nConstructing model ...")
         model = model_utils.get_model(session, config, verbose=True)
 
         if config.data_scaler is not None:

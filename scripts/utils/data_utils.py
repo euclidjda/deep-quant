@@ -1,11 +1,17 @@
 "Provides tools for user to load data as specified."
 
 import os
+import csv
+from datetime import datetime
 
 import pandas as pd
 
 from batch_generator import BatchGenerator
 
+BIG_DF_PATH = os.path.join(os.environ['DEEP_QUANT_ROOT'], 'data', 'datasets', 
+                           'big_datafile.dat')  # TODO: fix so we don't have to
+                                                # assume 'DEEP_QUANT_ROOT' is
+                                                # defined in the environment
 
 def get_data_path(data_dir, filename):
     """
@@ -24,13 +30,65 @@ def get_data_path(data_dir, filename):
         path = os.path.join(os.environ['DEEP_QUANT_ROOT'], path)
     return path
 
-def load_all_data(config):
+
+def get_gvkeys_from_tkrlist(tkrlist):
+    """
+    Returns 'gvkeys' from tkrlist.csv as a sorted list.
+
+    NOTE: Right now, 'gvkeys' are not the actual gvkeys that you'd see in
+    Compustat. Instead, they're unique identifiers constructed by concatenating
+    a numeric id for the exchange (1 for Nasdaq, 2 for NYSE) with the ticker
+    name.
+    """
+    tkrlist_filepath = os.path.join(os.environ['DEEP_QUANT_ROOT'], 'data',
+                                    'tkrlists', "{}.csv".format(tkrlist))
+
+    if os.path.isfile(tkrlist_filepath):
+        with open(tkrlist_filepath, 'r') as f:
+            reader = csv.reader(f)
+            lines = list(reader)
+
+        gvkeys = list()
+        for line in lines:
+            if line[1] == 'Nasdaq':
+                gvkeys.append('1'+line[0])
+            elif line[1] == 'NYSE':
+                gvkeys.append('2'+line[0])
+            else:
+                gvkeys.append('9'+line[0])  # TODO: is that best way to handle
+                                            # unrecognized market?
+
+    else:
+        gvkeys = list()
+        
+    return gvkeys
+
+
+def shave_big_datafile(big_df_path, config):
+    """
+    Shaves wanted data (in terms of tkrs and features only; the shaving by dates
+    is done by BatchGenerator's constructor), returns path to shaved .dat file.
+
+    NOTE: shaving by features not implemented yet, will rely on a feat_map.txt
+    file.
+    """
+    gvkeys = get_gvkeys_from_tkrlist(config.tkrlist)
+    big_df = pd.read_csv(BIG_DF_PATH, sep=' ', dtype={config.key_field: str})
+    shaved_df = big_df[big_df.gvkey.isin(gvkeys)]
+    now = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+    shaved_data_path = os.path.join(os.path.split(BIG_DF_PATH)[0],
+                                    "shaved_{}.dat".format(now))
+    shaved_df.to_csv(shaved_data_path, sep=' ', index=False)
+    return shaved_data_path
+
+
+def load_wanted_data(config):
     """
     Returns all data as a BatchGenerator object.
     """
     if config.datasource == "big_datafile":
-        all_data_path = get_data_path(config.data_dir, config.datafile)
-        batches = BatchGenerator(all_data_path, config)
+        shaved_data_path = shave_big_datafile(BIG_DF_PATH, config)
+        batches = BatchGenerator(shaved_data_path, config)
     elif config.datasource == "WRDS":
         raise Exception("Not Implemented yet, sorry!")
     else:
@@ -38,11 +96,12 @@ def load_all_data(config):
 
     return batches
 
+
 def load_train_valid_data(config):
     """
     Returns train_data and valid_data, both as BatchGenerator objects.
     """
-    batches = load_all_data(config)
+    batches = load_wanted_data(config)
 
     train_data = batches.train_batches()
     valid_data = batches.valid_batches()

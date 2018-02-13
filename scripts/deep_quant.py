@@ -42,6 +42,8 @@ def get_configs():
     """
     configs.DEFINE_string("datasource", 'big_datafile', 
                           "The source of the data.")
+    configs.DEFINE_string("tkrlist", 'system_test_tkrlist', 
+                          "The list of filters to use.")
     configs.DEFINE_string("datafile",'data.dat',"a datafile name.")
     configs.DEFINE_string("mse_outfile",None,"A file to write mse values during predict phase.")
     configs.DEFINE_string("default_gpu",'',"The default GPU to use e.g., /gpu:0")
