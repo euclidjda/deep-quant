@@ -40,7 +40,7 @@ def print_vector(name,v):
 
 def predict(config):
 
-    path = model_utils.get_data_path(config.data_dir,config.datafile)
+    path = utils.data_utils.get_data_path(config.data_dir,config.datafile)
 
     config.batch_size = 1
     batches = BatchGenerator(path, config,

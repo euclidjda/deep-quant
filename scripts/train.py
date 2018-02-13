@@ -30,6 +30,7 @@ from tensorflow.python.platform import gfile
 from batch_generator import BatchGenerator
 
 import model_utils
+from utils import data_utils
 
 def pretty_progress(step, prog_int, dot_count):
     if ( (prog_int<=1) or (step % (int(prog_int)+1)) == 0):
@@ -88,25 +89,18 @@ def run_epoch(session, model, train_data, valid_data,
     return (train_mse/train_steps,valid_mse/valid_steps)
 
 def train_model(config):
-
-    train_path = model_utils.get_data_path(config.data_dir,config.datafile)
-
     print("Loading training data ...")
-    batches = BatchGenerator(train_path,config)
-
-    train_data = batches.train_batches()
-    valid_data = batches.valid_batches()
+    train_data, valid_data = data_utils.load_train_valid_data(config)
 
     if config.start_date is not None:
-        print("Training start date: ",config.start_date)
+        print("Training start date: ", config.start_date)
     if config.start_date is not None:
-        print("Training end date: ",config.end_date)
+        print("Training end date: ", config.end_date)
 
-    tf_config = tf.ConfigProto( allow_soft_placement=True  ,
-                                log_device_placement=False )
+    tf_config = tf.ConfigProto(allow_soft_placement=True,
+                               log_device_placement=False)
 
     with tf.Graph().as_default(), tf.Session(config=tf_config) as session:
-
         if config.seed is not None:
             tf.set_random_seed(config.seed)
 

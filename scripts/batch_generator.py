@@ -53,7 +53,8 @@ class BatchGenerator(object):
         if data is None:
             if not os.path.isfile(filename):
                 raise RuntimeError("The data file %s does not exists" % filename)
-            data = pd.read_csv(filename,sep=' ', dtype={ config.key_field : str } )
+            data = pd.read_csv(filename, sep=' ', 
+                               dtype={ config.key_field: str})
             # Moved this to proper location in indices gen code below
             #if config.start_date is not None:
             #    data = data.drop(data[data['date'] < config.start_date].index)

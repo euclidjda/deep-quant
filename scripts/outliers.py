@@ -39,7 +39,7 @@ from batch_generator import BatchGenerator
 def main():
 
     config = deep_quant.get_configs()
-    train_path = model_utils.get_data_path(config.data_dir,config.datafile)
+    train_path = utils.data_utils.get_data_path(config.data_dir,config.datafile)
 
     print("Loading training data ...")
 
