@@ -64,7 +64,7 @@ def get_gvkeys_from_tkrlist(tkrlist):
     return gvkeys
 
 
-def shave_big_datafile(big_df_path, config):
+def shave_big_datafile(config):
     """
     Shaves wanted data (in terms of tkrs and features only; the shaving by dates
     is done by BatchGenerator's constructor), returns path to shaved .dat file.
@@ -82,18 +82,25 @@ def shave_big_datafile(big_df_path, config):
     return shaved_data_path
 
 
+def write_WRDS_data(config):
+    """
+    Writes .dat file using data from WRDS.
+    """
+    raise NotImplementedError("Sorry! WRDS integration not ready.")  # TODO
+
+
 def load_wanted_data(config):
     """
     Returns all data as a BatchGenerator object.
     """
     if config.datasource == "big_datafile":
-        shaved_data_path = shave_big_datafile(BIG_DF_PATH, config)
-        batches = BatchGenerator(shaved_data_path, config)
+        data_path = shave_big_datafile(config)
     elif config.datasource == "WRDS":
-        raise Exception("Not Implemented yet, sorry!")
+        data_path = write_WRDS_data(config)
     else:
         raise Exception("Unknown datasource.")  # TODO: use argparse to check
-
+    
+    batches = BatchGenerator(shaved_data_path, config)
     return batches
 
 
