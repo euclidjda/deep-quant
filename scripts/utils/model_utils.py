@@ -20,16 +20,15 @@ from __future__ import print_function
 
 import time
 import os
-import sys
 
 import numpy as np
 import tensorflow as tf
 
 from tensorflow.python.platform import gfile
-from deep_mlp_model import DeepMlpModel
-from clvynt_model import ClvyntModel
-from naive_model import NaiveModel
-from deep_rnn_model import DeepRnnModel
+from models.deep_mlp_model import DeepMlpModel
+from models.clvynt_model import ClvyntModel
+from models.naive_model import NaiveModel
+from models.deep_rnn_model import DeepRnnModel
 
 #from log_reg_model import LogRegModel
 
@@ -111,9 +110,10 @@ def get_model(session, config, verbose=False):
         start_time = time.time()
         if ckpt and gfile.Exists(ckpt.model_checkpoint_path+".index"):
             if verbose:
-                print("Reading model parameters from %s ..."%ckpt.model_checkpoint_path, end=' ')
+                print("Reading model parameters from {}...".format(
+                    ckpt.model_checkpoint_path), end=' ')
             tf.train.Saver(max_to_keep=200).restore(session,
-                                                      ckpt.model_checkpoint_path)
+                                                    ckpt.model_checkpoint_path)
             if verbose:
                 print("done in %.2f seconds."%(time.time() - start_time))
         else:
