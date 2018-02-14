@@ -24,7 +24,7 @@ import sys
 import numpy as np
 import tensorflow as tf
 
-from base_model import BaseModel
+from models.base_model import BaseModel
 from tensorflow.python.ops import math_ops
 from tensorflow.python.ops import random_ops
 

@@ -23,7 +23,7 @@ import sys
 import numpy as np
 import tensorflow as tf
 
-from base_model import BaseModel
+from models.base_model import BaseModel
 
 class DeepRnnModel(BaseModel):
     """

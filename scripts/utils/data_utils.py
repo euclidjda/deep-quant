@@ -101,7 +101,7 @@ def load_wanted_data(config):
         raise Exception("Unknown datasource.")  # TODO: use argparse to check
     
     batches = BatchGenerator(data_path, config)
-
+    
     #cleanup
     if config.datasource == "big_datafile":
         os.remove(data_path)

@@ -30,7 +30,7 @@ import regex as re
 from tensorflow.python.platform import gfile
 from batch_generator import BatchGenerator
 
-import model_utils
+from utils import model_utils
 
 def print_vector(name,v):
     print("%s: "%name,end='')
