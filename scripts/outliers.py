@@ -29,7 +29,7 @@ import numpy as np
 import regex as re
 import pandas as pd
 
-import model_utils
+from utils import model_utils
 import deep_quant
 import configs as configs
 from batch_generator import BatchGenerator

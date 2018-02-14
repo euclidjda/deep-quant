@@ -223,8 +223,6 @@ class BatchGenerator(object):
           * target_idx: index of target variable within the list of features, if
                         target is specified by config.
         """
-
-
         data = self._data  # TODO: try without copying? could be faster
 
         assert config.feature_fields

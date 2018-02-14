@@ -25,7 +25,7 @@ import copy
 import numpy as np
 import regex as re
 
-import model_utils
+from utils import model_utils
 import configs as configs
 from batch_generator import BatchGenerator
 

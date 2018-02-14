@@ -24,8 +24,7 @@ import sys
 import tensorflow as tf
 import regex as re
 
-import model_utils
-from utils import data_utils
+from utils import data_utils, model_utils
 
 def pretty_progress(step, prog_int, dot_count):
     if ( (prog_int<=1) or (step % (int(prog_int)+1)) == 0):
