@@ -20,14 +20,9 @@ from __future__ import print_function
 import time
 import os
 import sys
-import copy
 
-import numpy as np
 import tensorflow as tf
 import regex as re
-
-from tensorflow.python.platform import gfile
-from batch_generator import BatchGenerator
 
 import model_utils
 from utils import data_utils

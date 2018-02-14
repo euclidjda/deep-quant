@@ -21,32 +21,24 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import time
-import os
-import sys
-import copy
-
-import numpy as np
 import tensorflow as tf
 
-from tensorflow.python.platform import gfile
-from batch_generator import BatchGenerator
-
-#import model_utils
 import configs as configs
 from train import train_model
 from predict import predict
 
+
 def get_configs():
-    """Defines all configuration params passable to command line.
+    """
+    Defines all configuration params passable to command line.
     """
     configs.DEFINE_string("datasource", 'big_datafile', 
                           "The source of the data.")
-    configs.DEFINE_string("tkrlist", 'system_test_tkrlist', 
+    configs.DEFINE_string("tkrlist", "big_tkrlist.csv", 
                           "The list of filters to use.")
-    configs.DEFINE_string("datafile",'data.dat',"a datafile name.")
-    configs.DEFINE_string("mse_outfile",None,"A file to write mse values during predict phase.")
-    configs.DEFINE_string("default_gpu",'',"The default GPU to use e.g., /gpu:0")
+    configs.DEFINE_string("datafile", 'big_datafile.dat', "a datafile name.")
+    configs.DEFINE_string("mse_outfile", None, "A file to write mse values during predict phase.")
+    configs.DEFINE_string("default_gpu", '', "The default GPU to use e.g., /gpu:0")
     configs.DEFINE_string("nn_type",'DeepRnnModel',"Model type")
     configs.DEFINE_string("active_field", 'active',"Key column name header for active indicator")
     configs.DEFINE_string("key_field", 'gvkey',"Key column name header in datafile")
@@ -117,6 +109,7 @@ def get_configs():
         assert('learning_rate' not in c.optimizer_params)
 
     return c
+
 
 def main(_):
     config = get_configs()
