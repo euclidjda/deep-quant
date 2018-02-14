@@ -242,6 +242,7 @@ class BatchGenerator(object):
         self._key_idx = list(data.columns.values).index(config.key_field)
         self._active_idx = list(data.columns.values).index(config.active_field)
         self._date_idx = list(data.columns.values).index('date')
+        self._scalar_idx = list(data.columns.values).index(config.scale_field)
 
         idx = list(data.columns.values).index(config.target_field)
         if config.target_field != 'target':
@@ -282,8 +283,8 @@ class BatchGenerator(object):
                 print("Num training entities: %d"%(len(keys)-sample_size))
                 print("Num validation entities: %d"%sample_size)
 
-    def _get_normalizer(self,end_idx):
-        val = max(self._data.iloc[end_idx][self._scaling_feature],_MIN_SEQ_NORM)
+    def _get_normalizer(self, end_idx):
+        val = max(self._data.iat[end_idx, self._scalar_idx], _MIN_SEQ_NORM)
         return val
 
     def _get_batch_normalizers(self):
@@ -292,13 +293,9 @@ class BatchGenerator(object):
         inputs of the current sequence should be scaled (this is specified by
         config.scale_field).
         """
-        normalizers = list()
-        for b in range(self._batch_size):
-            cursor = self._index_cursor[b]
-            end_idx = self._end_indices[cursor]
-            s = self._get_normalizer(end_idx)
-            normalizers.append(s)
-        return np.array( normalizers )
+        v_get_normalizer = np.vectorize(self._get_normalizer)
+        end_idxs = np.array(self._end_indices)[self._index_cursor]
+        return v_get_normalizer(end_idxs)
 
     def _get_feature_vector(self,end_idx,cur_idx):
         data = self._data
