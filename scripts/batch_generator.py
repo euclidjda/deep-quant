@@ -28,34 +28,63 @@ _MIN_SEQ_NORM = 1.0
 
 class BatchGenerator(object):
     """
-    BatchGenerator object takes a data file are returns an object with
-    a next_batch() function. The next_batch() function yields a batch of data
-    sequences from the datafile whose shape is specified by config.batch_size
-    and config.max_unrollings.
+    BatchGenerator takes a data file and returns an object with a next_batch()
+    function. The next_batch() function yields a batch of data sequences from
+    the datafile whose shape is specified by config.batch_size and
+    config.max_unrollings.
     """
     def __init__(self, filename, config, validation=True, require_targets=True,
                      data=None, verbose=True):
         """
-        Init a BatchGenerator
+        Init a BatchGenerator.
+        Data is loaded as a Pandas DataFrame and stored in the _data attribute.
+        `
+        Sequences of length config.max_unrollings are identified; the start and
+        end indices of these sequences are stored in the _start_indices and
+        _end_indices attributes of our BatchGenerator object, respectively. 
+        (These are both lists of equal length that indicate the indices of the
+        start and of the end of the sequence, within the _data DataFrame.)
+
+        Indices are set up to access config.batch_size of these sequences as a
+        batch; these are set up in such way that these sequences are "far apart"
+        from each other in _data (they're num_batches rows away from each other,
+        more specifically). This way it's unlikely that more than one sequence
+        corresponds to the same company in a batch.
         """
         self._scaling_feature = config.scale_field
-        self._max_unrollings = max_unrollings = config.max_unrollings
-        self._min_unrollings = min_unrollings = config.min_unrollings
+        self._max_unrollings = config.max_unrollings
+        self._min_unrollings = config.min_unrollings
         self._stride = config.stride
         self._forecast_n = config.forecast_n
-        self._batch_size = batch_size = config.batch_size
+        self._batch_size = config.batch_size
         self._scaling_params = None
         self._start_date = config.start_date
         self._end_date = config.end_date
-        
-        assert( self._stride >= 1 )
 
+        assert self._stride >= 1
+        
+        self._init_data(filename, config, validation, data, verbose)
+        self._init_batch_cursor(config, require_targets, verbose)
+        self._config = config # save this around for train_batches() method
+
+    def _init_data(self, filename, config, validation=True, data=None, 
+                   verbose=True):
+        """
+        Loads data as Pandas DataFrame, saves it as ._data attribute, sets up a
+        validation set if necessary. 
+
+        (The latter consists of creating a dictionary to house the unique
+        identifiers of the companies that are to be used for validation, and
+        populating it with randomly-selected companies.)
+        """
+        # Load data
         if data is None:
             if not os.path.isfile(filename):
                 raise RuntimeError("The data file %s does not exists" % filename)
-            data = pd.read_csv(filename,sep=' ', dtype={ config.key_field : str } )
+            data = pd.read_csv(filename, sep=' ', 
+                               dtype={config.key_field: str})
             # Moved this to proper location in indices gen code below
-            #if config.start_date is not None:
+            #if config.start_date is not None: # TODO: uncomment?
             #    data = data.drop(data[data['date'] < config.start_date].index)
             if config.end_date is not None:
                 data = data.drop(data[data['date'] > config.end_date].index)
@@ -65,32 +94,41 @@ class BatchGenerator(object):
         assert(self._data_len)
 
         self._init_column_indices(config)
-        #self._init_validation_set(config)
-        #self._init_batch_cursor(config)
+        self._init_validation_set(config, validation, verbose)
 
-        self._config = config # save this around for train_batches() method
-        
-        # Setup the validation data
-        self._validation_set = dict()
-        if validation is True:
-            if config.seed is not None:
-                if verbose is True: print("setting random seed to "+str(config.seed))
-                random.seed( config.seed )
-                np.random.seed( config.seed )
-            # get number of keys
-            keys = list(set(data[config.key_field]))
-            keys.sort()
-            sample_size = int( config.validation_size * len(keys) )
-            sample = random.sample(keys, sample_size)
-            self._validation_set = dict(zip(sample,[1]*sample_size))
-            if verbose is True:
-                print("Num training entities: %d"%(len(keys)-sample_size))
-                print("Num validation entities: %d"%sample_size)
+    def _init_batch_cursor(self, config, require_targets=True, verbose=True):
+        """
+        Sets up indexes into the sequences.
+        First identifies start and end points of sequences (stored as
+        _start_indices and _end_indices).
 
-        # Setup indexes into the sequences
+        Then sets up two cursors:
+          (1) _index_cursor, which is a cursor of equally-spaced indices into
+              the dataset. Here, each index points to a sequence (which can be
+              determined fully using _data, _start_indices, and _end_indices).
+              There will be config.batch_size indices in this list.
+          (2) _batch_cursor, which keeps track of the batch that we're working
+              with. (This is just an int that changes as we go through the
+              dataset in batches.)
+
+        Note that the number of batches is dictated by the number of sequences
+        available and the user-defined size of each batch (as specified in
+        config.batch_size). (The number of sequences available in turn depends
+        on the length of those sequences, config.max_unrollings as well as the
+        size of the dataset).
+
+        Here, an attribute called _batch_cache is also created. This is a list
+        of size num_batches that will house the contents of each batch once
+        they're cached.
+
+        Lastly, an attribute called _init_index_cursor is also created. This is
+        simply a copy of _index_cursor in its original state, which will allow
+        us to go back to the start if we need to once _index_cursor has changed.
+        """
+        data = self._data
         stride = self._stride
-        min_steps = stride * (min_unrollings-1) + 1
-        max_steps = stride * (max_unrollings-1) + 1
+        min_steps = stride * (self._min_unrollings-1) + 1
+        max_steps = stride * (self._max_unrollings-1) + 1
         forecast_n = self._forecast_n
         self._start_indices = list()
         self._end_indices = list()
@@ -99,17 +137,22 @@ class BatchGenerator(object):
             start_date = config.start_date
         last_key = ""
         cur_length = 1
+        
+        # Identify start and end points of sequences 
+        # TODO: roll up as function (to be housed within _init_batch_cursor)?
         for i in range(self._data_len):
-            # get active value
-            key = data.iat[i,self._key_idx]
-            pred_key = data.iat[i+forecast_n, self._key_idx] if i+forecast_n < len(data) else ""
+            key = data.iat[i, self._key_idx]
+            if i+forecast_n < len(data):
+                pred_key = data.iat[i+forecast_n, self._key_idx]
+            else:
+                pred_key = ""
             active = True if int(data.iat[i,self._active_idx]) else False
             date = data.iat[i,self._date_idx]
-            if (key != last_key):
+            if key != last_key:
                 cur_length = 1
-            if ( (cur_length >= min_steps) 
-                 and (active is True) 
-                 and (date >= start_date) ):
+            if ((cur_length >= min_steps)
+                 and (active is True)
+                 and (date >= start_date)):
                 # If targets are not required, we don't need the future
                 # sequences to be there, otherwise we do
                 seq_len = min(cur_length-(cur_length-1)%stride, max_steps)
@@ -121,52 +164,91 @@ class BatchGenerator(object):
 
         if verbose is True:
             print("Number of batch indices: %d"%(len(self._start_indices)))
+
         # Create a cursor of equally spaced indices into the dataset. Each index
         # in the cursor points to one sequence in a batch and is used to keep
         # track of where we are in the dataset.
         batch_size = self._batch_size
         num_batches = len(self._start_indices) // batch_size
-        self._index_cursor = [ offset * num_batches for offset in range(batch_size) ]
+        self._index_cursor = [offset*num_batches for offset in range(batch_size)]
         self._init_index_cursor = self._index_cursor[:]
         self._num_batches = num_batches
         self._batch_cache = [None]*num_batches
         self._batch_cursor = 0
 
-    def _get_indices_from_names(self,names):
+    def _get_indices_from_names(self, names):
+        """
+        Returns indexes of columns of self._data that are in the range of
+        `names`, inclusive. `names` should be a string with the following
+        format: start_column_name-end_column_name (saleq_ttm-ltq_mrq, for
+        example).
+        """
         data = self._data
-        assert(names.find('-') < len(names)-1 )
-        assert(names.find('-') > 0 )
-        (first,last) = names.split('-')
+        assert 0 < names.find('-') < len(names)-1
+        first, last = names.split('-')
         start_idx = list(data.columns.values).index(first)
         end_idx = list(data.columns.values).index(last)
-        assert(start_idx>=0)
-        assert(start_idx <= end_idx)
-        return [i for i in range(start_idx,end_idx+1)]
+        assert start_idx >= 0
+        assert start_idx <= end_idx
+        return list(range(start_idx,end_idx+1))
 
-    def _init_column_indices(self,config):
-        data = self._data
+    def _init_column_indices(self, config):
+        """
+        Sets up column-index-related attributes and adds a few items to the
+        config.
 
-        assert( config.feature_fields is not None )
-        assert( len(config.feature_fields) > 0 )
+        Column-index-related attributes:
+          * _feature_indices: A list housing the column numbers of the features,
+                              where features are as specified by 
+                              config.feature_fields.
+          * _aux_indices: A list housing the column numbers of the auxilary
+                          covariates, where these auxilary covariates are
+                          specified by config.aux_input_fields.
+          * _feature_names: A list housing the names of the columns of the 
+                            features _and_ of the auxilary covariates.
+          * _num_inputs: The total number of covariates used as input (so both
+                         those that are specified in config.feature_fields and
+                         those that are specified in config.aux_input_fields).
+          * _key_idx: The column index of what should be used as a unique
+                      identifier of each company (the index of gvkey, for 
+                      example).
+          * _active_idx: The column index of the field that lets us know whether
+                         a company was actively trading during a specific point
+                         in time or not.
+          * _date_idx: The column index of the date field.
 
-        self._feature_indices = self._get_indices_from_names( config.feature_fields )
-        
-        self._feature_names = list(data.columns.values[self._feature_indices])
+        Items added to the config:
+          * num_inputs: same as the _num_inputs attribute
+          * num_ouptus: num_inputs minus the number of aux covariates.
+          * target_idx: index of target variable within the list of features, if
+                        target is specified by config.
+        """
+        data = self._data  # TODO: try without copying? could be faster
+
+        assert config.feature_fields
+
+        self._feature_indices = self._get_indices_from_names(
+                config.feature_fields)
 
         self._aux_indices = list()
         if config.aux_input_fields is not None:
-            self._aux_indices =  self._get_indices_from_names( config.aux_input_fields )
-            self._feature_names.extend( list(data.columns.values[self._aux_indices]) )
-            
+            self._aux_indices = self._get_indices_from_names(
+                    config.aux_input_fields)
+
+        self._feature_names = list(data.columns.values[self._feature_indices \
+                                   + self._aux_indices])
+
         config.num_inputs = self._num_inputs = len(self._feature_names)
         self._key_idx = list(data.columns.values).index(config.key_field)
         self._active_idx = list(data.columns.values).index(config.active_field)
         self._date_idx = list(data.columns.values).index('date')
+        self._scalar_idx = list(data.columns.values).index(config.scale_field)
 
         idx = list(data.columns.values).index(config.target_field)
         if config.target_field != 'target':
             config.target_idx = idx - self._feature_indices[0]
-            config.num_outputs = self._num_outputs = self._num_inputs - len( self._aux_indices )
+            config.num_outputs = self._num_outputs = self._num_inputs \
+                                                     - len(self._aux_indices)
             self._price_target_idx = -1
         else:
             config.target_idx = 0
@@ -175,25 +257,45 @@ class BatchGenerator(object):
         # assert( 0 <= self._num_outputs <= self._num_inputs )
 
         assert(config.target_idx >= 0)
-        
-    def _init_validation_set(self, config):
-        pass
-    
-    def _init_batch_cursor(self, config):
-        pass
 
-    def _get_normalizer(self,end_idx):
-        val = max(self._data.iloc[end_idx][self._scaling_feature],_MIN_SEQ_NORM)
+    def _init_validation_set(self, config, validation, verbose=True):
+        """
+        Sets up validation set. Creates the _validation_set attribute, which is
+        a dictionary housing the keys (unique identifier, such as gvkey) of
+        the companies that should be used for validation as the dictionary's
+        keys, and the number 1 as the dictionary's values.
+        """
+        # Setup the validation data
+        self._validation_set = dict()
+        if validation is True:
+            if config.seed is not None:
+                if verbose is True:
+                    print("\nSetting random seed to "+str(config.seed))
+                random.seed( config.seed )
+                np.random.seed( config.seed )
+            # get number of keys
+            keys = sorted(set(self._data[config.key_field]))
+            sample_size = int(config.validation_size * len(keys))
+            sample = random.sample(keys, sample_size)
+            self._validation_set = dict(zip(sample, [1]*sample_size))  
+            #TODO: store as set instead of as dict?
+            if verbose is True:
+                print("Num training entities: %d"%(len(keys)-sample_size))
+                print("Num validation entities: %d"%sample_size)
+
+    def _get_normalizer(self, end_idx):
+        val = max(self._data.iat[end_idx, self._scalar_idx], _MIN_SEQ_NORM)
         return val
-        
+
     def _get_batch_normalizers(self):
-        normalizers = list()
-        for b in range(self._batch_size):
-            cursor = self._index_cursor[b]
-            end_idx = self._end_indices[cursor]
-            s = self._get_normalizer(end_idx)
-            normalizers.append(s)
-        return np.array( normalizers )
+        """
+        Returns an np.array housing the normalizers (scalers) by which the
+        inputs of the current sequence should be scaled (this is specified by
+        config.scale_field).
+        """
+        v_get_normalizer = np.vectorize(self._get_normalizer)
+        end_idxs = np.array(self._end_indices)[self._index_cursor]
+        return v_get_normalizer(end_idxs)
 
     def _get_feature_vector(self,end_idx,cur_idx):
         data = self._data
@@ -206,7 +308,7 @@ class BatchGenerator(object):
             return np.multiply(np.sign(y),np.log1p(y_abs))
         else:
             return np.zeros(shape=[len(self._feature_indices)])
-           
+
     def _get_aux_vector(self,cur_idx):
         data = self._data
         if cur_idx < self._data_len:
@@ -221,7 +323,7 @@ class BatchGenerator(object):
         """
         x = np.zeros(shape=(self._batch_size, self._num_inputs), dtype=np.float)
         y = np.zeros(shape=(self._batch_size, self._num_outputs), dtype=np.float)
-        
+
         attr = list()
         data = self._data
         key_idx = self._key_idx
@@ -255,16 +357,18 @@ class BatchGenerator(object):
                     y[b,:] = self._get_feature_vector(end_idx,next_idx)
                 else: # no targets exist
                     y[b,:] = None
-                
+
         return x, y, attr
 
     def _next_batch(self):
-        """Generate the next batch of sequences from the data.
+        """
+        Generate the next batch of sequences from the data.
+
         Returns:
           A batch of type Batch (see class def below)
         """
-        normalizers = self._get_batch_normalizers( )
-        seq_lengths = np.full(self._batch_size, self._max_unrollings, dtype=int) 
+        normalizers = self._get_batch_normalizers()
+        seq_lengths = np.full(self._batch_size, self._max_unrollings, dtype=int)
         inputs = list()
         targets = list()
         attribs = list()
@@ -274,18 +378,23 @@ class BatchGenerator(object):
             targets.append(y)
             attribs.append(attr)
 
-        assert(len(inputs)==len(targets))
-        
-        #############################################################################
+        assert len(inputs) == len(targets)
+
+        ########################################################################
         #   Set cursor for next batch
-        #############################################################################
+        ########################################################################
         batch_size = self._batch_size
         num_idxs = len(self._start_indices)
-        self._index_cursor = [ (self._index_cursor[b]+1)%num_idxs for b in range(batch_size) ]
+        self._index_cursor = [(self._index_cursor[b]+1)%num_idxs \
+                              for b in range(batch_size)]
 
         return Batch(inputs, targets, attribs, normalizers, seq_lengths)
 
     def next_batch(self):
+        """
+        Fetches next batch via the `_next_batch` method, saves batch onto the
+        `_batch_cache` attribute list and also returns it.
+        """
         b = None
 
         if self._batch_cache[self._batch_cursor] is not None:
@@ -298,8 +407,7 @@ class BatchGenerator(object):
 
         return b
 
-    def get_scaling_params(self,scaler_class):
-
+    def get_scaling_params(self, scaler_class):
         if self._scaling_params is None:
             stride = self._stride
             data = self._data
@@ -307,9 +415,7 @@ class BatchGenerator(object):
             z = zip(self._start_indices,self._end_indices)
             indices = random.sample(list(z),
                                     int(0.10*len(self._start_indices)))
-            for idx in indices:
-                start_idx = idx[0]
-                end_idx = idx[1]
+            for start_idx, end_idx in indices:
                 step = random.randrange(self._min_unrollings)
                 cur_idx = start_idx+step*stride
                 x1 = self._get_feature_vector(end_idx,cur_idx)
@@ -318,11 +424,11 @@ class BatchGenerator(object):
                 #sample.append(np.append(x1,x2))
 
             scaler = None
-            if hasattr(sklearn.preprocessing,scaler_class):
-                scaler = getattr(sklearn.preprocessing,scaler_class)()
+            if hasattr(sklearn.preprocessing, scaler_class):
+                scaler = getattr(sklearn.preprocessing, scaler_class)()
             else:
                 raise RuntimeError("Unknown scaler = %s"%scaler_class)
-            
+
             scaler.fit(sample)
 
             params = dict()
@@ -331,13 +437,12 @@ class BatchGenerator(object):
 
             num_aux = len(self._aux_indices)
             if num_aux > 0:
-                params['center'] = np.append(params['center'], np.full( (num_aux), 0.0 )) 
-                params['scale'] = np.append(params['scale'], np.full( (num_aux), 1.0 )) 
-            
+                params['center'] = np.append(params['center'], np.full( (num_aux), 0.0 ))
+                params['scale'] = np.append(params['scale'], np.full( (num_aux), 1.0 ))
+
             self._scaling_params = params
 
         return self._scaling_params
-
 
     def normalize_features():
         pass
@@ -362,7 +467,7 @@ class BatchGenerator(object):
     def _get_cache_filename(self):
         config = self._config
         key_list = list(set(self._data[config.key_field]))
-        key_list.sort()        
+        key_list.sort()
         keys = ''.join(key_list)
         sd = self._start_date if self._start_date is not None else 100001
         ed = self._end_date if self._end_date is not None else 999912
@@ -376,22 +481,36 @@ class BatchGenerator(object):
         hashed = hashlib.md5(uid.encode()).hexdigest()
         filename = "bcache-%s.pkl"%hashed
         return filename
-        
+
     def _load_cache(self,verbose=False):
+        """
+        Caches batches from self by calling the `next_batch()` method (which
+        writes batch to the list held by the `_batch_cache` attribute).
+        """
         start_time = time.time()
         if verbose is True:
-            print("Caching batches ...",end=' '); sys.stdout.flush()
+            print("\nCaching batches ...",end=' '); sys.stdout.flush()
+
         self.rewind()
         for _ in range(self.num_batches):
             b = self.next_batch()
+
         if verbose is True:
             print("done in %.2f seconds."%(time.time() - start_time))
-            
+
     def cache(self,verbose=False):
-        assert(len(self._batch_cache))
+        """
+        Caches data if not already cached.
+        Does so by either reading cache from a pickled file in the _bcache
+        directory, or by loading the cache (via the `_load_cache` method) and
+        subsequently writing that to the _bcache directory as a pickled file
+        for posterity.
+        """
+        assert len(self._batch_cache)
         if self._batch_cache[-1] is not None:
             return
-        # cache is empty
+
+        # cache is empty (data not already cached)
         if self._config.cache_id is None:
             self._load_cache(verbose)
         else:
@@ -402,16 +521,20 @@ class BatchGenerator(object):
                 os.makedirs(dirname)
             if os.path.isfile(filename):
                 start_time = time.time()
-                if verbose is True: print("Reading cache from %s ..."%filename, end=' ')
+                if verbose is True:
+                    print("Reading cache from %s ..."%filename, end=' ')
                 self._batch_cache = pickle.load( open( filename, "rb" ) )
                 self._num_batches = len(self._batch_cache)
-                if verbose is True: print("done in %.2f seconds."%(time.time() - start_time))            
+                if verbose is True:
+                    print("done in %.2f seconds."%(time.time() - start_time))
             else:
-                self._load_cache(verbose)                
+                self._load_cache(verbose)
                 start_time = time.time()
-                if verbose is True: print("Writing cache to %s ..."%filename, end=' ')
-                pickle.dump( self._batch_cache, open( filename, "wb" ) )
-                if verbose is True: print("done in %.2f seconds."%(time.time() - start_time))            
+                if verbose is True:
+                    print("Writing cache to %s ..."%filename, end=' ')
+                pickle.dump(self._batch_cache, open( filename, "wb" ))
+                if verbose is True:
+                    print("done in %.2f seconds."%(time.time() - start_time))
 
     def _train_dates(self):
         data = self._data
@@ -427,12 +550,17 @@ class BatchGenerator(object):
         dates = list(set(data['date']))
         dates.sort()
         i = int(len(dates)*(1.0-self._config.validation_size))-1
-        i = max(i - (self._min_unrollings-1)*self._stride-1,0) 
+        i = max(i - (self._min_unrollings-1)*self._stride-1,0)
         assert(i < len(dates))
         valid_dates = [d for d in dates if d >= dates[i]]
         return valid_dates
 
     def train_batches(self):
+        """
+        Returns a BatchGenerator object built from the subset of self._data that
+        corresponds to the 'keys' (uniquely-identified companies) that are _not_
+        in the validation set.
+        """
         valid_keys = list(self._validation_set.keys())
         indexes = self._data[self._config.key_field].isin(valid_keys)
         # indexes = self._data['date'].isin(self._train_dates())
@@ -443,11 +571,17 @@ class BatchGenerator(object):
                                   data=train_data)
 
     def valid_batches(self):
+        """
+        Returns a BatchGenerator object built from the subset of self._data that
+        corresponds to the 'keys' (uniquely-identified companies) that _are_ in
+        the validation set.
+        """
         valid_keys = list(self._validation_set.keys())
         indexes = self._data[self._config.key_field].isin(valid_keys)
         # indexes = self._data['date'].isin(self._valid_dates())
         valid_data = self._data[indexes]
-        #print("Validation period: %d to %d"%(min(valid_data['date']),max(valid_data['date'])))
+        #print("Validation period: %d to %d"%(min(valid_data['date']),
+        #                                     max(valid_data['date'])))
         return BatchGenerator("", self._config, validation=False,
                                   data=valid_data)
 
@@ -456,14 +590,17 @@ class BatchGenerator(object):
         if (self._batch_cache[-1] is not None):
             random.shuffle(self._batch_cache)
             self._batch_cusror = 0
-         
+
     def rewind(self):
+        """
+        Resets _batch_cursor index to ensure we're working with the first batch.
+        """
         self._batch_cusror = 0
 
     @property
     def feature_names(self):
         return self._feature_names
-        
+
     @property
     def dataframe(self):
         return self._data
@@ -483,7 +620,7 @@ class BatchGenerator(object):
     @property
     def num_outputs(self):
         return self._num_outputs
-    
+
 class Batch(object):
     def __init__(self, inputs, targets, attribs, normalizers, seq_lengths):
         self._inputs = inputs
@@ -515,4 +652,3 @@ class Batch(object):
     @property
     def seq_lengths(self):
         return self._seq_lengths
-    

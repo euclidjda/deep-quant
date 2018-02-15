@@ -25,7 +25,7 @@ import copy
 import numpy as np
 import regex as re
 
-import model_utils
+from utils import model_utils
 import configs as configs
 from batch_generator import BatchGenerator
 
@@ -50,14 +50,14 @@ def main():
 
     config = configs.ConfigValues()
 
-    train_path = model_utils.get_data_path(config.data_dir,config.datafile)
+    train_path = utils.data_utils.get_data_path(config.data_dir,config.datafile)
 
     print("Loading training data ...")
 
     batches = BatchGenerator(train_path,config,require_targets=True)
 
     print("Num batches %d"%batches.num_batches)
-    
+
     #train_data = batches.train_batches()
 
     #print("Steps per epoch: %d"%train_data.num_batches)
@@ -74,7 +74,7 @@ def main():
             inputs  = batch.inputs[-1][0]
             targets = batch.targets[-1][0]
             scale   = batch.seq_scales[0]
-      
+
             print("%s %s %s %s %d %d %d"%
                       (key,ndate,pdate,edate,len(batch.attribs),len(batch.inputs),len(batch.targets)))
             sys.stdout.flush()
@@ -86,6 +86,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-    
