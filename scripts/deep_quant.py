@@ -32,11 +32,11 @@ def get_configs():
     """
     Defines all configuration params passable to command line.
     """
-    configs.DEFINE_string("datasource", 'big_datafile', 
+    configs.DEFINE_string("datasource", 'open_dataset', 
                           "The source of the data.")
-    configs.DEFINE_string("tkrlist", "big_tkrlist.csv", 
+    configs.DEFINE_string("ticlist", "open_ticlist", 
                           "The list of filters to use.")
-    configs.DEFINE_string("datafile", 'big_datafile.dat', "a datafile name.")
+    configs.DEFINE_string("datafile", 'open_dataset.dat', "a datafile name.")
     configs.DEFINE_string("mse_outfile", None, "A file to write mse values during predict phase.")
     configs.DEFINE_string("default_gpu", '', "The default GPU to use e.g., /gpu:0")
     configs.DEFINE_string("nn_type",'DeepRnnModel',"Model type")
