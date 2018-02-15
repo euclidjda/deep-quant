@@ -7,10 +7,10 @@ import pandas as pd
 
 from batch_generator import BatchGenerator
 
-OPEN_DF_PATH = os.path.join(os.environ['DEEP_QUANT_ROOT'], 'datasets', 
-                           'open_dataset.dat')  # TODO: fix so we don't have to
-                                                # assume 'DEEP_QUANT_ROOT' is
-                                                # defined in the environment
+DATASETS_PATH = os.path.join(os.environ['DEEP_QUANT_ROOT'], 'datasets')
+OPEN_DF_PATH = os.path.join(DATASETS_PATH, 'open_dataset.dat') 
+# TODO: fix so we don't have to assume 'DEEP_QUANT_ROOT' is defined in the
+# environment
 
 def get_data_path(data_dir, filename):
     """
@@ -30,77 +30,85 @@ def get_data_path(data_dir, filename):
     return path
 
 
-def get_gvkeys_from_ticlist(ticlist):  #TODO: use actual gvkeys
+def create_datafile(datasource, ticlist, dest_basename):
     """
-    Returns 'gvkeys' from ticlist.dat as a sorted list.
+    Creates a .dat file using `datasource` (either `open_dataset` or `WRDS`).
+    This file will be made up of tickers from ticlist, and will reside in
+    `DEEP_QUANT_ROOT`/datasets/dest_basename.
 
-    NOTE: Right now, 'gvkeys' are not the actual gvkeys that you'd see in
-    Compustat. Instead, they're unique identifiers constructed by concatenating
-    a numeric id for the exchange (1 for Nasdaq, 2 for NYSE) with the ticker
-    name.
+    Args:
+      datasource: specifies whether the datafile should be built using
+                  open_dataset as a starting point, or be built by querying
+                  WRDS.
+      ticlist: the name of the list of tickers that the produced .dat file
+               should contain. NOTE: this should be postfixed by .dat.
+      dest_basename: the name you'd like the produced datafile to have. NOTE:
+                     this should be postfixed by .dat.
     """
-    ticlist_filepath = os.path.join(os.environ['DEEP_QUANT_ROOT'], 'datasets',
-                                    "{}.dat".format(ticlist))
+    def get_gvkeys_from_ticlist(ticlist):  #TODO: use actual gvkeys
+        """
+        Returns 'gvkeys' from ticlist.dat as a sorted list.
 
-    if os.path.isfile(ticlist_filepath):
-        ticlist_df = pd.read_csv(ticlist_filepath, sep=' ', header=None)
-        gvkeys = list()
-        for line in ticlist_df.values:
-            if line[1] == 'Nasdaq':
-                gvkeys.append('1'+line[0])
-            elif line[1] == 'NYSE':
-                gvkeys.append('2'+line[0])
-            else:
-                gvkeys.append('9'+line[0])  # TODO: is that best way to handle
-                                            # unrecognized market?
+        NOTE: Right now, 'gvkeys' are not the actual gvkeys that you'd see in
+        Compustat. Instead, they're unique identifiers constructed by concatenating
+        a numeric id for the exchange (1 for Nasdaq, 2 for NYSE) with the ticker
+        name.
+        """
+        ticlist_filepath = os.path.join(DATASETS_PATH, ticlist)
+
+        if os.path.isfile(ticlist_filepath):
+            ticlist_df = pd.read_csv(ticlist_filepath, sep=' ', header=None)
+            gvkeys = list()
+            for line in ticlist_df.values:
+                if line[1] == 'Nasdaq':
+                    gvkeys.append('1'+line[0])
+                elif line[1] == 'NYSE':
+                    gvkeys.append('2'+line[0])
+                else:
+                    gvkeys.append('9'+line[0])  # TODO: is that best way to handle
+                                                # unrecognized market?
+        else:
+            gvkeys = list()
+            
+        return gvkeys
+
+    def shave_open_dataset(ticlist, dest):
+        """
+        Shaves wanted data (in terms of tics and features only; the shaving by
+        dates is done by BatchGenerator's constructor), stores shaved .dat file
+        at dest.
+
+        NOTE: shaving by features not implemented yet, will rely on a
+        feat_map.txt file.
+        """
+        gvkeys = get_gvkeys_from_ticlist(ticlist)
+        open_df = pd.read_csv(OPEN_DF_PATH, sep=' ', dtype={'gvkey': str})
+        shaved_df = open_df[open_df.gvkey.isin(gvkeys)]
+        shaved_df.to_csv(dest, sep=' ', index=False)
+
+    def write_WRDS_data(dest):
+        """
+        Writes .dat file using data from WRDS.
+        """
+        raise NotImplementedError("Sorry! WRDS integration not ready.")  # TODO
+
+    dest = get_data_path(DATASETS_PATH, dest_basename)
+
+    if datasource == "open_dataset":
+        shave_open_dataset(ticlist, dest)
+    elif datasource == "WRDS":
+        write_WRDS_data(ticlist, dest)
     else:
-        gvkeys = list()
-        
-    return gvkeys
+        raise Exception("Unknown datasource.")
 
 
-def shave_open_dataset(config):
-    """
-    Shaves wanted data (in terms of tkrs and features only; the shaving by dates
-    is done by BatchGenerator's constructor), returns path to shaved .dat file.
-
-    NOTE: shaving by features not implemented yet, will rely on a feat_map.txt
-    file.
-    """
-    gvkeys = get_gvkeys_from_ticlist(config.ticlist)
-    open_df = pd.read_csv(OPEN_DF_PATH, sep=' ', dtype={config.key_field: str})
-    shaved_df = open_df[open_df.gvkey.isin(gvkeys)]
-    now = datetime.utcnow().strftime("%Y%m%d%H%M%S")
-    shaved_data_path = os.path.join(os.path.split(OPEN_DF_PATH)[0],
-                                    "shaved_{}.dat".format(now))
-    shaved_df.to_csv(shaved_data_path, sep=' ', index=False)
-    return shaved_data_path
-
-
-def write_WRDS_data(config):
-    """
-    Writes .dat file using data from WRDS.
-    """
-    raise NotImplementedError("Sorry! WRDS integration not ready.")  # TODO
-
-
-def load_wanted_data(config):
+def load_all_data(config):
     """
     Returns all data as a BatchGenerator object.
     """
-    if config.datasource == "open_dataset":
-        data_path = shave_open_dataset(config)
-    elif config.datasource == "WRDS":
-        data_path = write_WRDS_data(config)
-    else:
-        raise Exception("Unknown datasource.")  # TODO: use argparse to check
-    
+    data_path = get_data_path(config.data_dir, config.datafile)
     batches = BatchGenerator(data_path, config)
     
-    #cleanup
-    if config.datasource == "open_dataset":
-        os.remove(data_path)
-
     return batches
 
 
@@ -108,7 +116,7 @@ def load_train_valid_data(config):
     """
     Returns train_data and valid_data, both as BatchGenerator objects.
     """
-    batches = load_wanted_data(config)
+    batches = load_all_data(config)
 
     train_data = batches.train_batches()
     valid_data = batches.valid_batches()
