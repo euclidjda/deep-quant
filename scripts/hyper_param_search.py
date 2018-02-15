@@ -93,6 +93,7 @@ def generate_results(pop,gen):
     content = [s for s in content if re.search('MSE',s)]
     errors = [float(s.split()[_VALID_ERR_IDX]) for s in content]
     errors.sort()
+    # err = errors[0] if len(errors)>0 else float("inf")
     result.append(errors[0])
   print("o"*80)
   print(result)
