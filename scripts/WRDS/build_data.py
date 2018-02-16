@@ -22,7 +22,7 @@ import numpy as np
 import pickle
 from time import time
 from wrds_data_processing import data_processing
-from configParser import SafeConfigParser, NoOptionError
+from configparser import SafeConfigParser, NoOptionError
 import argparse as ap
 import sys
 
