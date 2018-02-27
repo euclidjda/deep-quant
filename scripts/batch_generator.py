@@ -93,8 +93,17 @@ class BatchGenerator(object):
         self._data_len = len(data)
         assert(self._data_len)
 
+        self._keys = data[config.key_field].tolist()
+        self._dates = data['date'].tolist() # TODO: date field name should be in config
+
+        #print(type(self._dates))
+        #print(self._dates[1000])
+        #exit()
+
         self._init_column_indices(config)
         self._init_validation_set(config, validation, verbose)
+
+        
 
     def _init_batch_cursor(self, config, require_targets=True, verbose=True):
         """
@@ -235,14 +244,18 @@ class BatchGenerator(object):
             self._aux_indices = self._get_indices_from_names(
                     config.aux_input_fields)
 
+        self._features = data.iloc[:,self._feature_indices].as_matrix()
+        self._aux_inputs = data.iloc[:,self._aux_indices].as_matrix()
+
         self._feature_names = list(data.columns.values[self._feature_indices \
                                    + self._aux_indices])
 
         config.num_inputs = self._num_inputs = len(self._feature_names)
         self._key_idx = list(data.columns.values).index(config.key_field)
         self._active_idx = list(data.columns.values).index(config.active_field)
+        # TODO: date column name should be a config
         self._date_idx = list(data.columns.values).index('date')
-        self._scalar_idx = list(data.columns.values).index(config.scale_field)
+        self._normalizer_idx = list(data.columns.values).index(config.scale_field)
 
         idx = list(data.columns.values).index(config.target_field)
         if config.target_field != 'target':
@@ -284,7 +297,7 @@ class BatchGenerator(object):
                 print("Num validation entities: %d"%sample_size)
 
     def _get_normalizer(self, end_idx):
-        val = max(self._data.iat[end_idx, self._scalar_idx], _MIN_SEQ_NORM)
+        val = max(self._data.iat[end_idx, self._normalizer_idx], _MIN_SEQ_NORM)
         return val
 
     def _get_batch_normalizers(self):
@@ -298,11 +311,10 @@ class BatchGenerator(object):
         return v_get_normalizer(end_idxs)
 
     def _get_feature_vector(self,end_idx,cur_idx):
-        data = self._data
         if cur_idx < self._data_len:
             s = self._get_normalizer(end_idx)
             assert(s>0)
-            x = data.iloc[cur_idx,self._feature_indices].as_matrix()
+            x = self._features[cur_idx]
             y = np.divide(x,s)
             y_abs = np.absolute(y).astype(float)
             return np.multiply(np.sign(y),np.log1p(y_abs))
@@ -310,9 +322,8 @@ class BatchGenerator(object):
             return np.zeros(shape=[len(self._feature_indices)])
 
     def _get_aux_vector(self,cur_idx):
-        data = self._data
         if cur_idx < self._data_len:
-            x = data.iloc[cur_idx,self._aux_indices].as_matrix()
+            x = self._aux_inputs[cur_idx]
             return x
         else:
             return np.zeros(shape=[len(self._aux_indices)])
@@ -325,9 +336,9 @@ class BatchGenerator(object):
         y = np.zeros(shape=(self._batch_size, self._num_outputs), dtype=np.float)
 
         attr = list()
-        data = self._data
-        key_idx = self._key_idx
-        date_idx = self._date_idx
+        # data = self._data
+        # key_idx = self._key_idx
+        # date_idx = self._date_idx
         stride = self._stride
         forecast_n = self._forecast_n
         len1 = len(self._feature_indices)
@@ -340,10 +351,10 @@ class BatchGenerator(object):
             seq_lengths[b] = ((end_idx-start_idx)//stride)+1
             idx = start_idx + step*stride
             assert( idx < self._data_len )
-            date = data.iat[idx,date_idx]
-            key = data.iat[idx,key_idx]
+            date = self._dates[idx]
+            key = self._keys[idx]
             next_idx = idx + forecast_n
-            next_key = data.iat[next_idx,key_idx] if next_idx < len(data) else ""
+            next_key = self._keys[next_idx] if next_idx < len(self._keys) else ""
             if idx > end_idx:
                 attr.append(None)
                 x[b,:] = 0.0

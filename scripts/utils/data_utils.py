@@ -5,7 +5,7 @@ from datetime import datetime
 
 import pandas as pd
 
-from batch_generator_new import BatchGenerator
+from batch_generator import BatchGenerator
 
 DATASETS_PATH = os.path.join(os.environ['DEEP_QUANT_ROOT'], 'datasets')
 OPEN_DF_PATH = os.path.join(DATASETS_PATH, 'open_dataset.dat') 
