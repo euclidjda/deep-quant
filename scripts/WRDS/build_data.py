@@ -237,6 +237,7 @@ dates = df_all_eq['datadate'].unique()
 mom_f = ['mom1m','mom3m','mom6m','mom9m']
 
 for date in dates:
+    date = pd.TimeStamp(date)
     df_date = df_all_eq[mom_f][df_all_eq['datadate']==date]
 
     ix_dates = df_date.index

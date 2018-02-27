@@ -99,3 +99,7 @@ ENV/
 
 # mypy
 .mypy_cache/
+
+# Test datafiles
+out.dat
+wrds_top_2000_3mo_lag.dat
