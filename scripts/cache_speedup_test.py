@@ -24,17 +24,18 @@ from __future__ import print_function
 import tensorflow as tf
 
 import configs as configs
-from train import train_model
-from predict import predict
+from utils.data_utils import load_train_valid_data
 
 
 def get_configs():
-
     """
     Defines all configuration params passable to command line.
     """
-    configs.DEFINE_string("name",'none',"A name for the config.")
-    configs.DEFINE_string("datafile", 'open_dataset.dat', "a datafile name.")
+    configs.DEFINE_string("datasource", 'big_datafile', 
+                          "The source of the data.")
+    configs.DEFINE_string("tkrlist", "big_tkrlist.csv", 
+                          "The list of filters to use.")
+    configs.DEFINE_string("datafile", 'big_datafile.dat', "a datafile name.")
     configs.DEFINE_string("mse_outfile", None, "A file to write mse values during predict phase.")
     configs.DEFINE_string("default_gpu", '', "The default GPU to use e.g., /gpu:0")
     configs.DEFINE_string("nn_type",'DeepRnnModel',"Model type")
@@ -111,12 +112,11 @@ def get_configs():
 
 def main(_):
     config = get_configs()
+    
+    train_data, valid_data = load_train_valid_data(config)
 
-    # Check to see if we are in training or testing mode
-    if config.train is True:
-        train_model(config)
-    else:
-        predict(config)
+    train_data.cache(verbose=True)
+    valid_data.cache(verbose=True)
 
 if __name__ == "__main__":
     tf.app.run()

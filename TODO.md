@@ -42,4 +42,21 @@ THE TODO LIST:
 
 - rename config's nn_type to model_type
 
+- Documentation. Starting with README.md
 
+- Make caching faster
+
+- Move model_utils into utils, create a model directory to house all 
+  \*\_model.pys; maybe follow sklearn design and make sure they all have a .fit
+  and a .predict method?
+
+- Finish big_datfile integration (allow user to specify _which_ pieces of data
+  he/she wants via a feat_map.txt file).
+
+- Finish WRDS integration (allow user to specify _which_ tickers he/she wants
+  and _what_ pieces of data he/she wants about them)
+
+- Write logs for tensorboard to use in painting learning curves. Allow user to
+  see these easily.
+
+- Look into using TravisCI for automatic testing with every push.

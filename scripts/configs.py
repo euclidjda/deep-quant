@@ -33,103 +33,101 @@ _global_parser.add_argument('--config', type=open,
                             help="File containing configuration")
 
 class ConfigValues(object):
-  """
-  Command line argument helper class.
-  """
+    """
+    Command line argument helper class.
+    """
 
-  def __init__(self):
-    """Global container and accessor for configs and their values."""
-    self.__dict__['__configs'] = {}
-    self.__dict__['__parsed'] = False
+    def __init__(self):
+        """Global container and accessor for configs and their values."""
+        self.__dict__['__configs'] = {}
+        self.__dict__['__parsed'] = False
 
-  def _parse_configs(self):
-    result, _ = _global_parser.parse_known_args()
-    if '__configs' not in self.__dict__:
-      self.__dict__['__configs'] = {}
-    if '__parsed' not in self.__dict__:
-      self.__dict__['__parsed'] = False
-    for config_name, val in vars(result).items():
-      self.__dict__['__configs'][config_name] = val
-    self.__dict__['__parsed'] = True
+    def _parse_configs(self):
+        result, _ = _global_parser.parse_known_args()
+        if '__configs' not in self.__dict__:
+            self.__dict__['__configs'] = {}
+        if '__parsed' not in self.__dict__:
+            self.__dict__['__parsed'] = False
+        for config_name, val in vars(result).items():
+            self.__dict__['__configs'][config_name] = val
+        self.__dict__['__parsed'] = True
 
-  def __getattr__(self, name):
-    """Retrieves the 'value' attribute of the config --name."""
-    if ('__parsed' not in self.__dict__) or (not self.__dict__['__parsed']):
-      self._parse_configs()
-    if name not in self.__dict__['__configs']:
-      raise AttributeError(name)
-    return self.__dict__['__configs'][name]
+    def __getattr__(self, name):
+        """Retrieves the 'value' attribute of the config --name."""
+        if ('__parsed' not in self.__dict__) or (not self.__dict__['__parsed']):
+            self._parse_configs()
+        if name not in self.__dict__['__configs']:
+            raise AttributeError(name)
+        return self.__dict__['__configs'][name]
 
-  def __setattr__(self, name, value):
-    """Sets the 'value' attribute of the config --name."""
-    if ('__parsed' not in self.__dict__) or (not self.__dict__['__parsed']):
-      self._parse_configs()
-    self.__dict__['__configs'][name] = value
+    def __setattr__(self, name, value):
+        """Sets the 'value' attribute of the config --name."""
+        if ('__parsed' not in self.__dict__) or (not self.__dict__['__parsed']):
+            self._parse_configs()
+        self.__dict__['__configs'][name] = value
 
 
 
 def _define_helper(config_name, default_value, docstring, configtype):
-  """Registers 'config_name' with 'default_value' and 'docstring'."""
-  _global_parser.add_argument("--" + config_name,
-                              default=default_value,
-                              help=docstring,
-                              type=configtype)
+    """Registers 'config_name' with 'default_value' and 'docstring'."""
+    _global_parser.add_argument("--" + config_name,
+                                default=default_value,
+                                help=docstring,
+                                type=configtype)
 
 def DEFINE_string(config_name, default_value, docstring):
-  """Defines a config of type 'string'.
+    """Defines a config of type 'string'.
 
-  Args:
-    config_name: The name of the config as a string.
-    default_value: The default value the config should take as a string.
-    docstring: A helpful message explaining the use of the config.
-  """
-  _define_helper(config_name, default_value, docstring, str)
+    Args:
+      config_name: The name of the config as a string.
+      default_value: The default value the config should take as a string.
+      docstring: A helpful message explaining the use of the config.
+    """
+    _define_helper(config_name, default_value, docstring, str)
 
 
 def DEFINE_integer(config_name, default_value, docstring):
-  """Defines a config of type 'int'.
+    """Defines a config of type 'int'.
 
-  Args:
-    config_name: The name of the config as a string.
-    default_value: The default value the config should take as an int.
-    docstring: A helpful message explaining the use of the config.
-  """
-  _define_helper(config_name, default_value, docstring, int)
+    Args:
+      config_name: The name of the config as a string.
+      default_value: The default value the config should take as an int.
+      docstring: A helpful message explaining the use of the config.
+    """
+    _define_helper(config_name, default_value, docstring, int)
 
 
 def DEFINE_boolean(config_name, default_value, docstring):
-  """Defines a config of type 'boolean'.
+    """Defines a config of type 'boolean'.
 
-  Args:
-    config_name: The name of the config as a string.
-    default_value: The default value the config should take as a boolean.
-    docstring: A helpful message explaining the use of the config.
-  """
-  # Register a custom function for 'bool' so --config=True works.
-  def str2bool(v):
-    return v.lower() in ('true', 't', '1')
-  _global_parser.add_argument('--' + config_name,
-                              nargs='?',
-                              const=True,
-                              help=docstring,
-                              default=default_value,
-                              type=str2bool)
-  _global_parser.add_argument('--no' + config_name,
-                              action='store_false',
-                              dest=config_name)
+    Args:
+      config_name: The name of the config as a string.
+      default_value: The default value the config should take as a boolean.
+      docstring: A helpful message explaining the use of the config.
+    """
+    # Register a custom function for 'bool' so --config=True works.
+    def str2bool(v):
+        return v.lower() in ('true', 't', '1')
+    _global_parser.add_argument('--' + config_name,
+                                nargs='?',
+                                const=True,
+                                help=docstring,
+                                default=default_value,
+                                type=str2bool)
+    _global_parser.add_argument('--no' + config_name,
+                                action='store_false',
+                                dest=config_name)
 
 # The internal google library defines the following alias, so we match
 # the API for consistency.
 DEFINE_bool = DEFINE_boolean  # pylint: disable=invalid-name
 
 def DEFINE_float(config_name, default_value, docstring):
-  """Defines a config of type 'float'.
+    """Defines a config of type 'float'.
 
-  Args:
-    config_name: The name of the config as a string.
-    default_value: The default value the config should take as a float.
-    docstring: A helpful message explaining the use of the config.
-  """
-  _define_helper(config_name, default_value, docstring, float)
-
-
+    Args:
+      config_name: The name of the config as a string.
+      default_value: The default value the config should take as a float.
+      docstring: A helpful message explaining the use of the config.
+    """
+    _define_helper(config_name, default_value, docstring, float)
