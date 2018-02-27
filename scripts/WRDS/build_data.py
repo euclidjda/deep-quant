@@ -6,11 +6,11 @@ Config changes may be made to build_data_config.ini file
 # N = number of securities sorted by market cap
 # Exclude GICS codes
 
-Features: active, date,	gvkey,	year,  month,  mom1m,	mom3m,	mom6m,	mom9m,
-        mrkcap,	entval,	saleq_ttm,	cogsq_ttm,	xsgaq_ttm,	oiadpq_ttm,
-        niq_ttm,	cheq_mrq,	rectq_mrq,	invtq_mrq,	acoq_mrq,
-        ppentq_mrq,	aoq_mrq,	dlcq_mrq,	apq_mrq,	txpq_mrq,
-        lcoq_mrq,   ltq_mrq,	csho_1yr_avg
+Features: active, date, gvkey,  year,  month,  mom1m,   mom3m,  mom6m,  mom9m,
+        mrkcap, entval, saleq_ttm,      cogsq_ttm,      xsgaq_ttm,      oiadpq_ttm,
+        niq_ttm,        cheq_mrq,       rectq_mrq,      invtq_mrq,      acoq_mrq,
+        ppentq_mrq,     aoq_mrq,        dlcq_mrq,       apq_mrq,        txpq_mrq,
+        lcoq_mrq,   ltq_mrq,    csho_1yr_avg
 
 Takes about 40 minutes to build the dataset for top 2000 equities and outputs a dat file
 """
