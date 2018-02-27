@@ -52,6 +52,8 @@ def get_configs():
     configs.DEFINE_integer("target_idx",None,"")
     configs.DEFINE_integer("min_unrollings",None,"Min number of unrolling steps")
     configs.DEFINE_integer("max_unrollings",None,"Max number of unrolling steps")
+    configs.DEFINE_integer("min_years",None,"Alt to min_unrollings")
+    configs.DEFINE_integer("pls_years",None,"Alt min_unrollings and max_unrollings")
     # num_unrollings is being depricated by max_unrollings
     configs.DEFINE_integer("num_unrollings",4,"Number of unrolling steps")
     configs.DEFINE_integer("stride",12,"How many steps to skip per unrolling")
@@ -93,6 +95,13 @@ def get_configs():
 
     if c.max_unrollings is None:
         c.max_unrollings = c.num_unrollings
+
+    if c.min_years is not None:
+        c.min_unrollings = c.min_years * ( 12 // c.stride )
+        if c.pls_years is None:
+            c.max_unrollings = c.min_unrollings
+        else:
+            c.max_unrollings = (c.min_years+c.pls_years) * ( 12 // c.stride )
 
     # optimizer_params is a string of the form "param1=value1,param2=value2,..."
     # this maps it to dictionary { param1 : value1, param2 : value2, ...}
