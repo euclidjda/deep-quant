@@ -23,8 +23,11 @@ import hashlib
 import numpy as np
 import pandas as pd
 import sklearn.preprocessing
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 
 _MIN_SEQ_NORM = 1.0
+DEEP_QUANT_ROOT = os.environ['DEEP_QUANT_ROOT']
+DATASETS_PATH = os.path.join(DEEP_QUANT_ROOT, 'datasets')
 
 class BatchGenerator(object):
     """
@@ -80,7 +83,7 @@ class BatchGenerator(object):
         # Load data
         if data is None:
             if not os.path.isfile(filename):
-                raise RuntimeError("The data file %s does not exists" % filename)
+                raise RuntimeError("The data file %s does not exist" % filename)
             data = pd.read_csv(filename, sep=' ', 
                                dtype={config.key_field: str})
             # Moved this to proper location in indices gen code below
@@ -89,21 +92,66 @@ class BatchGenerator(object):
             if config.end_date is not None:
                 data = data.drop(data[data['date'] > config.end_date].index)
 
+        # Define attributes
+        self._keys = data[config.key_field].tolist()
+        self._dates = data['date'].tolist() # TODO: date name should be a config
         self._data = data
         self._data_len = len(data)
-        assert(self._data_len)
+        assert self._data_len
 
-        self._keys = data[config.key_field].tolist()
-        self._dates = data['date'].tolist() # TODO: date field name should be in config
-
-        #print(type(self._dates))
-        #print(self._dates[1000])
-        #exit()
-
+        # Setup data
+        self._encode_categoricals(config)
         self._init_column_indices(config)
         self._init_validation_set(config, validation, verbose)
 
+    def _encode_categoricals(self, config):
+        def encode_categorical(self, cat_attribute):
+            """
+            Gets one-hot representation of the categorical attribute under
+            `colname`, appends that at right-end of `self._data` dataframe,
+            populates `self._onehot_colnames` and `self._onehot_colixs`.
+            """
+            encoding_file = "{}-encoding.dat".format(cat_attribute.lower())
+            encoding_path = os.path.join(DATASETS_PATH, encoding_file)
+            encoding_df = pd.read_csv(encoding_path, sep=' ')
+            cat_encoder = LabelEncoder().fit(encoding_df[cat_attribute].values)
+            categories = self._data[cat_attribute].values
+            codes = cat_encoder.transform(categories).reshape(-1, 1)
+            onehot_encoder = OneHotEncoder(n_values=len(cat_encoder.classes_))
+            onehot_vecs = onehot_encoder.fit_transform(codes).toarray()
+            onehot_colnames = ['is_' + attr for attr in cat_encoder.classes_]
+
+            # TODO: fix this it's kind of hacky
+            # If all of onehot_colnames are already in self._data, just get
+            # those column indices
+            if len(set(onehot_colnames) - set(self._data.columns)) == 0:
+                onehot_colixs = list()
+                for i, colname in enumerate(self._data.columns.values):
+                    if colname in onehot_colnames:
+                        onehot_colixs.append(i)
+            # if there's any that ISNT in self._data
+            else:
+                # drop the ones that are
+                cols_to_drop = set(onehot_colnames).intersection(
+                    set(self._data.columns))
+                if cols_to_drop:
+                    self._data.drop(cols_to_drop)
+                # write everything in again
+                _, m = self._data.shape
+                codes_df = pd.DataFrame(onehot_vecs, columns=onehot_colnames)
+                self._data = pd.concat([self._data, codes_df], axis=1)
+                onehot_colixs = list(range(m, m + onehot_encoder.n_values))
+
+            self._aux_colixs.extend(onehot_colixs)
+
+        self._aux_colixs = list()
+
+        cat_fields = config.categorical_fields
+        cat_attributes = cat_fields.split(',') if cat_fields is not None else []
+        for cat_attribute in cat_attributes:
+            encode_categorical(self, cat_attribute)
         
+        return
 
     def _init_batch_cursor(self, config, require_targets=True, verbose=True):
         """
@@ -185,39 +233,24 @@ class BatchGenerator(object):
         self._batch_cache = [None]*num_batches
         self._batch_cursor = 0
 
-    def _get_indices_from_names(self, names):
-        """
-        Returns indexes of columns of self._data that are in the range of
-        `names`, inclusive. `names` should be a string with the following
-        format: start_column_name-end_column_name (saleq_ttm-ltq_mrq, for
-        example).
-        """
-        data = self._data
-        assert 0 < names.find('-') < len(names)-1
-        first, last = names.split('-')
-        start_idx = list(data.columns.values).index(first)
-        end_idx = list(data.columns.values).index(last)
-        assert start_idx >= 0
-        assert start_idx <= end_idx
-        return list(range(start_idx,end_idx+1))
-
     def _init_column_indices(self, config):
         """
+        # TODO: rewrite this docstring
         Sets up column-index-related attributes and adds a few items to the
         config.
 
         Column-index-related attributes:
           * _feature_indices: A list housing the column numbers of the features,
                               where features are as specified by 
-                              config.feature_fields.
+                              config.financial_fields.
           * _aux_indices: A list housing the column numbers of the auxilary
                           covariates, where these auxilary covariates are
-                          specified by config.aux_input_fields.
-          * _feature_names: A list housing the names of the columns of the 
+                          specified by config.aux_fields.
+          * _input_names: A list housing the names of the columns of the 
                             features _and_ of the auxilary covariates.
           * _num_inputs: The total number of covariates used as input (so both
-                         those that are specified in config.feature_fields and
-                         those that are specified in config.aux_input_fields).
+                         those that are specified in config.financial_fields and
+                         those that are specified in config.aux_fields).
           * _key_idx: The column index of what should be used as a unique
                       identifier of each company (the index of gvkey, for 
                       example).
@@ -232,44 +265,79 @@ class BatchGenerator(object):
           * target_idx: index of target variable within the list of features, if
                         target is specified by config.
         """
-        data = self._data  # TODO: try without copying? could be faster
+        assert config.financial_fields
+        def get_colixs_from_colname_range(data, colname_range):
+            """
+            Returns indexes of columns of data that are in the range of
+            `names`, inclusive. `names` should be a string with the following
+            format: start_column_name-end_column_name (saleq_ttm-ltq_mrq, for
+            example).
+            """
+            if colname_range is None:
+                colixs = []
+            else:
+                assert 0 < colname_range.find('-') < len(colname_range)-1
+                first, last = colname_range.split('-')
+                start_ix = list(data.columns.values).index(first)
+                end_ix = list(data.columns.values).index(last)
+                assert start_ix >= 0
+                assert start_ix <= end_ix
+                colixs = list(range(start_ix, end_ix+1))
+            return colixs
+        
+        def np_array_index(arr, value):
+            """
+            Replicates the Python list's `index` method (that is, it returns the
+            first appearance of value in the array
+            
+            Raises `ValueError` if `value` is not present in `arr`.
+            """
+            index = None
+            for i, element in enumerate(arr):
+                if element == value:
+                    index = i
+                    break
 
-        assert config.feature_fields
+            if index is None:
+                raise ValueError("{} is not in arr.".format(value))
 
-        self._feature_indices = self._get_indices_from_names(
-                config.feature_fields)
+            return index
 
-        self._aux_indices = list()
-        if config.aux_input_fields is not None:
-            self._aux_indices = self._get_indices_from_names(
-                    config.aux_input_fields)
+        # Set up financials column indices and auxiliaries column indices
+        self._fin_colixs = get_colixs_from_colname_range(
+                self._data, config.financial_fields)
 
-        self._features = data.iloc[:,self._feature_indices].as_matrix()
-        self._aux_inputs = data.iloc[:,self._aux_indices].as_matrix()
+        self._aux_colixs += get_colixs_from_colname_range(
+                self._data, config.aux_fields)
 
-        self._feature_names = list(data.columns.values[self._feature_indices \
-                                   + self._aux_indices])
+        # Set up other attributes
+        colnames = self._data.columns.values
+        self._key_idx = np_array_index(colnames, config.key_field)
+        self._active_idx = np_array_index(colnames, config.active_field)
+        self._date_idx = np_array_index(colnames, 'date')  # TODO: make a config
+        self._normalizer_idx = np_array_index(colnames, config.scale_field)
 
-        config.num_inputs = self._num_inputs = len(self._feature_names)
-        self._key_idx = list(data.columns.values).index(config.key_field)
-        self._active_idx = list(data.columns.values).index(config.active_field)
-        # TODO: date column name should be a config
-        self._date_idx = list(data.columns.values).index('date')
-        self._normalizer_idx = list(data.columns.values).index(config.scale_field)
+        # Set up input-related attributes
+        self._input_names = list(colnames[self._fin_colixs + self._aux_colixs])
+        self._num_inputs = config.num_inputs = len(self._input_names)
 
-        idx = list(data.columns.values).index(config.target_field)
-        if config.target_field != 'target':
-            config.target_idx = idx - self._feature_indices[0]
-            config.num_outputs = self._num_outputs = self._num_inputs \
-                                                     - len(self._aux_indices)
-            self._price_target_idx = -1
-        else:
+        # Set up target index
+        idx = np_array_index(colnames, config.target_field)
+        if config.target_field == 'target':
             config.target_idx = 0
-            config.num_outputs = self._num_outputs = 1
+            self._num_outputs = config.num_outputs = 1
             self._price_target_idx = idx
-        # assert( 0 <= self._num_outputs <= self._num_inputs )
+        else:
+            config.target_idx = idx - self._fin_colixs[0]
+            self._num_outputs = config.num_outputs = self._num_inputs \
+                                                     - len(self._aux_colixs)
+            self._price_target_idx = -1
 
         assert(config.target_idx >= 0)
+
+        # Set up fin_inputs attribute and aux_inputs attribute
+        self._fin_inputs = self._data.iloc[:, self._fin_colixs].as_matrix()
+        self._aux_inputs = self._data.iloc[:, self._aux_colixs].as_matrix()
 
     def _init_validation_set(self, config, validation, verbose=True):
         """
@@ -314,19 +382,19 @@ class BatchGenerator(object):
         if cur_idx < self._data_len:
             s = self._get_normalizer(end_idx)
             assert(s>0)
-            x = self._features[cur_idx]
+            x = self._fin_inputs[cur_idx]
             y = np.divide(x,s)
             y_abs = np.absolute(y).astype(float)
             return np.multiply(np.sign(y),np.log1p(y_abs))
         else:
-            return np.zeros(shape=[len(self._feature_indices)])
+            return np.zeros(shape=[len(self._fin_colixs)])
 
     def _get_aux_vector(self,cur_idx):
         if cur_idx < self._data_len:
             x = self._aux_inputs[cur_idx]
             return x
         else:
-            return np.zeros(shape=[len(self._aux_indices)])
+            return np.zeros(shape=[len(self._aux_colixs)])
 
     def _next_step(self, step, seq_lengths):
         """
@@ -341,8 +409,8 @@ class BatchGenerator(object):
         # date_idx = self._date_idx
         stride = self._stride
         forecast_n = self._forecast_n
-        len1 = len(self._feature_indices)
-        len2 = len(self._aux_indices)
+        len1 = len(self._fin_colixs)
+        len2 = len(self._aux_colixs)
 
         for b in range(self._batch_size):
             cursor = self._index_cursor[b]
@@ -446,7 +514,7 @@ class BatchGenerator(object):
             params['center'] = scaler.center_ if hasattr(scaler,'center_') else scaler.mean_
             params['scale'] = scaler.scale_
 
-            num_aux = len(self._aux_indices)
+            num_aux = len(self._aux_colixs)
             if num_aux > 0:
                 params['center'] = np.append(params['center'], np.full( (num_aux), 0.0 ))
                 params['scale'] = np.append(params['scale'], np.full( (num_aux), 1.0 ))
@@ -459,8 +527,8 @@ class BatchGenerator(object):
         pass
 
     def get_raw_inputs(self,batch,idx,vec):
-        len1 = len(self._feature_indices)
-        len2 = len(self._aux_indices)
+        len1 = len(self._fin_colixs)
+        len2 = len(self._aux_colixs)
         n = batch.normalizers[idx]
         x = vec[0:len1]
         y = n * np.multiply(np.sign(x),np.expm1(np.fabs(x)))
@@ -486,8 +554,8 @@ class BatchGenerator(object):
                                                self._max_unrollings,
                                                self._min_unrollings,
                                                self._stride,self._batch_size,
-                                               config.feature_fields,
-                                               config.aux_input_fields,
+                                               config.financial_fields,
+                                               config.aux_fields,
                                                keys)
         hashed = hashlib.md5(uid.encode()).hexdigest()
         filename = "bcache-%s.pkl"%hashed
@@ -610,7 +678,7 @@ class BatchGenerator(object):
 
     @property
     def feature_names(self):
-        return self._feature_names
+        return self._input_names
 
     @property
     def dataframe(self):
