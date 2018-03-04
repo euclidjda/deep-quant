@@ -45,6 +45,7 @@ Total Execution Time: 30.65
 
 2. Train on the built dataset
 ```shell
+$ mkdir chkpts
 $ ~/deep-quant/scripts/deep_quant.py --config=config/mlp.conf --train=True --datafile=sample_data_wrds.dat
 ```
 
