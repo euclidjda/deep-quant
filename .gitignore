@@ -103,3 +103,4 @@ ENV/
 # Test datafiles
 out.dat
 wrds_top_2000_3mo_lag.dat
+sample_data_wrds.dat
