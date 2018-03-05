@@ -22,7 +22,7 @@ import numpy as np
 import pickle
 from time import time
 from wrds_data_processing import data_processing
-from ConfigParser import SafeConfigParser, NoOptionError
+from configparser import SafeConfigParser, NoOptionError
 import argparse as ap
 import sys
 
@@ -237,6 +237,7 @@ dates = df_all_eq['datadate'].unique()
 mom_f = ['mom1m','mom3m','mom6m','mom9m']
 
 for date in dates:
+    date = pd.Timestamp(date)
     df_date = df_all_eq[mom_f][df_all_eq['datadate']==date]
 
     ix_dates = df_date.index
