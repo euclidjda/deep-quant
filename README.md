@@ -3,20 +3,13 @@ Deep learning on company fundamental data for long-term investing
 
 ## Installation and Setup
 
-Install prerequisites:
-
-`pip install -r requirements.txt`
-
-or, for python3:
-
-`pip3 install -r requirements.txt`
-
-Please also add DEEP\_QUANT\_ROOT to your environment:
+Clone repo, setup environment, and install requirements:
 
 ```shell 
 git clone https://github.com/euclidjda/deep-quant.git
 cd deep-quant
 export DEEP_QUANT_ROOT=`pwd`
+pip3 install -r requirements.txt
 ```
 
 ## Running the System Test
