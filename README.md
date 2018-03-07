@@ -2,13 +2,6 @@
 Deep learning on company fundamental data for long-term investing
 
 ## Installation and Setup
-Create a virtual environment
-
-`virtualenv env`
-
-Activate that virtual environment
-
-`source activate env`
 
 Install prerequisites:
 

@@ -139,6 +139,7 @@ def _create_model(session,config,verbose=False):
         print("  model_type  = %s"% config.nn_type)
         print("  min_unroll  = %d"% config.min_unrollings)
         print("  max_unroll  = %d"% config.max_unrollings)
+        print("  stride      = %d"% config.stride)
         print("  batch_size  = %d"% config.batch_size)
         print("  num_inputs  = %d"% config.num_inputs)
         print("  num_outputs = %d"% config.num_outputs)

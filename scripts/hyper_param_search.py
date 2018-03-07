@@ -275,7 +275,7 @@ def get_next_generation(pop, gen, results):
 def parse_config(filename):
     with open(filename) as f:
         content = f.readlines()
-    # you may also want to remove whitespace characters like `\n` at the end of each line
+    # remove whitespace characters like `\n` at the end of each line
     content = [x.strip() for x in content]
     config = dict()
     for i in range(len(content)):
@@ -310,13 +310,13 @@ def main():
 
 
     for i in range(_GENERATIONS):
-        result = train_population(pop,i+1)
+        gen = i+1
+        result = train_population(pop,gen)
         print('*'*80)
         print(result)
-        (pop,new_best) = get_next_generation(pop,result)
+        (pop,new_best) = get_next_generation(pop,gen,result)
         if best is None or best[0] >= new_best[0]:
             best = new_best
-        gen = i+1
         name = best[1]['--name'][0]
         error = best[0]
         print("Generation: %s Best: %s Error: %s"%(gen,name,error))
