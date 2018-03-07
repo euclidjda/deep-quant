@@ -14,7 +14,7 @@ Make sure you are able to successfully build the dataset using WRDS module as de
 1. Build the dataset. You can jump to Step 2 if the dataset already exists.
 ```shell
 $ cd ~/deep-quant/exprmnts/train-model-wrds
-$ ~/deep-quant/scripts/WRDS/build_data.py --N=10 --exclude_gics=40 --filename=~/deep-quant/datasets/sample_data_wrds.dat
+$ ~/deep-quant/scripts/WRDS/build_data.py --N=10 --exclude_gics=40 --filename=~/deep-quant/datasets/sample-data-wrds.dat
 ```
 In the above code the arguments are as follows:-
 
@@ -45,7 +45,7 @@ Total Execution Time: 30.65
 
 2. Train on the built dataset
 ```shell
-$ ~/deep-quant/scripts/deep_quant.py --config=config/rnn.conf --train=True --datafile=sample_data_wrds.dat
+$ ~/deep-quant/scripts/deep_quant.py --config=config/rnn.conf --train=True --datafile=sample-data-wrds.dat
 ```
 The output should look like this
 ```shell
@@ -130,7 +130,7 @@ Epoch: 25 Train MSE: 6.335211 Valid MSE: 3.817821 Learning rate: 0.6000
 
 3. Prediction
 ```shell
-$ ~/deep-quant/scripts/deep_quant.py --config=config/rnn.conf --train=False --datafile=sample_data_wrds.dat --pretty_print_preds=True
+$ ~/deep-quant/scripts/deep_quant.py --config=config/rnn.conf --train=False --datafile=sample-data-wrds.dat --pretty_print_preds=True
 ```
 The output should like this
 ```shell
