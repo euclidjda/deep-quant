@@ -13,7 +13,7 @@ Make sure you are able to successfully build the dataset using WRDS module as de
 
 1. Build the dataset. You can jump to Step 2 if the dataset already exists.
 ```shell
-$ cd ~/deep-quant/exprmnts/train-model-wrds/rnn
+$ cd ~/deep-quant/exprmnts/train-model-wrds
 $ ~/deep-quant/scripts/WRDS/build_data.py --N=10 --exclude_gics=40 --filename=~/deep-quant/datasets/sample_data_wrds.dat
 ```
 In the above code the arguments are as follows:-
@@ -45,56 +45,87 @@ Total Execution Time: 30.65
 
 2. Train on the built dataset
 ```shell
-$ mkdir chkpts
 $ ~/deep-quant/scripts/deep_quant.py --config=config/rnn.conf --train=True --datafile=sample_data_wrds.dat
 ```
 The output should look like this
 ```shell
 Loading training data ...
 
-Setting random seed to 521
-Num training entities: 7
-Num validation entities: 3
-Number of batch indices: 2310
-Number of batch indices: 1323
-Number of batch indices: 987
-2018-03-04 16:13:13.812119: I tensorflow/core/platform/cpu_feature_guard.cc:137] Your CPU supports instructions that this TensorFlow binary was not compiled to use: SSE4.1 SSE4.2 AVX AVX2 FMA
+Setting random seed to 100
+Num training entities: 1400
+Num validation entities: 600
+Number of batch indices: 459693
+Number of batch indices: 315722
+Number of batch indices: 143971
 
 Constructing model ...
 Model has the following geometry:
   model_type  = DeepRnnModel
   min_unroll  = 5
   max_unroll  = 5
-  batch_size  = 256
+  stride      = 12
+  batch_size  = 128
   num_inputs  = 20
   num_outputs = 16
-  num_hidden  = 64
+  num_hidden  = 128
   num_layers  = 2
   optimizer   = AdadeltaOptimizer
   device      = /gpu:0
-Creating model with fresh parameters ... done in 0.55 seconds.
-Calculating scaling parameters ... done in 0.75 seconds.
+Creating model with fresh parameters ... done in 0.60 seconds.
+Calculating scaling parameters ... done in 1.32 seconds.
 Training will early stop without improvement after 25 epochs.
-Reading cache from ./_bcache/bcache-f325edd65346188b40e0defa66841017.pkl ... done in 0.00 seconds.
-Reading cache from ./_bcache/bcache-6388dd54f750ab6f5c840232b2495031.pkl ... done in 0.00 seconds.
-Steps: 4  .................................................................................................... passes: 0.20  speed: 2 seconds
-Epoch: 1 Train MSE: 282.490936 Valid MSE: 195.845795 Learning rate: 0.6000
-Creating directory chkpts/chkpts-rnn
-Steps: 4  .................................................................................................... passes: 0.20  speed: 0 seconds
-Epoch: 2 Train MSE: 282.117676 Valid MSE: 195.487956 Learning rate: 0.6000
-Steps: 4  .................................................................................................... passes: 0.20  speed: 0 seconds
-Epoch: 3 Train MSE: 281.473175 Valid MSE: 195.199361 Learning rate: 0.6000
-Steps: 4  .................................................................................................... passes: 0.20  speed: 0 seconds
-Epoch: 4 Train MSE: 281.821686 Valid MSE: 194.938619 Learning rate: 0.6000
-Steps: 4  .................................................................................................... passes: 0.20  speed: 0 seconds
-Epoch: 5 Train MSE: 280.885315 Valid MSE: 194.534856 Learning rate: 0.6000
-Steps: 4  .................................................................................................... passes: 0.20  speed: 0 seconds
-Epoch: 6 Train MSE: 281.497986 Valid MSE: 194.295314 Learning rate: 0.6000
-Steps: 4  .................................................................................................... passes: 0.20  speed: 0 seconds
-Epoch: 7 Train MSE: 281.097595 Valid MSE: 194.044937 Learning rate: 0.6000
-Steps: 4  .................................................................................................... passes: 0.20  speed: 0 seconds
-Epoch: 8 Train MSE: 281.298340 Valid MSE: 193.841476 Learning rate: 0.6000
-Steps: 4  .................................................................................................... passes: 0.20  speed: 0 seconds
+Reading cache from ./_bcache/bcache-6857e8ea389b445edc5002df2b48741a.pkl ... done in 0.91 seconds.
+Reading cache from ./_bcache/bcache-0e7691d4506f7361b9ab7fe10e0b7f33.pkl ... done in 0.41 seconds.
+Steps: 1617  .................................................................................................... passes: 0.20  speed: 247 seconds
+Epoch: 1 Train MSE: 44.290438 Valid MSE: 36.296103 Learning rate: 0.6000
+Steps: 1617  .................................................................................................... passes: 0.20  speed: 245 seconds
+Epoch: 2 Train MSE: 28.928278 Valid MSE: 25.702968 Learning rate: 0.6000
+Steps: 1617  .................................................................................................... passes: 0.20  speed: 245 seconds
+Epoch: 3 Train MSE: 23.222220 Valid MSE: 18.648749 Learning rate: 0.6000
+Steps: 1617  .................................................................................................... passes: 0.20  speed: 245 seconds
+Epoch: 4 Train MSE: 17.437683 Valid MSE: 14.027041 Learning rate: 0.6000
+Steps: 1617  .................................................................................................... passes: 0.20  speed: 245 seconds
+Epoch: 5 Train MSE: 14.772658 Valid MSE: 10.295938 Learning rate: 0.6000
+Steps: 1617  .................................................................................................... passes: 0.20  speed: 264 seconds
+Epoch: 6 Train MSE: 11.669147 Valid MSE: 7.940729 Learning rate: 0.6000
+Steps: 1617  .................................................................................................... passes: 0.20  speed: 263 seconds
+Epoch: 7 Train MSE: 10.737432 Valid MSE: 6.061102 Learning rate: 0.6000
+Steps: 1617  .................................................................................................... passes: 0.20  speed: 267 seconds
+Epoch: 8 Train MSE: 9.341028 Valid MSE: 5.028525 Learning rate: 0.6000
+Steps: 1617  .................................................................................................... passes: 0.20  speed: 245 seconds
+Epoch: 9 Train MSE: 8.965150 Valid MSE: 4.722991 Learning rate: 0.6000
+Steps: 1617  .................................................................................................... passes: 0.20  speed: 245 seconds
+Epoch: 10 Train MSE: 8.423432 Valid MSE: 4.034361 Learning rate: 0.6000
+Steps: 1617  .................................................................................................... passes: 0.20  speed: 245 seconds
+Epoch: 11 Train MSE: 7.190366 Valid MSE: 3.905058 Learning rate: 0.6000
+Steps: 1617  .................................................................................................... passes: 0.20  speed: 244 seconds
+Epoch: 12 Train MSE: 6.570809 Valid MSE: 3.865089 Learning rate: 0.6000
+Steps: 1617  .................................................................................................... passes: 0.20  speed: 244 seconds
+Epoch: 13 Train MSE: 7.227545 Valid MSE: 3.667518 Learning rate: 0.6000
+Steps: 1617  .................................................................................................... passes: 0.20  speed: 244 seconds
+Epoch: 14 Train MSE: 5.670859 Valid MSE: 3.335403 Learning rate: 0.6000
+Steps: 1617  .................................................................................................... passes: 0.20  speed: 245 seconds
+Epoch: 15 Train MSE: 6.203264 Valid MSE: 3.334543 Learning rate: 0.6000
+Steps: 1617  .................................................................................................... passes: 0.20  speed: 245 seconds
+Epoch: 16 Train MSE: 6.803460 Valid MSE: 3.635183 Learning rate: 0.6000
+Steps: 1617  .................................................................................................... passes: 0.20  speed: 245 seconds
+Epoch: 17 Train MSE: 5.957897 Valid MSE: 3.227542 Learning rate: 0.6000
+Steps: 1617  .................................................................................................... passes: 0.20  speed: 245 seconds
+Epoch: 18 Train MSE: 6.157975 Valid MSE: 3.236347 Learning rate: 0.6000
+Steps: 1617  .................................................................................................... passes: 0.20  speed: 245 seconds
+Epoch: 19 Train MSE: 5.889822 Valid MSE: 3.673328 Learning rate: 0.6000
+Steps: 1617  .................................................................................................... passes: 0.20  speed: 245 seconds
+Epoch: 20 Train MSE: 5.476445 Valid MSE: 3.133401 Learning rate: 0.6000
+Steps: 1617  .................................................................................................... passes: 0.20  speed: 244 seconds
+Epoch: 21 Train MSE: 5.124536 Valid MSE: 3.613623 Learning rate: 0.6000
+Steps: 1617  .................................................................................................... passes: 0.20  speed: 245 seconds
+Epoch: 22 Train MSE: 4.831257 Valid MSE: 3.542350 Learning rate: 0.6000
+Steps: 1617  .................................................................................................... passes: 0.20  speed: 244 seconds
+Epoch: 23 Train MSE: 5.524669 Valid MSE: 3.385701 Learning rate: 0.6000
+Steps: 1617  .................................................................................................... passes: 0.20  speed: 244 seconds
+Epoch: 24 Train MSE: 5.309324 Valid MSE: 4.217220 Learning rate: 0.6000
+Steps: 1617  .................................................................................................... passes: 0.20  speed: 245 seconds
+Epoch: 25 Train MSE: 6.335211 Valid MSE: 3.817821 Learning rate: 0.6000
 ```
 
 3. Prediction
