@@ -96,10 +96,6 @@ class BatchGenerator(object):
         self._keys = data[config.key_field].tolist()
         self._dates = data['date'].tolist() # TODO: date field name should be in config
 
-        #print(type(self._dates))
-        #print(self._dates[1000])
-        #exit()
-
         self._init_column_indices(config)
         self._init_validation_set(config, validation, verbose)
 
