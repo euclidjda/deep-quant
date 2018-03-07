@@ -13,7 +13,11 @@ or, for python3:
 
 Please also add DEEP\_QUANT\_ROOT to your environment:
 
-`export DEEP_QUANT_ROOT="/path/to/deep-quant/in/your/machine"`
+```shell 
+git clone https://github.com/euclidjda/deep-quant.git
+cd deep-quant
+export DEEP_QUANT_ROOT=`pwd`
+```
 
 ## Running the System Test
 
