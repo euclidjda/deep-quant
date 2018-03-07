@@ -2,7 +2,6 @@
 Builds the fundamental dataset for top N market cap equitities from WRDS.
 Requires WRDS account. Enter username and password when prompted.
 
-Config changes may be made to build_data_config.ini file
 # N = number of securities sorted by market cap
 # Exclude GICS codes
 
@@ -86,7 +85,7 @@ top_N_eq_gvkey_list = [k for k in top_N_eq_gvkey_list_all if k not in exclude_gv
 
 # Read the gvkey config file which contains the most recent list
 config_gvkey = SafeConfigParser()
-config_gvkey.read('gvkey_config.ini')
+config_gvkey.read('gvkey-hist.dat')
 config_gvkey.set('gvkey_list','# Used to keep track of most recent requity list. No need to edit','')
 
 # Initialize active dict
@@ -113,7 +112,7 @@ if test_mode != 'yes':
 
 
 # save to a file
-with open('gvkey_config.ini', 'w') as configfile:
+with open('gvkey-hist.dat', 'w') as configfile:
     config_gvkey.write(configfile)
 
 # change format to be compatible with sql query
