@@ -148,4 +148,5 @@ def train_model(config):
                 quit()
             else:
                 checkpoint_path = os.path.join(config.model_dir, chkpt_file_prefix)
-                tf.train.Saver().save(session, checkpoint_path, global_step=i)
+                if (valid_history[-1] == min(valid_history)):
+                    tf.train.Saver().save(session, checkpoint_path, global_step=i)
