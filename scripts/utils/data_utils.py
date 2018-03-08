@@ -8,7 +8,6 @@ import pandas as pd
 from batch_generator import BatchGenerator
 
 DATASETS_PATH = os.path.join(os.environ['DEEP_QUANT_ROOT'], 'datasets')
-OPEN_DF_PATH = os.path.join(DATASETS_PATH, 'open_dataset.dat') 
 # TODO: fix so we don't have to assume 'DEEP_QUANT_ROOT' is defined in the
 # environment
 
@@ -30,34 +29,31 @@ def get_data_path(data_dir, filename):
     return path
 
 
-def create_datafile(datasource, ticlist, dest_basename):
+def build_and_write_trimmed_datfile(open_dataset_path, ticlist_path, 
+                                    trimmed_datfile_path):
     """
-    Creates a .dat file using `datasource` (either `open_dataset` or `WRDS`).
-    This file will be made up of tickers from ticlist, and will reside in
-    `DEEP_QUANT_ROOT`/datasets/dest_basename.
+    Creates a .dat file by trimming open-dataset.dat so that it contains only
+    tickers specified by ticlist file at`ticlist_path`. Writes produced .dat
+    file at `trimmed_datfile_path`.
 
     Args:
-      datasource: specifies whether the datafile should be built using
-                  open_dataset as a starting point, or be built by querying
-                  WRDS.
-      ticlist: the name of the list of tickers that the produced .dat file
-               should contain. NOTE: this should be postfixed by .dat.
-      dest_basename: the name you'd like the produced datafile to have. NOTE:
-                     this should be postfixed by .dat.
+      open_dataset_path: the path to open-dataset.dat
+      ticlist_path: the path to the list of tickers that the produced .dat file
+                    should contain.
+      trimmed_datfile_path: path where you'd like the trimmed datfile to be
+                            placed.
     """
-    def get_gvkeys_from_ticlist(ticlist):  #TODO: use actual gvkeys
+    def get_gvkeys_from_ticlist(ticlist_path):  #TODO: use actual gvkeys
         """
         Returns 'gvkeys' from ticlist.dat as a sorted list.
 
         NOTE: Right now, 'gvkeys' are not the actual gvkeys that you'd see in
-        Compustat. Instead, they're unique identifiers constructed by concatenating
-        a numeric id for the exchange (1 for Nasdaq, 2 for NYSE) with the ticker
-        name.
+        Compustat. Instead, they're unique identifiers constructed by
+        concatenating a numeric id for the exchange (1 for Nasdaq, 2 for NYSE)
+        with the ticker name.
         """
-        ticlist_filepath = os.path.join(DATASETS_PATH, ticlist)
-
-        if os.path.isfile(ticlist_filepath):
-            ticlist_df = pd.read_csv(ticlist_filepath, sep=' ', header=None)
+        if os.path.isfile(ticlist_path):
+            ticlist_df = pd.read_csv(ticlist_path, sep=' ', header=None)
             gvkeys = list()
             for line in ticlist_df.values:
                 if line[1] == 'Nasdaq':
@@ -72,34 +68,23 @@ def create_datafile(datasource, ticlist, dest_basename):
             
         return gvkeys
 
-    def shave_open_dataset(ticlist, dest):
+    def shave_open_dataset(open_dataset_path, ticlist_path, dest):
         """
-        Shaves wanted data (in terms of tics and features only; the shaving by
+        Trims wanted data (in terms of tics and features only; the shaving by
         dates is done by BatchGenerator's constructor), stores shaved .dat file
         at dest.
 
-        NOTE: shaving by features not implemented yet, will rely on a
-        feat_map.txt file.
+        NOTE: trimming by features not implemented yet, will rely on a
+        feat_map.dat file.
         """
-        gvkeys = get_gvkeys_from_ticlist(ticlist)
-        open_df = pd.read_csv(OPEN_DF_PATH, sep=' ', dtype={'gvkey': str})
+        gvkeys = get_gvkeys_from_ticlist(ticlist_path)
+        open_df = pd.read_csv(open_dataset_path, sep=' ', dtype={'gvkey': str})
         shaved_df = open_df[open_df.gvkey.isin(gvkeys)]
         shaved_df.to_csv(dest, sep=' ', index=False)
+        print("Successfully trimmed {} as specified by {}, wrote to {}.".format(
+            open_dataset_path, ticlist_path, dest))
 
-    def write_WRDS_data(dest):
-        """
-        Writes .dat file using data from WRDS.
-        """
-        raise NotImplementedError("Sorry! WRDS integration not ready.")  # TODO
-
-    dest = get_data_path(DATASETS_PATH, dest_basename)
-
-    if datasource == "open_dataset":
-        shave_open_dataset(ticlist, dest)
-    elif datasource == "WRDS":
-        write_WRDS_data(ticlist, dest)
-    else:
-        raise Exception("Unknown datasource.")
+    shave_open_dataset(open_dataset_path, ticlist_path, trimmed_datfile_path)
 
 
 def load_all_data(config):
