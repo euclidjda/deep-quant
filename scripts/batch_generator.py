@@ -47,7 +47,6 @@ class BatchGenerator(object):
         _end_indices attributes of our BatchGenerator object, respectively. 
         (These are both lists of equal length that indicate the indices of the
         start and of the end of the sequence, within the _data DataFrame.)
-
         Indices are set up to access config.batch_size of these sequences as a
         batch; these are set up in such way that these sequences are "far apart"
         from each other in _data (they're num_batches rows away from each other,
@@ -75,7 +74,6 @@ class BatchGenerator(object):
         """
         Loads data as Pandas DataFrame, saves it as ._data attribute, sets up a
         validation set if necessary. 
-
         (The latter consists of creating a dictionary to house the unique
         identifiers of the companies that are to be used for validation, and
         populating it with randomly-selected companies.)
@@ -158,7 +156,6 @@ class BatchGenerator(object):
         Sets up indexes into the sequences.
         First identifies start and end points of sequences (stored as
         _start_indices and _end_indices).
-
         Then sets up two cursors:
           (1) _index_cursor, which is a cursor of equally-spaced indices into
               the dataset. Here, each index points to a sequence (which can be
@@ -167,17 +164,14 @@ class BatchGenerator(object):
           (2) _batch_cursor, which keeps track of the batch that we're working
               with. (This is just an int that changes as we go through the
               dataset in batches.)
-
         Note that the number of batches is dictated by the number of sequences
         available and the user-defined size of each batch (as specified in
         config.batch_size). (The number of sequences available in turn depends
         on the length of those sequences, config.max_unrollings as well as the
         size of the dataset).
-
         Here, an attribute called _batch_cache is also created. This is a list
         of size num_batches that will house the contents of each batch once
         they're cached.
-
         Lastly, an attribute called _init_index_cursor is also created. This is
         simply a copy of _index_cursor in its original state, which will allow
         us to go back to the start if we need to once _index_cursor has changed.
@@ -238,7 +232,6 @@ class BatchGenerator(object):
         # TODO: rewrite this docstring
         Sets up column-index-related attributes and adds a few items to the
         config.
-
         Column-index-related attributes:
           * _feature_indices: A list housing the column numbers of the features,
                               where features are as specified by 
@@ -258,7 +251,6 @@ class BatchGenerator(object):
                          a company was actively trading during a specific point
                          in time or not.
           * _date_idx: The column index of the date field.
-
         Items added to the config:
           * num_inputs: same as the _num_inputs attribute
           * num_ouptus: num_inputs minus the number of aux covariates.
@@ -442,7 +434,6 @@ class BatchGenerator(object):
     def _next_batch(self):
         """
         Generate the next batch of sequences from the data.
-
         Returns:
           A batch of type Batch (see class def below)
         """
