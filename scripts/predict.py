@@ -53,7 +53,7 @@ def predict(config):
 
     with tf.Graph().as_default(), tf.Session(config=tf_config) as session:
 
-        model = model_utils.get_model(session, config, verbose=False)
+        model = model_utils.get_model(session, config, verbose=True)
 
         perfs = dict()
 

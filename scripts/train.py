@@ -126,8 +126,9 @@ def train_model(config):
         for i in range(config.max_epoch):
 
             (train_mse, valid_mse) = run_epoch(session, model, train_data, valid_data,
-                                                keep_prob=config.keep_prob, passes=config.passes,
-                                                verbose=True)
+                                               keep_prob=config.keep_prob, 
+                                               passes=config.passes,
+                                               verbose=True)
             print( ('Epoch: %d Train MSE: %.6f Valid MSE: %.6f Learning rate: %.4f') %
                   (i + 1, train_mse, valid_mse, lr) )
             sys.stdout.flush()
@@ -147,6 +148,6 @@ def train_model(config):
                 print("Training stopped.")
                 quit()
             else:
-                checkpoint_path = os.path.join(config.model_dir, chkpt_file_prefix)
+                checkpoint_path = os.path.join(config.model_dir,chkpt_file_prefix)
                 if (valid_history[-1] == min(valid_history)):
                     tf.train.Saver().save(session, checkpoint_path, global_step=i)
