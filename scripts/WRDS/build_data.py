@@ -252,7 +252,7 @@ for date in dates:
 df_all_eq.rename(columns={'datadate':'date'},inplace=True)
 
 # Change date from Y-m-d to ymd
-df_all_eq['date'] = df_all_eq['date'].dt.strftime('%Y%m%d')
+df_all_eq['date'] = df_all_eq['date'].dt.strftime('%Y%m')
 
 # Output the csv
 df_all_eq.to_csv(out_filename,sep=' ',index=False)
