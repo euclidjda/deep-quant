@@ -37,10 +37,10 @@ import time
 
 _GENERATIONS   = 100
 _POP_SIZE      = 40
-_NUM_SURVIVORS = 10
+_NUM_SURVIVORS = 20
 _NUM_GPU       = 4
 _SLEEP_TIME    = 1
-_MUTATE_RATE   = 0.3
+_MUTATE_RATE   = 0.4
 _SHELL         = '/bin/sh'
 _VALID_ERR_IDX = 7
 
@@ -307,17 +307,16 @@ def main():
             print("  %s -> (%s)"%(flag,','.join(config[flag])))
 
     results = [float('inf')]*_POP_SIZE
+
     pop = init_population(config)
     best = None
-
-
     for i in range(_GENERATIONS):
         gen = i+1
         result = train_population(pop,gen)
         print('*'*80)
         print(result)
         (pop,new_best) = get_next_generation(pop,gen,result)
-        if best is None or best[0] >= new_best[0]:
+        if best is None or best[0] > new_best[0]:
             best = new_best
         name = best[1]['--name'][0]
         error = best[0]

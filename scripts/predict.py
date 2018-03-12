@@ -30,7 +30,8 @@ import regex as re
 from tensorflow.python.platform import gfile
 from batch_generator import BatchGenerator
 
-from utils import model_utils
+from utils import model_utils,data_utils
+import utils
 
 def print_vector(name,v):
     print("%s: "%name,end='')
@@ -52,7 +53,7 @@ def predict(config):
 
     with tf.Graph().as_default(), tf.Session(config=tf_config) as session:
 
-        model = model_utils.get_model(session, config, verbose=False)
+        model = model_utils.get_model(session, config, verbose=True)
 
         perfs = dict()
 

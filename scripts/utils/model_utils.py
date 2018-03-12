@@ -42,26 +42,12 @@ def stop_training(config, perfs, file_prefix):
       file_prefix: how to name the chkpnt file
     """
     window_size = config.early_stop
-    if window_size is not None:
-        if len(perfs) > window_size:
-            total_min = min(perfs)
-            window_min = min(perfs[-window_size:])
-            # print("total_min=%.4f window_min=%.4f"%(total_min,window_min))
-            if total_min < window_min:
-                # early stop here
-                best_idx = perfs.index(total_min) # index of total min
-                chkpt_name = "%s-%d"%(file_prefix,best_idx)
-                rewrite_chkpt(config.model_dir, chkpt_name)
-                return True
-    return False
-
-def rewrite_chkpt(model_dir,chkpt_name):
-    # open file model_dir/checkpoint
-    path = model_dir+"/checkpoint"
-    # write file as tensorflow expects
-    with open(path, "w") as outfile:
-        outfile.write("model_checkpoint_path: \"%s\"\n"%chkpt_name)
-        outfile.write("all_model_checkpoint_paths: \"%s\"\n"%chkpt_name)
+    if ( (window_size is not None)
+     and (len(perfs) > window_size)
+     and (min(perfs) < min(perfs[-window_size:])) ):
+        return True
+    else:
+        return False
 
 def adjust_learning_rate(session, model,
                          learning_rate, lr_decay, cost_history, lookback=5):
