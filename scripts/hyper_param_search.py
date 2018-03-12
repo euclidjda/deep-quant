@@ -94,6 +94,8 @@ def generate_results(pop,gen):
         errors = [float(s.split()[_VALID_ERR_IDX]) for s in content]
         errors.sort()
         result.append(errors[0])
+        if result[-1] == 'nan':
+            result[-1] = float('inf')
     print("o"*80)
     print(result)
     assert(len(pop) == len(result))

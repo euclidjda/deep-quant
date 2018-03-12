@@ -23,6 +23,7 @@ import sys
 
 import tensorflow as tf
 import regex as re
+import math
 
 from utils import data_utils, model_utils
 
@@ -56,21 +57,11 @@ def run_epoch(session, model, train_data, valid_data,
         train_mse += model.train_step(session, batch, keep_prob=keep_prob)
         if verbose: dot_count = pretty_progress(step,prog_int,dot_count)
 
-    # Look at train out
-    #print()
-    #batch = train_data.next_batch()
-    #model.test_step(session, batch, training=False)
-
     for step in range(valid_steps):
         batch = valid_data.next_batch()
         (mse,_) = model.step(session, batch)
         valid_mse += mse
         if verbose: dot_count = pretty_progress(train_steps+step,prog_int,dot_count)
-
-    # Look at test out
-    #print()
-    #batch = valid_data.next_batch()
-    #model.test_step(session, batch, training=False)
 
     # evaluate validation data
 
@@ -83,7 +74,7 @@ def run_epoch(session, model, train_data, valid_data,
     return (train_mse/train_steps,valid_mse/valid_steps)
 
 def train_model(config):
-    print("\nLoading training data ...")
+    print("Loading training data ...")
     train_data, valid_data = data_utils.load_train_valid_data(config)
 
     if config.start_date is not None:
@@ -98,7 +89,7 @@ def train_model(config):
         if config.seed is not None:
             tf.set_random_seed(config.seed)
 
-        print("\nConstructing model ...")
+        print("Constructing model ...")
         model = model_utils.get_model(session, config, verbose=True)
 
         if config.data_scaler is not None:
@@ -143,7 +134,10 @@ def train_model(config):
                 os.mkdir(config.model_dir)
 
             chkpt_file_prefix = "training.ckpt"
-            if model_utils.stop_training(config,valid_history,chkpt_file_prefix):
+            if math.isnan(valid_mse):
+                print("Training failed due to nan.")
+                quit()
+            elif model_utils.stop_training(config,valid_history,chkpt_file_prefix):
                 print("Training stopped.")
                 quit()
             else:
