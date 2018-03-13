@@ -61,7 +61,7 @@ def predict(config):
             batch = batches.next_batch()
 
             (mse, preds) = model.step(session, batch)
-            # (mse, preds) = model.test_step(session, batch)
+            # (mse, preds) = model.debug_step(session, batch)
 
             if math.isnan(mse) is False:
                 date = batch_to_date(batch)

@@ -23,11 +23,12 @@ import sys
 import numpy as np
 import tensorflow as tf
 
+from tensorflow.python.ops import math_ops
 from models.base_model import BaseModel
 
 class DeepRnnModel(BaseModel):
     """
-    A Deep Rnn Model that supports a binary (two class) output with an
+    A Deep Rnn Model that supports regression with 
     arbitrary number of fixed width hidden layers.
     """
     def __init__(self, config):
@@ -106,23 +107,30 @@ class DeepRnnModel(BaseModel):
         for i in range(max_unrollings):
             self._outputs.append( tf.nn.xw_plus_b( rnn_outputs[i], output_w, output_b ) )
 
-        seq_mask = tf.sequence_mask(self._seq_lengths*num_outputs,
+        seqmask = tf.sequence_mask(self._seq_lengths*num_outputs,
                                     max_unrollings*num_outputs, dtype=tf.float32)
-        self._outs = outputs = tf.multiply(seq_mask,tf.concat(self._outputs, 1))
-        self._tars = targets = tf.multiply(seq_mask,tf.concat(self._scaled_targets, 1))
+        outputs = tf.concat(self._outputs, 1)
+        targets = tf.concat(self._scaled_targets, 1)
 
-        minlen = max_unrollings-min_unrollings+1
+        seqmask = tf.reshape(seqmask, [batch_size,max_unrollings,num_outputs] )
+        outputs = tf.reshape(outputs, [batch_size,max_unrollings,num_outputs] )
+        targets = tf.reshape(targets, [batch_size,max_unrollings,num_outputs] )
 
-        last_k_outputs = tf.reverse_sequence(
-          tf.reshape(outputs, [batch_size,max_unrollings,num_outputs]),
-          self._seq_lengths,seq_axis=1,batch_axis=0)[:,0:minlen,:]
+        outputs = tf.multiply(seqmask, outputs)
+        targets = tf.multiply(seqmask, targets)
+        
+        last_k_seqmask = seqmask[:,min_unrollings-1:,:]
+        last_k_outputs = outputs[:,min_unrollings-1:,:]
+        last_k_targets = targets[:,min_unrollings-1:,:]
+        
+        reversed_outputs = tf.reverse_sequence(outputs,
+                              self._seq_lengths,seq_axis=1,batch_axis=0)
 
-        last_k_targets = tf.reverse_sequence(
-          tf.reshape(targets, [batch_size,max_unrollings,num_outputs] ),
-          self._seq_lengths,seq_axis=1,batch_axis=0)[:,0:minlen,:]
+        reversed_targets = tf.reverse_sequence(targets,
+                              self._seq_lengths,seq_axis=1,batch_axis=0)
 
-        last_output = tf.unstack(last_k_outputs, axis=1)[0]
-        last_target = tf.unstack(last_k_targets, axis=1)[0]
+        last_output = tf.unstack(reversed_outputs, axis=1)[0]
+        last_target = tf.unstack(reversed_targets, axis=1)[0]
 
         if config.data_scaler is not None and config.scale_targets is True:
             self._predictions = self._reverse_center_and_scale( last_output )
@@ -130,12 +138,29 @@ class DeepRnnModel(BaseModel):
             self._predictions = last_output
 
         ktidx = config.target_idx
-        self._mse_0 = tf.losses.mean_squared_error(last_k_targets[:,:,ktidx], last_k_outputs[:,:,ktidx])
-        self._mse_1 = tf.losses.mean_squared_error(last_k_targets, last_k_outputs)
-        self._mse_2 = tf.losses.mean_squared_error(targets, outputs)
+
+        # For debugging from base_model.debug_step()
+        self._lt  = last_target
+        self._lo  = last_output
+        self._lkt = last_k_targets
+        self._lko = last_k_outputs
+        self._lkti = last_k_targets[:,:,ktidx]
+        self._lkoi = last_k_outputs[:,:,ktidx]
+        self._t = targets
+        self._o = outputs
+
+        # Different components of mse definitions
+        self._mse_0 = self._mean_squared_error(last_k_targets[:,:,ktidx],
+                                                   last_k_outputs[:,:,ktidx],
+                                                   last_k_seqmask[:,:,ktidx])
+
+        self._mse_1 = self._mean_squared_error(last_k_targets, last_k_outputs, last_k_seqmask)
+
+        self._mse_2 = self._mean_squared_error(targets, outputs, seqmask)
 
         self._mse = tf.losses.mean_squared_error(last_target[:,ktidx], last_output[:,ktidx])
 
+        
         # here is the learning part of the graph
         p1 = config.target_lambda
         p2 = config.rnn_lambda
@@ -157,3 +182,9 @@ class DeepRnnModel(BaseModel):
             raise RuntimeError("Unknown optimizer = %s"%config.optimizer)
 
         self._train_op = optimizer.apply_gradients(zip(grads, tvars))
+
+    def _mean_squared_error(self, targets, outputs, mask):
+        loss = math_ops.squared_difference(targets, outputs)
+        # TODO: Make the below safe to div by zero
+        mse = tf.reduce_sum( loss ) / tf.reduce_sum( mask )
+        return mse
