@@ -541,13 +541,14 @@ class BatchGenerator(object):
         keys = ''.join(key_list)
         sd = self._start_date if self._start_date is not None else 100001
         ed = self._end_date if self._end_date is not None else 999912
-        uid = "%d-%d-%d-%d-%d-%d-%d-%s-%s-%s"%(config.cache_id,sd,ed,
-                                               self._max_unrollings,
-                                               self._min_unrollings,
-                                               self._stride,self._batch_size,
-                                               config.financial_fields,
-                                               config.aux_fields,
-                                               keys)
+        uid = "%d-%d-%d-%d-%d-%d-%d-%d-%s-%s-%s"%(config.cache_id,sd,ed,
+                                                  self._forecast_n,
+                                                  self._max_unrollings,
+                                                  self._min_unrollings,
+                                                  self._stride,self._batch_size,
+                                                  config.financial_fields,
+                                                  config.aux_fields,
+                                                  keys)
         hashed = hashlib.md5(uid.encode()).hexdigest()
         filename = "bcache-%s.pkl"%hashed
         return filename
