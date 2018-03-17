@@ -62,7 +62,7 @@ q1a = ("select a.gvkey,a.latest,b.cshoq,b.prccq,b.mkvaltq,b.cshoq*b.prccq as mar
          "compm.fundq where datadate > '2017-01-01' "
          "group by gvkey) a inner join "
              "(select gvkey,datadate,mkvaltq,cshoq,prccq,curcdq "
-                "from compm.fundq where cshoq>0 and prccq>0 and curcdq='USD') b "
+                "from compm.fundq where cshoq>0 and prccq>0 and curcdq='USD' and mkvaltq is not null) b "
     "on a.gvkey = b.gvkey and a.latest=b.datadate "
      "order by market_cap desc "
     "limit %i")%N
