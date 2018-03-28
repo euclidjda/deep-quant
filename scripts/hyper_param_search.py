@@ -292,8 +292,11 @@ def parse_config(filename):
 def get_args():
     # read and populate configuration
     parser = ap.ArgumentParser(description='Hyper Parameter Search')
-    parser.add_argument('--template', help='Configuration file', required=True)
-    parser.add_argument('--genetic', dest='genetic', action='store_true', help='Use Genetic Algo')
+    parser.add_argument('--template', help='Template configuration file name.', required=True)
+    parser.add_argument('--genetic',
+                            dest='genetic',
+                            action='store_true',
+                            help='Use a genetic algo. Otherwise does grid search.')
     parser.set_defaults(genetic=False)
     args = vars(parser.parse_args())
     return args
