@@ -142,6 +142,11 @@ def train_model(config):
                 print("Training stopped.")
                 quit()
             else:
-                checkpoint_path = os.path.join(config.model_dir,chkpt_file_prefix)
                 if (valid_history[-1] == min(valid_history)):
+                    last_checkpoint_path = tf.train.latest_checkpoint(config.model_dir)
+                    checkpoint_path = os.path.join(config.model_dir,chkpt_file_prefix)
                     tf.train.Saver().save(session, checkpoint_path, global_step=i)
+                    if last_checkpoint_path is not None:
+                        os.remove(last_checkpoint_path+'.data-00000-of-00001')
+                        os.remove(last_checkpoint_path+'.index')
+                        os.remove(last_checkpoint_path+'.meta')
