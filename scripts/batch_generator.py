@@ -306,7 +306,7 @@ class BatchGenerator(object):
         colnames = self._data.columns.values
         self._key_idx = np_array_index(colnames, config.key_field)
         self._active_idx = np_array_index(colnames, config.active_field)
-        self._date_idx = np_array_index(colnames, 'date')  # TODO: make a config
+        self._date_idx = np_array_index(colnames, 'date')  # TODO: make date config
         self._normalizer_idx = np_array_index(colnames, config.scale_field)
 
         # Set up input-related attributes
@@ -328,8 +328,9 @@ class BatchGenerator(object):
         assert(config.target_idx >= 0)
 
         # Set up fin_inputs attribute and aux_inputs attribute
-        self._fin_inputs = self._data.iloc[:, self._fin_colixs].as_matrix()
-        self._aux_inputs = self._data.iloc[:, self._aux_colixs].as_matrix()
+        self._fin_inputs  = self._data.iloc[:, self._fin_colixs].as_matrix()
+        self._aux_inputs  = self._data.iloc[:, self._aux_colixs].as_matrix()
+        self._normalizers = self._data.iloc[:, self._normalizer_idx].as_matrix()
 
     def _init_validation_set(self, config, validation, verbose=True):
         """
@@ -357,7 +358,8 @@ class BatchGenerator(object):
                 print("Num validation entities: %d"%sample_size)
 
     def _get_normalizer(self, end_idx):
-        val = max(self._data.iat[end_idx, self._normalizer_idx], _MIN_SEQ_NORM)
+        # val = max(self._data.iat[end_idx, self._normalizer_idx], _MIN_SEQ_NORM)
+        val = max(self._normalizers[end_idx], _MIN_SEQ_NORM)
         return val
 
     def _get_batch_normalizers(self):
@@ -396,9 +398,6 @@ class BatchGenerator(object):
         y = np.zeros(shape=(self._batch_size, self._num_outputs), dtype=np.float)
 
         attr = list()
-        # data = self._data
-        # key_idx = self._key_idx
-        # date_idx = self._date_idx
         stride = self._stride
         forecast_n = self._forecast_n
         len1 = len(self._fin_colixs)
@@ -513,9 +512,6 @@ class BatchGenerator(object):
             self._scaling_params = params
 
         return self._scaling_params
-
-    def normalize_features():
-        pass
 
     def get_raw_inputs(self,batch,idx,vec):
         len1 = len(self._fin_colixs)
