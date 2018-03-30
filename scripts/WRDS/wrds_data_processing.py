@@ -18,7 +18,7 @@ class data_processing(object):
         self.ttm_list = [x + '_ttm' for x in self.income_list]
 
         self.blnc_sheet_list = ['cheq','rectq','invtq','acoq','ppentq','aoq',
-                                'dlcq','apq','txpq','lcoq','ltq','dlttq','cshoq']
+                                'dlcq','apq','txpq','lcoq','ltq','dlttq','cshoq','seqq','atq']
         self.mrq_list = [x + '_mrq' for x in self.blnc_sheet_list]
 
     def add_1_day(self,date):
@@ -144,7 +144,7 @@ class data_processing(object):
 
         # Fill new_df with monthly frquency between 1st and last day of
         # orginal df
-        cols = ['active','datadate','gvkey','year','month'] + self.ttm_list
+        cols = ['active','datadate','gvkey','gsector','year','month'] + self.ttm_list
         new_df = pd.concat([new_df,pd.DataFrame(columns=cols)])
         new_df = new_df[cols]
 
@@ -152,6 +152,7 @@ class data_processing(object):
         new_df['active'] = status
         new_df['datadate'] = new_df.index.values
         new_df['gvkey'] = df['gvkey'].iloc[0]
+        new_df['gsector'] = df['gsector'].iloc[0]
         new_df['year'] = [d.year for d in new_df.index]
         new_df['month'] = [d.month for d in new_df.index]
 

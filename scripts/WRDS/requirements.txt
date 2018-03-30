@@ -1,3 +1,5 @@
 numpy
 pandas
 psycopg2
+configparser
+sqlalchemy
