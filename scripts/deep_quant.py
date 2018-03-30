@@ -53,7 +53,8 @@ def get_configs():
     configs.DEFINE_integer("min_unrollings",None,"Min number of unrolling steps")
     configs.DEFINE_integer("max_unrollings",None,"Max number of unrolling steps")
     configs.DEFINE_integer("min_years",None,"Alt to min_unrollings")
-    configs.DEFINE_integer("pls_years",None,"Alt min_unrollings and max_unrollings")
+    configs.DEFINE_integer("max_years",None,"Alt to max_unrollings")
+    configs.DEFINE_integer("pls_years",None,"Alt to max_years. max_years = min_year+pls_years")
     # num_unrollings is being depricated by max_unrollings
     configs.DEFINE_integer("num_unrollings",4,"Number of unrolling steps")
     configs.DEFINE_integer("stride",12,"How many steps to skip per unrolling")
@@ -74,6 +75,7 @@ def get_configs():
     configs.DEFINE_boolean("use_cache",True,"Load data for logreg from cache (vs processing from batch generator)")
     configs.DEFINE_boolean("pretty_print_preds",False,"Print predictions in tabular format with inputs, targets, and keys")
     configs.DEFINE_boolean("scale_targets",True,"")
+    configs.DEFINE_boolean("log_squasher",True,"Squash large normalized inputs with natural log function")
     configs.DEFINE_string("data_scaler",None,'sklearn scaling algorithm or None if no scaling')
     configs.DEFINE_string("optimizer", 'GradientDescentOptimizer', 'Any tensorflow optimizer in tf.train')
     configs.DEFINE_string("optimizer_params",None, 'Additional optimizer params such as momentum')
@@ -98,7 +100,9 @@ def get_configs():
 
     if c.min_years is not None:
         c.min_unrollings = c.min_years * ( 12 // c.stride )
-        if c.pls_years is None:
+        if c.max_years is not None:
+            c.max_unrollings = (c.max_years) * ( 12 // c.stride )
+        elif c.pls_years is None:
             c.max_unrollings = c.min_unrollings
         else:
             c.max_unrollings = (c.min_years+c.pls_years) * ( 12 // c.stride )

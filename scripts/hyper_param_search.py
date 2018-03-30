@@ -52,7 +52,7 @@ def get_name(gen,i):
 
 def output_filename(gen,i):
     name = get_name(gen,i)
-    filename = "output/stdout-%s.txt"%name
+    filename = "output/output-%s.txt"%name
     return filename
 
 def config_filename(gen,i):
@@ -97,6 +97,8 @@ def generate_results(pop,gen):
         errors = [float(s.split()[_VALID_ERR_IDX]) for s in content]
         errors.sort()
         result.append(errors[0])
+        if result[-1] == 'nan':
+            result[-1] = float('inf')
     print("o"*80)
     print(result)
     assert(len(pop) == len(result))
@@ -138,7 +140,7 @@ def create_train_scripts(pop,gen):
                 str = "CUDA_VISIBLE_DEVICES=%d"%gpu
                 str += " deep_quant.py"
                 str += " --config=config/"+config_filename(gen,i)
-                str += " > output/stdout-%s.txt"%get_name(gen,i)
+                str += " > output/output-%s.txt"%get_name(gen,i)
                 str += " 2> output/stderr-%s.txt"%get_name(gen,i)
                 str += "; rm -rf chkpts/chkpts-%s"%get_name(gen,i)+";"
                 print(str,file=f)
@@ -171,11 +173,11 @@ def train_population(pop,gen):
     assert(type(pop) is list)
     write_population_configs(pop,gen)
     create_train_scripts(pop,gen)
-    #execute_train_scripts(pop,gen)
-    #poll_for_done(pop,gen)
-    #result = generate_results(pop,gen)
+    execute_train_scripts(pop,gen)
+    poll_for_done(pop,gen)
+    result = generate_results(pop,gen)
     # result = generate_results_test(pop,gen)
-    #return result
+    return result
 
 def swap(items,i,j):
     """ Swap two items in a list
@@ -290,8 +292,11 @@ def parse_config(filename):
 def get_args():
     # read and populate configuration
     parser = ap.ArgumentParser(description='Hyper Parameter Search')
-    parser.add_argument('--template', help='Configuration file', required=True)
-    parser.add_argument('--genetic', dest='genetic', action='store_true', help='Use Genetic Algo')
+    parser.add_argument('--template', help='Template configuration file name.', required=True)
+    parser.add_argument('--genetic',
+                            dest='genetic',
+                            action='store_true',
+                            help='Use a genetic algo. Otherwise does grid search.')
     parser.set_defaults(genetic=False)
     args = vars(parser.parse_args())
     return args
