@@ -25,7 +25,7 @@ import pandas as pd
 import sklearn.preprocessing
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 
-_MIN_SEQ_NORM = 1.0
+_MIN_SEQ_NORM = 10.0
 DEEP_QUANT_ROOT = os.environ['DEEP_QUANT_ROOT']
 DATASETS_PATH = os.path.join(DEEP_QUANT_ROOT, 'datasets')
 
@@ -60,6 +60,7 @@ class BatchGenerator(object):
         self._forecast_n = config.forecast_n
         self._batch_size = config.batch_size
         self._scaling_params = None
+        self._log_squasher = config.log_squasher
         self._start_date = config.start_date
         self._end_date = config.end_date
 
@@ -371,12 +372,14 @@ class BatchGenerator(object):
 
     def _get_feature_vector(self,end_idx,cur_idx):
         if cur_idx < self._data_len:
-            s = self._get_normalizer(end_idx)
-            assert(s>0)
+            n = self._get_normalizer(end_idx)
+            assert(n>0)
             x = self._fin_inputs[cur_idx]
-            y = np.divide(x,s)
-            y_abs = np.absolute(y).astype(float)
-            return np.multiply(np.sign(y),np.log1p(y_abs))
+            y = np.divide(x,n)
+            if self._log_squasher is True:
+                y_abs = np.absolute(y).astype(float)
+                y = np.multiply(np.sign(y),np.log1p(y_abs))
+            return y
         else:
             return np.zeros(shape=[len(self._fin_colixs)])
 
@@ -514,8 +517,10 @@ class BatchGenerator(object):
         len1 = len(self._fin_colixs)
         len2 = len(self._aux_colixs)
         n = batch.normalizers[idx]
-        x = vec[0:len1]
-        y = n * np.multiply(np.sign(x),np.expm1(np.fabs(x)))
+        y = vec[0:len1]
+        if self._log_squasher is True:
+            y = np.multiply(np.sign(y),np.expm1(np.fabs(y)))
+        y = n * y
         if len2 > 0 and len(vec) > len1:
             assert(len(vec)==len1+len2)
             y = np.append( y, vec[len1:len1+len2] )
