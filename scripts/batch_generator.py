@@ -65,7 +65,7 @@ class BatchGenerator(object):
         self._end_date = config.end_date
 
         assert self._stride >= 1
-        
+
         self._init_data(filename, config, validation, data, verbose)
         self._init_batch_cursor(config, require_targets, verbose)
         self._config = config # save this around for train_batches() method
@@ -356,11 +356,24 @@ class BatchGenerator(object):
                 print("Num validation entities: %d"%sample_size)
 
     def _get_normalizer(self, end_idx):
-        # val = max(self._data.iat[end_idx, self._normalizer_idx], _MIN_SEQ_NORM)
         val = max(self._normalizers[end_idx], _MIN_SEQ_NORM)
         return val
 
     def _get_batch_normalizers(self):
+        """
+        Returns an np.array housing the normalizers (scalers) by which the
+        inputs of the current sequence should be scaled (this is specified by
+        config.scale_field).
+        """
+        normalizers = list()
+        for b in range(self._batch_size):
+            cursor = self._index_cursor[b]
+            end_idx = self._end_indices[cursor]
+            s = self._get_normalizer(end_idx)
+            normalizers.append(s)
+        return np.array( normalizers )
+
+    def _get_batch_normalizers_new(self):
         """
         Returns an np.array housing the normalizers (scalers) by which the
         inputs of the current sequence should be scaled (this is specified by
@@ -556,16 +569,20 @@ class BatchGenerator(object):
         Caches batches from self by calling the `next_batch()` method (which
         writes batch to the list held by the `_batch_cache` attribute).
         """
+        num_batches = self.num_batches
         start_time = time.time()
         if verbose is True:
-            print("\nCaching batches ...",end=' '); sys.stdout.flush()
+            print("\nCaching %d batches ..."%(num_batches),end='')
+            sys.stdout.flush()
 
         self.rewind()
-        for _ in range(self.num_batches):
+        for i in range(num_batches):
+            if verbose is True and (i%(num_batches//50))==0:
+                print('.',end=''); sys.stdout.flush()
             b = self.next_batch()
 
         if verbose is True:
-            print("done in %.2f seconds."%(time.time() - start_time))
+            print(" done in %.2f seconds."%(time.time() - start_time))
 
     def cache(self,verbose=False):
         """

@@ -34,8 +34,6 @@ import deep_quant
 import configs as configs
 from batch_generator import BatchGenerator
 
-
-
 def main():
 
     config = deep_quant.get_configs()
