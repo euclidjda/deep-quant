@@ -25,7 +25,7 @@ import pandas as pd
 import sklearn.preprocessing
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 
-_MIN_SEQ_NORM = 1.0
+_MIN_SEQ_NORM = 10.0
 DEEP_QUANT_ROOT = os.environ['DEEP_QUANT_ROOT']
 DATASETS_PATH = os.path.join(DEEP_QUANT_ROOT, 'datasets')
 
@@ -60,11 +60,12 @@ class BatchGenerator(object):
         self._forecast_n = config.forecast_n
         self._batch_size = config.batch_size
         self._scaling_params = None
+        self._log_squasher = config.log_squasher
         self._start_date = config.start_date
         self._end_date = config.end_date
 
         assert self._stride >= 1
-        
+
         self._init_data(filename, config, validation, data, verbose)
         self._init_batch_cursor(config, require_targets, verbose)
         self._config = config # save this around for train_batches() method
@@ -355,7 +356,6 @@ class BatchGenerator(object):
                 print("Num validation entities: %d"%sample_size)
 
     def _get_normalizer(self, end_idx):
-        # val = max(self._data.iat[end_idx, self._normalizer_idx], _MIN_SEQ_NORM)
         val = max(self._normalizers[end_idx], _MIN_SEQ_NORM)
         return val
 
@@ -365,18 +365,24 @@ class BatchGenerator(object):
         inputs of the current sequence should be scaled (this is specified by
         config.scale_field).
         """
-        v_get_normalizer = np.vectorize(self._get_normalizer)
-        end_idxs = np.array(self._end_indices)[self._index_cursor]
-        return v_get_normalizer(end_idxs)
+        normalizers = list()
+        for b in range(self._batch_size):
+            cursor = self._index_cursor[b]
+            end_idx = self._end_indices[cursor]
+            s = self._get_normalizer(end_idx)
+            normalizers.append(s)
+        return np.array( normalizers )
 
     def _get_feature_vector(self,end_idx,cur_idx):
         if cur_idx < self._data_len:
-            s = self._get_normalizer(end_idx)
-            assert(s>0)
+            n = self._get_normalizer(end_idx)
+            assert(n>0)
             x = self._fin_inputs[cur_idx]
-            y = np.divide(x,s)
-            y_abs = np.absolute(y).astype(float)
-            return np.multiply(np.sign(y),np.log1p(y_abs))
+            y = np.divide(x,n)
+            if self._log_squasher is True:
+                y_abs = np.absolute(y).astype(float)
+                y = np.multiply(np.sign(y),np.log1p(y_abs))
+            return y
         else:
             return np.zeros(shape=[len(self._fin_colixs)])
 
@@ -406,16 +412,17 @@ class BatchGenerator(object):
             end_idx = self._end_indices[cursor]
             seq_lengths[b] = ((end_idx-start_idx)//stride)+1
             idx = start_idx + step*stride
-            assert( idx < self._data_len )
-            date = self._dates[idx]
-            key = self._keys[idx]
-            next_idx = idx + forecast_n
-            next_key = self._keys[next_idx] if next_idx < len(self._keys) else ""
+
             if idx > end_idx:
                 attr.append(None)
                 x[b,:] = 0.0
                 y[b,:] = 0.0
             else:
+                assert( idx < self._data_len )
+                date = self._dates[idx]
+                key = self._keys[idx]
+                next_idx = idx + forecast_n
+                next_key = self._keys[next_idx] if next_idx < len(self._keys) else ""
                 attr.append((key,date))
                 x[b,0:len1] = self._get_feature_vector(end_idx,idx)
                 if len2 > 0:
@@ -514,8 +521,10 @@ class BatchGenerator(object):
         len1 = len(self._fin_colixs)
         len2 = len(self._aux_colixs)
         n = batch.normalizers[idx]
-        x = vec[0:len1]
-        y = n * np.multiply(np.sign(x),np.expm1(np.fabs(x)))
+        y = vec[0:len1]
+        if self._log_squasher is True:
+            y = np.multiply(np.sign(y),np.expm1(np.fabs(y)))
+        y = n * y
         if len2 > 0 and len(vec) > len1:
             assert(len(vec)==len1+len2)
             y = np.append( y, vec[len1:len1+len2] )
@@ -534,14 +543,15 @@ class BatchGenerator(object):
         keys = ''.join(key_list)
         sd = self._start_date if self._start_date is not None else 100001
         ed = self._end_date if self._end_date is not None else 999912
-        uid = "%d-%d-%d-%d-%d-%d-%d-%d-%s-%s-%s"%(config.cache_id,sd,ed,
-                                                  self._forecast_n,
-                                                  self._max_unrollings,
-                                                  self._min_unrollings,
-                                                  self._stride,self._batch_size,
-                                                  config.financial_fields,
-                                                  config.aux_fields,
-                                                  keys)
+        uid = "%d-%d-%d-%d-%d-%d-%d-%d-%s-%s-%s-%s"%(config.cache_id,sd,ed,
+                                                     self._forecast_n,
+                                                     self._max_unrollings,
+                                                     self._min_unrollings,
+                                                     self._stride,self._batch_size,
+                                                     config.financial_fields,
+                                                     config.aux_fields,
+                                                     config.scale_field,
+                                                     keys)
         hashed = hashlib.md5(uid.encode()).hexdigest()
         filename = "bcache-%s.pkl"%hashed
         return filename
@@ -551,16 +561,20 @@ class BatchGenerator(object):
         Caches batches from self by calling the `next_batch()` method (which
         writes batch to the list held by the `_batch_cache` attribute).
         """
+        num_batches = self.num_batches
         start_time = time.time()
         if verbose is True:
-            print("\nCaching batches ...",end=' '); sys.stdout.flush()
+            print("\nCaching %d batches ..."%(num_batches),end='')
+            sys.stdout.flush()
 
         self.rewind()
-        for _ in range(self.num_batches):
+        for i in range(num_batches):
+            if verbose is True and (i%(num_batches//50))==0:
+                print('.',end=''); sys.stdout.flush()
             b = self.next_batch()
 
         if verbose is True:
-            print("done in %.2f seconds."%(time.time() - start_time))
+            print(" done in %.2f seconds."%(time.time() - start_time))
 
     def cache(self,verbose=False):
         """

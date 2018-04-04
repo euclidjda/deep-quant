@@ -62,7 +62,7 @@ q1a = ("select a.gvkey,a.latest,b.cshoq,b.prccq,b.mkvaltq,b.cshoq*b.prccq as mar
          "compm.fundq where datadate > '2017-01-01' "
          "group by gvkey) a inner join "
              "(select gvkey,datadate,mkvaltq,cshoq,prccq,curcdq "
-                "from compm.fundq where cshoq>0 and prccq>0 and curcdq='USD') b "
+                "from compm.fundq where cshoq>0 and prccq>0 and curcdq='USD' and mkvaltq is not null) b "
     "on a.gvkey = b.gvkey and a.latest=b.datadate "
      "order by market_cap desc "
     "limit %i")%N
@@ -121,13 +121,16 @@ top_N_eq_gvkey = ",".join(top_N_eq_gvkey)
 
 # Query to get fundamental Data
 q2 = ("select datadate,gvkey,tic,saleq,cogsq,xsgaq,oiadpq,niq,"
-      "cheq, rectq, invtq, acoq, ppentq, aoq, dlcq, apq, txpq, lcoq, ltq, dlttq,cshoq "
+      "cheq, rectq, invtq, acoq, ppentq, aoq, dlcq, apq, txpq, lcoq, ltq, dlttq, cshoq, seqq, atq "
     "from compm.fundq "
      "where gvkey in (%s) ")%top_N_eq_gvkey
 fundq_df = db.raw_sql(q2)
 print('\n')
 print("Shape of raw dataframe: %g,%g"%fundq_df.shape)
 print('\n')
+
+# Add gics_sector as a column
+fundq_df = pd.merge(fundq_df,df_gic,how='left',on=['gvkey'])
 
 # Query to get price data
 q3 = ("select gvkey,datadate,prccm "
@@ -145,7 +148,7 @@ stock_split_df_all = db.raw_sql(q4).sort_values('datadate')
 
 # Build balance sheet features
 blnc_sheet_list = ['cheq','rectq','invtq','acoq','ppentq','aoq',
-                                'dlcq','apq','txpq','lcoq','ltq','dlttq','cshoq']
+                                'dlcq','apq','txpq','lcoq','ltq','dlttq','cshoq','seqq','atq']
 
 # Build income sheet features
 income_list = ['saleq','cogsq','xsgaq','oiadpq','niq']
@@ -154,11 +157,11 @@ gvkey_list = top_N_eq_gvkey_list
 print("Total Number of Equities in the dataset: %i"%len(gvkey_list))
 print('\n')
 
-df_all = fundq_df[['gvkey','datadate'] + income_list + blnc_sheet_list]
+df_all = fundq_df[['gvkey','gsector','datadate'] + income_list + blnc_sheet_list]
 df_all['active'] = np.nan
 
 def reorder_cols():
-    a = ['active','datadate','gvkey','year','month']
+    a = ['active','datadate','gvkey','gsector','year','month']
     mom = ['mom1m','mom3m','mom6m','mom9m']
     prc = ['mrkcap','entval']
     ttm_list_tmp = [x + '_ttm' for x in income_list]
@@ -212,7 +215,7 @@ for key in gvkey_list:
 
     # Add momentum features
     df_w_mom = dp.get_mom(df_w_price,price_df_for_mom,[1,3,6,9])
-
+    
     # Add csho_1_year average
     df_w_mom['csho_1yr_avg'] = df_w_mom['cshoq_mrq'].rolling(12,min_periods=1).mean()
 
@@ -252,7 +255,10 @@ for date in dates:
 df_all_eq.rename(columns={'datadate':'date'},inplace=True)
 
 # Change date from Y-m-d to ymd
-df_all_eq['date'] = df_all_eq['date'].dt.strftime('%Y%m%d')
+df_all_eq['date'] = df_all_eq['date'].dt.strftime('%Y%m')
+
+# Change column name gsector to gics-sector
+df_all_eq = df_all_eq.rename(columns={'gsector':'gics-sector'})
 
 # Output the csv
 df_all_eq.to_csv(out_filename,sep=' ',index=False)
