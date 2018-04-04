@@ -373,16 +373,6 @@ class BatchGenerator(object):
             normalizers.append(s)
         return np.array( normalizers )
 
-    def _get_batch_normalizers_new(self):
-        """
-        Returns an np.array housing the normalizers (scalers) by which the
-        inputs of the current sequence should be scaled (this is specified by
-        config.scale_field).
-        """
-        v_get_normalizer = np.vectorize(self._get_normalizer)
-        end_idxs = np.array(self._end_indices)[self._index_cursor]
-        return v_get_normalizer(end_idxs)
-
     def _get_feature_vector(self,end_idx,cur_idx):
         if cur_idx < self._data_len:
             n = self._get_normalizer(end_idx)
@@ -422,16 +412,17 @@ class BatchGenerator(object):
             end_idx = self._end_indices[cursor]
             seq_lengths[b] = ((end_idx-start_idx)//stride)+1
             idx = start_idx + step*stride
-            assert( idx < self._data_len )
-            date = self._dates[idx]
-            key = self._keys[idx]
-            next_idx = idx + forecast_n
-            next_key = self._keys[next_idx] if next_idx < len(self._keys) else ""
+
             if idx > end_idx:
                 attr.append(None)
                 x[b,:] = 0.0
                 y[b,:] = 0.0
             else:
+                assert( idx < self._data_len )
+                date = self._dates[idx]
+                key = self._keys[idx]
+                next_idx = idx + forecast_n
+                next_key = self._keys[next_idx] if next_idx < len(self._keys) else ""
                 attr.append((key,date))
                 x[b,0:len1] = self._get_feature_vector(end_idx,idx)
                 if len2 > 0:
@@ -552,14 +543,15 @@ class BatchGenerator(object):
         keys = ''.join(key_list)
         sd = self._start_date if self._start_date is not None else 100001
         ed = self._end_date if self._end_date is not None else 999912
-        uid = "%d-%d-%d-%d-%d-%d-%d-%d-%s-%s-%s"%(config.cache_id,sd,ed,
-                                                  self._forecast_n,
-                                                  self._max_unrollings,
-                                                  self._min_unrollings,
-                                                  self._stride,self._batch_size,
-                                                  config.financial_fields,
-                                                  config.aux_fields,
-                                                  keys)
+        uid = "%d-%d-%d-%d-%d-%d-%d-%d-%s-%s-%s-%s"%(config.cache_id,sd,ed,
+                                                     self._forecast_n,
+                                                     self._max_unrollings,
+                                                     self._min_unrollings,
+                                                     self._stride,self._batch_size,
+                                                     config.financial_fields,
+                                                     config.aux_fields,
+                                                     config.scale_field,
+                                                     keys)
         hashed = hashlib.md5(uid.encode()).hexdigest()
         filename = "bcache-%s.pkl"%hashed
         return filename

@@ -52,7 +52,7 @@ def get_name(gen,i):
 
 def output_filename(gen,i):
     name = get_name(gen,i)
-    filename = "output/output-%s.txt"%name
+    filename = "output/stdout-%s.txt"%name
     return filename
 
 def config_filename(gen,i):
