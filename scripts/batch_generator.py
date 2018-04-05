@@ -588,8 +588,7 @@ class BatchGenerator(object):
         if self._batch_cache[-1] is not None:
             return
 
-        # cache is empty (data not already cached)
-        if self._config.cache_id is None:
+        if self._config.cache_id is None: # don't cache
             self._load_cache(verbose)
         else:
             filename = self._get_cache_filename()
