@@ -47,13 +47,13 @@ def get_search_configs():
     """
     configurations.DEFINE_string("template",None,"Template file for hyper-param search")
     configurations.DEFINE_string("search_algorithm","genetic","Algorithm for hyper-param optimization. Select from 'genetic', 'grid_search'")
-    configurations.DEFINE_string("generations",100,"Number of generations for genetic algorithm")
-    configurations.DEFINE_string("pop_size",20,"Population size for genetic algorithm")
-    configurations.DEFINE_string("num_survivors",10,"Number of survivors for genetic algorithm")
-    configurations.DEFINE_string("num_threads",4,"NUmber of parallel threads (Number of parallel executions)")
-    configurations.DEFINE_string("num_gpu",1,"Number of GPU on the machine, Use 1 if there are 0")
-    configurations.DEFINE_string("sleep_time",1,"Sleep time")
-    configurations.DEFINE_string("mutate_rate",0.4,"Mutation rate for genetic algorithm")
+    configurations.DEFINE_integer("generations",100,"Number of generations for genetic algorithm")
+    configurations.DEFINE_integer("pop_size",20,"Population size for genetic algorithm")
+    configurations.DEFINE_integer("num_survivors",10,"Number of survivors for genetic algorithm")
+    configurations.DEFINE_integer("num_threads",4,"NUmber of parallel threads (Number of parallel executions)")
+    configurations.DEFINE_integer("num_gpu",1,"Number of GPU on the machine, Use 0 if there are None")
+    configurations.DEFINE_integer("sleep_time",1,"Sleep time")
+    configurations.DEFINE_float("mutate_rate",0.2,"Mutation rate for genetic algorithm")
     configurations.DEFINE_string("init_pop",None,"Specify starting population. Path to the pickle file")
 
     c = configurations.ConfigValues()
@@ -153,11 +153,12 @@ def create_train_scripts(pop,gen):
             m = len(pop)//_NUM_THREADS
             pop_idxs = [thread*m + i for i in range(m)]
             for i in pop_idxs:
+                # Add GPU number to the members of the generation
                 if _NUM_GPU!=0:
-                    str = "CUDA_VISIBLE_DEVICES=%d"%(thread//_NUM_GPU)
+                    str = "CUDA_VISIBLE_DEVICES=%d"%((thread+1)//_NUM_GPU)
                 elif _NUM_GPU==0:
-                    str = "CUDA_VISIBLE_DEVICES="""
-                str += " deep_quant.py"
+                    str = "CUDA_VISIBLE_DEVICES=''"
+                str += " ~/test_dq/deep-quant/scripts/deep_quant.py"
                 str += " --config=config/"+config_filename(gen,i)
                 str += " > output/output-%s.txt"%get_name(gen,i)
                 str += " 2> output/stderr-%s.txt"%get_name(gen,i)
@@ -372,6 +373,15 @@ def execute_grid_search(args):
 def main():
 
     config_search_args = get_search_configs()
+
+    # Define Global Variables
+    global _GENERATIONS
+    global _POP_SIZE
+    global _NUM_SURVIVORS
+    global _NUM_THREADS
+    global _NUM_GPU
+    global _SLEEP_TIME
+    global _MUTATE_RATE
 
     _GENERATIONS   = config_search_args.generations
     _POP_SIZE      = config_search_args.pop_size
