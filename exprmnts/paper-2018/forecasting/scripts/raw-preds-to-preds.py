@@ -1,5 +1,9 @@
 #! /usr/bin/env python3
 
+#
+# usage: python3 raw-preds-to-preds.py actuals.txt > preds.txt
+#
+
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -89,28 +93,40 @@ def main():
         ppe_date  = eff_actuals[_FPE_DATE_IDX]
         fpe_date  = add_one_year(ppe_date)
         fpe_actuals = None
-        fpe_key = make_key(gvkey,fpe_date)
-        fpe_actuals = get_fields(fpe_date_to_actuals[fpe_key]) if fpe_key in fpe_date_to_actuals else None
         
-        count+=1
-        # if count > 50: exit()
+        fpe_key = make_key(gvkey,fpe_date)
 
+        # ALL CHECKS
+        if fpe_key not in fpe_date_to_actuals:
+            continue
+
+        fpe_actuals = get_fields(fpe_date_to_actuals[fpe_key])
+
+        shares = 0
+        if fpe_actuals[_SHARES_IDX] != 'NULL':
+            shares = float(fpe_actuals[_SHARES_IDX])
+        else:
+            continue
+
+        if shares <= 0:
+            continue
+
+        actual = 0.0
+        if fpe_actuals[_IBCOM_IDX] != 'NULL':
+            actual = float(fpe_actuals[_IBCOM_IDX]) / shares
+        else:
+            continue
+
+        fcst_eps_avg = float(forecasts[_MEAN_IDX])/shares
+        fcst_eps_med = float(forecasts[_MEDIAN_IDX])/shares
+        
         # Now we can print the record
         print("%s"%eff_date,end=' ')
         print("%s"%gvkey,end=' ')
-        print("%s"%tic,end=' ')
         print("%s"%fpe_date,end=' ')
-
-        print("%s"%(forecasts[_MEAN_IDX]),end=' ')
-        print("%s"%(forecasts[_MEDIAN_IDX]),end=' ')
-
-        if fpe_actuals is None:
-            print("NULL NULL",end=' ')
-        else:
-            print("%s"%(fpe_actuals[_IBCOM_IDX]),end=' ')
-            print("%s"%(fpe_actuals[_SHARES_IDX]),end=' ')
-        print()
-
+        print("%.4f"%fcst_eps_avg,end=' ')
+        print("%.4f"%actual)
+            
 
 if __name__ == "__main__":
     main()
