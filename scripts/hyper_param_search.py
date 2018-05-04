@@ -155,12 +155,12 @@ def create_train_scripts(pop,gen):
             for i in pop_idxs:
                 # Add GPU number to the members of the generation
                 if _NUM_GPU!=0:
-                    str = "CUDA_VISIBLE_DEVICES=%d"%((thread+1)//_NUM_GPU)
+                    str = "CUDA_VISIBLE_DEVICES=%d"%thread
                 elif _NUM_GPU==0:
                     str = "CUDA_VISIBLE_DEVICES=''"
                 str += " deep_quant.py"
                 str += " --config=config/"+config_filename(gen,i)
-                str += " > output/output-%s.txt"%get_name(gen,i)
+                str += " > " + output_filename(gen,i) 
                 str += " 2> output/stderr-%s.txt"%get_name(gen,i)
                 str += "; rm -rf chkpts/chkpts-%s"%get_name(gen,i)+";"
                 print(str,file=f)

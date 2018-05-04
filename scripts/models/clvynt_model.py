@@ -49,6 +49,7 @@ class ClvyntModel(BaseModel):
         self._scale  = tf.get_variable('scale',shape=[num_inputs],trainable=False)
 
         batch_size = self._batch_size = tf.placeholder(tf.int32, shape=[])
+        self._seq_lengths = tf.placeholder(tf.int32, shape=[None])
         self._keep_prob = tf.placeholder(tf.float32, shape=[])
         self._phase = tf.placeholder(tf.bool, name='phase')
 
@@ -61,7 +62,10 @@ class ClvyntModel(BaseModel):
             self._targets.append( tf.placeholder(tf.float32,
                                                   shape=[None,num_outputs]) )
 
-        targets = self._targets[-1]
+        targets = tf.unstack(tf.reverse_sequence(tf.reshape(
+          tf.concat(self._targets, 1),[batch_size,max_unrollings,num_outputs]),
+          self._seq_lengths,seq_axis=1,batch_axis=0),axis=1)[0]
+        # targets = self._targets[-1]
 
         # center and scale
         if config.data_scaler is not None:

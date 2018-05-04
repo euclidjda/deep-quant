@@ -569,7 +569,7 @@ class BatchGenerator(object):
 
         self.rewind()
         for i in range(num_batches):
-            if verbose is True and (i%(num_batches//50))==0:
+            if verbose is True and (i%(1+num_batches//50))==0:
                 print('.',end=''); sys.stdout.flush()
             b = self.next_batch()
 
