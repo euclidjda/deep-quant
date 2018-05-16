@@ -32,7 +32,7 @@ data_dir = 'datasets'
 s3_bucket = 'deep-quant-data'
 
 # we should read this list from file in datasets
-remote_file = 'open-dataset-2018-03-08.dat.gz'
+remote_file = 'open-dataset-2018-04-25.dat.gz'
 local_file = 'open-dataset.dat'
 
 
