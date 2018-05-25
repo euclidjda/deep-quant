@@ -76,6 +76,7 @@ def get_configs():
     configs.DEFINE_boolean("pretty_print_preds",False,"Print predictions in tabular format with inputs, targets, and keys")
     configs.DEFINE_boolean("scale_targets",True,"")
     configs.DEFINE_boolean("log_squasher",True,"Squash large normalized inputs with natural log function")
+    configs.DEFINE_boolean("ts_smoother",False,"Use smoother on data time series during training")
     configs.DEFINE_string("data_scaler",None,'sklearn scaling algorithm or None if no scaling')
     configs.DEFINE_string("optimizer", 'GradientDescentOptimizer', 'Any tensorflow optimizer in tf.train')
     configs.DEFINE_string("optimizer_params",None, 'Additional optimizer params such as momentum')

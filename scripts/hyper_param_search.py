@@ -115,7 +115,7 @@ def generate_results(pop,gen):
         result.append(errors[0])
         if result[-1] == 'nan':
             result[-1] = float('inf')
-    print("o"*80)
+    print("-"*80)
     print(result)
     assert(len(pop) == len(result))
     return result
@@ -196,8 +196,15 @@ def train_population(pop,gen):
     execute_train_scripts(pop,gen)
     poll_for_done(pop,gen)
     result = generate_results(pop,gen)
-    # result = generate_results_test(pop,gen)
+    #result = generate_results_test(pop,gen)
     return result
+
+def calc_diversity(pop):
+    mems = [serialize_member(m) for m in pop]
+    count = float(len(mems))
+    uniq  = float(len(set(mems)))
+    assert(count > 0)
+    return uniq/count
 
 def swap(items,i,j):
     """ Swap two items in a list
@@ -278,22 +285,22 @@ def get_next_generation(pop, gen, results):
     combined = list(zip(results,pop))
     # lowest values are at top of list
     print('-'*80)
-    print(type(combined))
-    print(type(combined[0][0]))
-    print(type(combined[0][1]))
+    #print(type(combined))
+    #print(type(combined[0][0]))
+    #print(type(combined[0][1]))
     combined.sort(key=lambda tup: tup[0])
     new_best = combined[0]
     survivors = [combined[i][1] for i in range(_NUM_SURVIVORS)]
     new_pop = list()
     for i in range(_POP_SIZE):
       # cross two suvivors
-      mom = survivors[random.randrange(_NUM_SURVIVORS)]
-      dad = survivors[random.randrange(_NUM_SURVIVORS)]
+      random.shuffle(survivors)
+      mom = survivors[0]
+      dad = survivors[1]
       child = cross_parents(mom,dad,child_name=get_name(gen+1,i))
       # mutations
       if random.random() <= _MUTATE_RATE:
         mutate(child)
-      print("FI "+serialize_member(child))
       new_pop.append(child)
     return new_pop, new_best
 
@@ -340,14 +347,13 @@ def execute_genetic_search(args):
         pickle.dump(pop,open("_latest_pop/latest_pop.pkl","wb"))
 
         result = train_population(pop,gen)
-        print('*'*80)
-        print(result)
+        diversity = calc_diversity(pop)
         (pop,new_best) = get_next_generation(pop,gen,result)
         if best is None or best[0] > new_best[0]:
             best = new_best
-        name = best[1]['--name'][0]
-        error = best[0]
-        print("Generation: %s Best: %s Error: %s"%(gen,name,error))
+        best_name = best[1]['--name'][0]
+        error = float(best[0])
+        print("Generation: %s Best: %s Error: %.4f Diversity: %.2f"%(gen,best_name,error,diversity))
 
 def get_all_config_permutations(src,tbl,i,result):
     flags = [f for f in sorted(src)]

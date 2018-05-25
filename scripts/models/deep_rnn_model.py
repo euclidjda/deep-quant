@@ -93,7 +93,8 @@ class DeepRnnModel(BaseModel):
                                                  input_keep_prob=ikp,seed=config.seed)
             return cell
 
-        stacked_rnn = tf.contrib.rnn.MultiRNNCell([rnn_cell() for _ in range(config.num_layers)])
+        stacked_rnn = tf.contrib.rnn.MultiRNNCell([rnn_cell() 
+                                                   for _ in range(config.num_layers)])
 
         rnn_outputs, state = tf.contrib.rnn.static_rnn(stacked_rnn,
                                                        self._scaled_inputs,
