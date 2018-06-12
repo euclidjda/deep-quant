@@ -83,6 +83,7 @@ def get_configs():
     configs.DEFINE_float("learning_rate",0.6,"The initial starting learning rate")
     configs.DEFINE_float("lr_decay",0.9, "Learning rate decay")
     configs.DEFINE_float("validation_size",0.0,"Size of validation set as %, ie. .3 = 30% of data")
+    configs.DEFINE_float("train_until",0.0,"Train until validation MSE is less than this value")
     configs.DEFINE_float("passes",1.0,"Passes through day per epoch")
     configs.DEFINE_float("target_lambda",0.5,"How much to weight last step vs. all steps in loss")
     configs.DEFINE_float("rnn_lambda",0.5,"How much to weight last step vs. all steps in loss")

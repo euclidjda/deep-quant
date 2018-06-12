@@ -86,12 +86,22 @@ def stop_training(config, perfs):
      and (len(perfs) > window_size)
      and (min(perfs) < min(perfs[-window_size:])) ):
         return True
+    elif config.train_until > perfs[-1]:
+        return True
     else:
         return False
 
 def train_model(config):
     print("Loading training data ...")
-    train_data, valid_data = data_utils.load_train_valid_data(config)
+    train_data = None
+    valid_data = None
+
+    if config.early_stop is None:
+        train_data = data_utils.load_all_data(config, is_training_only=True)
+        valid_data = train_data
+    else:
+        train_data, valid_data = data_utils.load_train_valid_data(config)
+        
 
     if config.start_date is not None:
         print("Training start date: ", config.start_date)
@@ -159,5 +169,5 @@ def train_model(config):
                 quit()
             else:
                 if ( (config.early_stop is None) or 
-                     (valid_history[-1] <= min(valid_history[:-1])) ):
+                     (valid_history[-1] <= min(valid_history)) ):
                     model_utils.save_model(session,config,i)
