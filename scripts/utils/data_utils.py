@@ -87,12 +87,12 @@ def build_and_write_trimmed_datfile(open_dataset_path, ticlist_path,
     shave_open_dataset(open_dataset_path, ticlist_path, trimmed_datfile_path)
 
 
-def load_all_data(config):
+def load_all_data(config, is_training_only=False):
     """
     Returns all data as a BatchGenerator object.
     """
     data_path = get_data_path(config.data_dir, config.datafile)
-    batches = BatchGenerator(data_path, config)
+    batches = BatchGenerator(data_path, config, is_training_only=is_training_only)
     
     return batches
 

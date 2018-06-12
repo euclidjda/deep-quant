@@ -37,7 +37,7 @@ class BatchGenerator(object):
     config.max_unrollings.
     """
     def __init__(self, filename, config, validation=True, require_targets=True,
-                     data=None, verbose=True):
+                     data=None, verbose=True, is_training_only=False):
         """
         Init a BatchGenerator.
         Data is loaded as a Pandas DataFrame and stored in the _data attribute.
@@ -63,6 +63,8 @@ class BatchGenerator(object):
         self._log_squasher = config.log_squasher
         self._start_date = config.start_date
         self._end_date = config.end_date
+        self._is_training_only = is_training_only
+        self._ts_smoother = config.ts_smoother
 
         assert self._stride >= 1
 
@@ -375,9 +377,19 @@ class BatchGenerator(object):
 
     def _get_feature_vector(self,end_idx,cur_idx):
         if cur_idx < self._data_len:
+            x = self._fin_inputs[cur_idx]
+            # Time-series smoother
+            if self._ts_smoother is True:
+                if cur_idx < end_idx:
+                    for i in range(cur_idx+1,end_idx+1):
+                        x += self._fin_inputs[i]
+                    x /= float(end_idx-cur_idx+1)
+                elif (cur_idx > end_idx) and (self._is_training_only is True):
+                    x += self._fin_inputs[end_idx]
+                    x /= 2.0
+            # Normalize feature vector by normalizing feature
             n = self._get_normalizer(end_idx)
             assert(n>0)
-            x = self._fin_inputs[cur_idx]
             y = np.divide(x,n)
             if self._log_squasher is True:
                 y_abs = np.absolute(y).astype(float)
@@ -487,14 +499,14 @@ class BatchGenerator(object):
             sample = list()
             z = zip(self._start_indices,self._end_indices)
             indices = random.sample(list(z),
-                                    int(0.10*len(self._start_indices)))
+                                    int(0.30*len(self._start_indices)))
+
             for start_idx, end_idx in indices:
                 step = random.randrange(self._min_unrollings)
                 cur_idx = start_idx+step*stride
                 x1 = self._get_feature_vector(end_idx,cur_idx)
-                sample.append(x1)
-                #x2 = self._get_aux_vector(i,idx)
-                #sample.append(np.append(x1,x2))
+                x2 = self._get_aux_vector(cur_idx)
+                sample.append(np.append(x1,x2))
 
             scaler = None
             if hasattr(sklearn.preprocessing, scaler_class):
@@ -508,10 +520,10 @@ class BatchGenerator(object):
             params['center'] = scaler.center_ if hasattr(scaler,'center_') else scaler.mean_
             params['scale'] = scaler.scale_
 
-            num_aux = len(self._aux_colixs)
-            if num_aux > 0:
-                params['center'] = np.append(params['center'], np.full( (num_aux), 0.0 ))
-                params['scale'] = np.append(params['scale'], np.full( (num_aux), 1.0 ))
+            #num_aux = len(self._aux_colixs)
+            #if num_aux > 0:
+            #    params['center'] = np.append(params['center'], np.full( (num_aux), 0.0 ))
+            #    params['scale'] = np.append(params['scale'], np.full( (num_aux), 1.0 ))
 
             self._scaling_params = params
 
@@ -645,7 +657,7 @@ class BatchGenerator(object):
         #sd = max(self._config.start_date,min(train_data['date']))
         #print("Train period: %d to %d"%(sd,max(train_data['date'])))
         return BatchGenerator("", self._config, validation=False,
-                                  data=train_data)
+                                  data=train_data, is_training_only=True)
 
     def valid_batches(self):
         """

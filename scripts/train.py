@@ -73,9 +73,35 @@ def run_epoch(session, model, train_data, valid_data,
 
     return (train_mse/train_steps,valid_mse/valid_steps)
 
+def stop_training(config, perfs):
+    """
+    Early stop algorithm
+    Args:
+      config:
+      perfs: History of validation performance on each iteration
+      file_prefix: how to name the chkpnt file
+    """
+    window_size = config.early_stop
+    if ( (window_size is not None)
+     and (len(perfs) > window_size)
+     and (min(perfs) < min(perfs[-window_size:])) ):
+        return True
+    elif config.train_until > perfs[-1]:
+        return True
+    else:
+        return False
+
 def train_model(config):
     print("Loading training data ...")
-    train_data, valid_data = data_utils.load_train_valid_data(config)
+    train_data = None
+    valid_data = None
+
+    if config.early_stop is None:
+        train_data = data_utils.load_all_data(config, is_training_only=True)
+        valid_data = train_data
+    else:
+        train_data, valid_data = data_utils.load_train_valid_data(config)
+        
 
     if config.start_date is not None:
         print("Training start date: ", config.start_date)
@@ -128,25 +154,20 @@ def train_model(config):
             valid_history.append( valid_mse )
 
             if re.match("Gradient|Momentum",config.optimizer):
-                lr = model_utils.adjust_learning_rate(session, model, lr, config.lr_decay, train_history )
+                lr = model_utils.adjust_learning_rate(session, model, 
+                                                      lr, config.lr_decay, train_history )
 
             if not os.path.exists(config.model_dir):
                 print("Creating directory %s" % config.model_dir)
                 os.mkdir(config.model_dir)
 
-            chkpt_file_prefix = "training.ckpt"
             if math.isnan(valid_mse):
                 print("Training failed due to nan.")
                 quit()
-            elif model_utils.stop_training(config,valid_history,chkpt_file_prefix):
+            elif stop_training(config,valid_history):
                 print("Training stopped.")
                 quit()
             else:
-                if (valid_history[-1] == min(valid_history)):
-                    last_checkpoint_path = tf.train.latest_checkpoint(config.model_dir)
-                    checkpoint_path = os.path.join(config.model_dir,chkpt_file_prefix)
-                    tf.train.Saver().save(session, checkpoint_path, global_step=i)
-                    if last_checkpoint_path is not None:
-                        os.remove(last_checkpoint_path+'.data-00000-of-00001')
-                        os.remove(last_checkpoint_path+'.index')
-                        os.remove(last_checkpoint_path+'.meta')
+                if ( (config.early_stop is None) or 
+                     (valid_history[-1] <= min(valid_history)) ):
+                    model_utils.save_model(session,config,i)

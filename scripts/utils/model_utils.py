@@ -32,22 +32,14 @@ from models.deep_rnn_model import DeepRnnModel
 
 #from log_reg_model import LogRegModel
 
-def stop_training(config, perfs, file_prefix):
-    """
-    Early stop algorithm
-
-    Args:
-      config:
-      perfs: History of validation performance on each iteration
-      file_prefix: how to name the chkpnt file
-    """
-    window_size = config.early_stop
-    if ( (window_size is not None)
-     and (len(perfs) > window_size)
-     and (min(perfs) < min(perfs[-window_size:])) ):
-        return True
-    else:
-        return False
+def save_model(session, config, step):
+    last_checkpoint_path = tf.train.latest_checkpoint(config.model_dir)
+    checkpoint_path = os.path.join(config.model_dir, "training.ckpt")
+    tf.train.Saver().save(session, checkpoint_path, global_step=step)
+    if last_checkpoint_path is not None:
+        os.remove(last_checkpoint_path+'.data-00000-of-00001')
+        os.remove(last_checkpoint_path+'.index')
+        os.remove(last_checkpoint_path+'.meta')
 
 def adjust_learning_rate(session, model,
                          learning_rate, lr_decay, cost_history, lookback=5):

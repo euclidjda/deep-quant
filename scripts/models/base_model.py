@@ -81,41 +81,15 @@ class BaseModel(object):
            predictions: the model predictions for each data point in batch
         """
 
-        print()
-        print("////////////////////////////////////////////////////////////////////////////////////")
-        print(batch.targets)
-
-        feed_dict = self._get_feed_dict(batch,keep_prob=1.0,training=training)
-
-        (s,t,lt,lkt,lkti,o,lo,lko,lkoi) = sess.run([self._seq_lengths,self._t,self._lt,self._lkt,self._lkti,self._o,self._lo,self._lko,self._lkoi],feed_dict)
-
         np.set_printoptions(suppress=True)
         np.set_printoptions(precision=3)
 
-        n = batch.normalizers[0]
+        print()
+        print(batch.inputs[-1][0][18:22])
 
-        def unnorm(n,x):
-            return n * np.multiply(np.sign(x),np.expm1(np.fabs(x)))
+        feed_dict = self._get_feed_dict(batch,keep_prob=1.0,training=training)
 
-        print("Seq Len ////////////////////////////////////////////////////////////////////////")
-        print(np.array(s))
-        print("Targets ////////////////////////////////////////////////////////////////////////")
-        print(np.array(t))
-        print(" Last Target Targets ////////////////////////////////////////////////////////////////////////")
-        print(np.array(lt))
-        print("Last k Targets ////////////////////////////////////////////////////////////////////////////")
-        print(np.array(lkt))
-        print("Last k Targets i /////////////////////////////////////////////////////////////////////")
-        print(np.array(lkti))
-        print("Outputs ////////////////////////////////////////////////////////////////////////")
-        print(np.array(o))
-        print(" Last Output ////////////////////////////////////////////////////////////////////////")
-        print(np.array(lo))
-        print("Last k Outputs ////////////////////////////////////////////////////////////////////////////")
-        print(np.array(lko))
-        print("Last k Outputs i /////////////////////////////////////////////////////////////////////")
-        print(np.array(lkoi))
-        print("////////////////////////////////////////////////////////////////////////////////////")
+        # (s,t,lt,lkt,lkti,o,lo,lko,lkoi) = sess.run([self._seq_lengths,self._t,self._lt,self._lkt,self._lkti,self._o,self._lo,self._lko,self._lkoi],feed_dict)
 
         (mse, preds) = sess.run([self._mse,self._predictions],feed_dict)
         # assert( train_evals > 0 )
