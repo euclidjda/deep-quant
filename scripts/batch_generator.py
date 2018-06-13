@@ -65,6 +65,7 @@ class BatchGenerator(object):
         self._end_date = config.end_date
         self._is_training_only = is_training_only
         self._ts_smoother = config.ts_smoother
+        self._backfill = config.backfill
 
         assert self._stride >= 1
 
@@ -422,8 +423,15 @@ class BatchGenerator(object):
             cursor = self._index_cursor[b]
             start_idx = self._start_indices[cursor]
             end_idx = self._end_indices[cursor]
-            seq_lengths[b] = ((end_idx-start_idx)//stride)+1
-            idx = start_idx + step*stride
+            idx = start_idx
+            if self._backfill is True:
+                seq_length = ((end_idx-start_idx)//stride)+1
+                diff = self._max_unrollings - seq_length
+                if step > diff:
+                    idx = start_idx + (step-diff)*stride
+            else:
+                seq_lengths[b] = ((end_idx-start_idx)//stride)+1
+                idx = start_idx + step*stride
 
             if idx > end_idx:
                 attr.append(None)
