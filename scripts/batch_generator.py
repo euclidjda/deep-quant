@@ -89,11 +89,11 @@ class BatchGenerator(object):
             data = pd.read_csv(filename, sep=' ', 
                                dtype={config.key_field: str})
             if config.end_date is not None:
-                data = data.drop(data[data['date'] > config.end_date].index)
+                data = data.drop(data[data[config.date_field] > config.end_date].index)
 
         # Define attributes
         self._keys = data[config.key_field].tolist()
-        self._dates = data['date'].tolist() # TODO: date name should be a config
+        self._dates = data[config.date_field].tolist()
         self._data = data
         self._data_len = len(data)
         assert(self._data_len)
@@ -307,7 +307,7 @@ class BatchGenerator(object):
         colnames = self._data.columns.values
         self._key_idx = np_array_index(colnames, config.key_field)
         self._active_idx = np_array_index(colnames, config.active_field)
-        self._date_idx = np_array_index(colnames, 'date')  # TODO: make date config
+        self._date_idx = np_array_index(colnames, config.date_field)
         self._normalizer_idx = np_array_index(colnames, config.scale_field)
 
         # Set up input-related attributes
@@ -635,7 +635,7 @@ class BatchGenerator(object):
 
     def _train_dates(self):
         data = self._data
-        dates = list(set(data['date']))
+        dates = list(set(data[self._config.date_field]))
         dates.sort()
         i = int(len(dates)*(1.0-self._config.validation_size))-1
         assert(i < len(dates))
@@ -644,7 +644,7 @@ class BatchGenerator(object):
 
     def _valid_dates(self):
         data = self._data
-        dates = list(set(data['date']))
+        dates = list(set(data[self._config.date_field]))
         dates.sort()
         i = int(len(dates)*(1.0-self._config.validation_size))-1
         i = max(i - (self._min_unrollings-1)*self._stride-1,0)
