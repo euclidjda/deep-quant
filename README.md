@@ -18,14 +18,10 @@ pip install -r requirements.txt
 If you have access to WRDS through an academic license, please use that data
 as it is much bette
 
-<span style="background-color: red">
-```text
-Do not use models built with the dataset described below for actually trading 
+**Do not use models built with the dataset described below for actually trading 
 or investing.
 This is a freely available dataset assembed from freely available sources and
-contains errors such as look-ahead bias and survivorship bias.
-```
-</span> 
+contains errors such as look-ahead bias and survivorship bias.**
 
 Data is passed to `deep_quant.py` as a `.dat` file, which is a space-delimited
 file. The user can either run deep-quant on the full `open-dataset.dat` that's
@@ -48,6 +44,7 @@ specifying that config file as the point of reference when running
 ```shell
 python scripts/deep_quant.py --config/system-test.conf --train=True
 ```
+
 This will load the corresponding data and cache it in batches in a directory
 called `_bcache`, and will save model checkpoints in a directory called
 `chkpts-system-test` (both of these directories will be created automatically).
