@@ -27,7 +27,7 @@ to learn how to create a dataset for deep-quant.
 
 **Do not use models built with the dataset described below for actually trading 
 or investing.
-This is a freely available dataset assembed from freely available sources and
+This is a freely available dataset assembled from freely available sources and
 contains errors such as look-ahead bias and survivorship bias.**
 
 Data is passed to `deep_quant.py` as a `.dat` file, which is a space-delimited
