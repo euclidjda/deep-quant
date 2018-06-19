@@ -2,7 +2,9 @@
 
 #### [by Euclidean Technologies, LLC](http://www.euclidean.com)
 
-Deep learning on company fundamental data for long-term investing
+On a periodic basis, publicly traded companies are required to report fundamentals: financial data such as revenue, operating income, debt, among others. These data points provide some insight into the financial health of a company.
+
+This repository contains a set of deep learning tool for forecasting company future fundamentals from historical fundamentals and other auxiliary data such as historical market and macro economic data.
 
 ## Installation and Setup
 
