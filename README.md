@@ -9,10 +9,10 @@ Deep learning on company fundamental data for long-term investing
 Clone repo, setup environment, and install requirements:
 
 ```shell 
-git clone https://github.com/euclidjda/deep-quant.git
-cd deep-quant
-export DEEP_QUANT_ROOT=`pwd`
-pip install -r requirements.txt
+$ git clone https://github.com/euclidjda/deep-quant.git
+$ cd deep-quant
+$ export DEEP_QUANT_ROOT=`pwd`
+$ pip install -r requirements.txt
 ```
 
 ## Preparing the Data
@@ -36,7 +36,9 @@ provided, or --if, for example, the user wants to train a model on a particular
 set of tickers-- on a trimmed version of `open-dataset.dat`. To obtain this
 file, run the command:
 
-`python scripts/build_datfile.py`
+```shell
+$ python scripts/build_datfile.py
+```
 
 This will create a `datasets/open-dataset.dat` file.
 
@@ -49,7 +51,7 @@ specifying that config file as the point of reference when running
 `open-dataset.dat`, as specified by `config/system-test.conf`:
 
 ```shell
-python scripts/deep_quant.py --config/system-test.conf --train=True
+$ python scripts/deep_quant.py --config/system-test.conf --train=True
 ```
 
 This will load the corresponding data and cache it in batches in a directory
@@ -71,8 +73,7 @@ To generate forecasts for the companies in the validation set, `deep_quant.py`
 must be run with the `--train` option set to False. For example:
 
 ```shell
-python scripts/deep_quant.py --config=config/system-test.conf --train=False --pretty_print_preds=True \
-   --mse_outfile=mse-data.txt > forecasts.txt
+$ python scripts/deep_quant.py --config=config/system-test.conf --train=False --pretty_print_preds=True --mse_outfile=mse-data.txt > forecasts.txt
 ```
 
 That'll produce a file called forecasts.txt with the predicted values for every
