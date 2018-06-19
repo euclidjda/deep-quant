@@ -18,14 +18,14 @@ pip install -r requirements.txt
 If you have access to WRDS through an academic license, please use that data
 as it is much bette
 
+<span style="background-color: red">
 ```text
-<!-- background: #fff4e3 -->
-<!-- color: #2d2422 -->
 Do not use models built with the dataset described below for actually trading 
 or investing.
 This is a freely available dataset assembed from freely available sources and
 contains errors such as look-ahead bias and survivorship bias.
 ```
+</span> 
 
 Data is passed to `deep_quant.py` as a `.dat` file, which is a space-delimited
 file. The user can either run deep-quant on the full `open-dataset.dat` that's
