@@ -1,5 +1,7 @@
 # Deep Quant
 
+#### [by Euclidean Technologies, LLC](http://www.euclidean.com)
+
 Deep learning on company fundamental data for long-term investing
 
 ## Installation and Setup
@@ -15,8 +17,13 @@ pip install -r requirements.txt
 
 ## Preparing the Data
 
-If you have access to WRDS through an academic license, please use that data
-as it is much bette
+If you have access to 
+[Wharton Research Data Services (WRDS)](https://wrds-web.wharton.upenn.edu/wrds/) 
+through your academic institution, 
+[go here](https://github.com/euclidjda/deep-quant/tree/master/scripts/WRDS)
+to learn how to create a dataset for deep-quant.  
+
+[WRDS instructions for creating a deep-quant data file for learning and forecasting.](https://github.com/euclidjda/deep-quant/tree/master/scripts/WRDS)
 
 **Do not use models built with the dataset described below for actually trading 
 or investing.
@@ -71,7 +78,15 @@ python scripts/deep_quant.py --config=config/system-test.conf --train=False --pr
 That'll produce a file called forecasts.txt with the predicted values for every
 financial feature at every timestep.
 
+## Contributors and Acknowledgement
 
-## Running the System Test
+This repository was developed and is maintained by [Euclidean Technologies, LLC](http://www.euclidean.com/). 
 
-`python scripts/deep_quant.py --config=config/system-test.conf --train=True`
+## License 
+
+This is experimental software. It is provided under the [MIT license][mit], so you can do with it whatever you wish except hold the authors responsible if it does something you don't like.
+
+[mit]: http://www.opensource.org/licenses/mit-license.php
+
+
+
