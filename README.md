@@ -4,7 +4,7 @@
 
 On a periodic basis, publicly traded companies are required to report fundamentals: financial data such as revenue, operating income, debt, among others. These data points provide some insight into the financial health of a company.
 
-This repository contains a set of deep learning tool for forecasting company future fundamentals from historical fundamentals and other auxiliary data such as historical market and macro economic data.
+This repository contains a set of deep learning tools for forecasting company future fundamentals from historical fundamentals and other auxiliary data such as historical prices and macro economic data.
 
 ## Installation and Setup
 
