@@ -33,10 +33,10 @@ This is a freely available dataset assembled from freely available sources and
 contains errors such as look-ahead bias and survivorship bias.**
 
 Data is passed to `deep_quant.py` as a `.dat` file, which is a space-delimited
-file. The user can either run deep-quant on the full `open-dataset.dat` that's
-provided, or --if, for example, the user wants to train a model on a particular
-set of tickers-- on a trimmed version of `open-dataset.dat`. To obtain this
-file, run the command:
+file. If you do not have access to a commerial or academic dataset and you would
+like to test this code, we have provided a "open dataset" called open-dataset.dat.
+Again this dataset should be use for testing purposes only. To obtain this file,
+run the command:
 
 ```shell
 $ python scripts/build_datfile.py
