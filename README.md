@@ -17,6 +17,12 @@ $ export DEEP_QUANT_ROOT=`pwd`
 $ pip install -r requirements.txt
 ```
 
+You may also want to put DEEP_QUANT_ROOT in your shell initialization file such .bash_profile so that it does not need to be defined every time you start a shell. For example, you could run the following from with in the deep-quant directory:
+
+```shell 
+$ echo "export DEEP_QUANT_ROOT="`pwd` >> ~/.bash_profile
+```
+
 ## Preparing the Data
 
 If you have access to 
