@@ -83,7 +83,7 @@ financial feature at every timestep.
 
 ## Contributors and Acknowledgement
 
-This repository was developed and is maintained by [Euclidean Technologies, LLC](http://www.euclidean.com/). 
+This repository was developed and is maintained by [Euclidean Technologies, LLC](http://www.euclidean.com/). Individual core contributors include [John Alberg](https://github.com/euclidjda), [Zachary Lipton](https://github.com/zackchase), [Lakshay Kumar Chauhan](https://github.com/lakshaykc), and [Ignacio Aranguren](https://github.com/nachoaz). 
 
 ## License 
 
