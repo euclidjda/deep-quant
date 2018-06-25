@@ -99,9 +99,7 @@ one of two search algorithms: grid_search or genetic.
 
 ```shell
 $ cd deep-quant
-$ mkdir exprmnts/search 
-$ cd exprmnts/search
-$ python hyper_param_search.py --template=$DEEP_QUANT_ROOT/config/hyper-search.conf --search_algorithm='genetic'
+$ python scripts/hyper_param_search.py --template=config/hyper-search.conf --search_algorithm='genetic'
 ```
 
 ## Contributors and Acknowledgement
