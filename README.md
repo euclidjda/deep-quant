@@ -87,7 +87,7 @@ $ python scripts/deep_quant.py --config=config/system-test.conf --train=False --
 That'll produce a file called forecasts.txt with the predicted values for every
 financial feature at every timestep.
 
-## Hyper-parameter search
+## Hyper-parameter Search
 
 The deep-quant repository contains tools for performing hyper-parameter searches. A hyper-parameter search requires a datafile
 and a configuration template. A configuration template takes the format of the learning configuration file with the
