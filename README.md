@@ -92,7 +92,7 @@ financial feature at every timestep.
 The deep-quant repository contains tools for performing hyper-parameter searches. A hyper-parameter search requires a datafile
 and a configuration template. A configuration template takes the format of the learning configuration file with the
 exception that each configation parameter has multiple values, seperated by spaces
-(see [deep-quant/config/hyper-search.conf]() for an example). 
+(for example an, see [hyper-search.conf](https://github.com/euclidjda/deep-quant/blob/master/config/hyper-search.conf). 
 The hyper-parameter search algorithms
 uses the template to definine the hyper-parameter search space (i.e., all possible parameter combinations). A user may specify
 one of two search algorithms: grid_search or genetic.
