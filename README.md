@@ -98,7 +98,6 @@ uses the template to definine the hyper-parameter search space (i.e., all possib
 one of two search algorithms: grid_search or genetic.
 
 ```shell
-$ cd deep-quant
 $ python scripts/hyper_param_search.py --template=config/hyper-search.conf --search_algorithm='genetic'
 ```
 
