@@ -32,9 +32,9 @@ or investing.
 This is a freely available dataset assembled from freely available sources and
 contains errors such as look-ahead bias and survivorship bias.**
 
-Data is passed to `deep_quant.py` as a `.dat` file, which is a space-delimited
-file. If you do not have access to a commerial or academic dataset and you would
-like to test this code, we have provided a "open dataset" called open-dataset.dat.
+Data is passed to `deep_quant.py` as a space-delimited
+flat file. If you do not have access to a commercial or academic dataset and you would
+like to test this code, we have provided a "open dataset" for this purpose.
 Again this dataset should be use for testing purposes only. To obtain this file,
 run the command:
 
