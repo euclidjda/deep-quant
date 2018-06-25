@@ -87,6 +87,23 @@ $ python scripts/deep_quant.py --config=config/system-test.conf --train=False --
 That'll produce a file called forecasts.txt with the predicted values for every
 financial feature at every timestep.
 
+## Hyper-parameter search
+
+The deep-quant repository contains tools for performing hyper-parameter searches. A hyper-parameter search requires a datafile
+and a configuration template. A configuration template takes the format of the learning configuration file with the
+exception that each configation parameter has multiple values, seperated by spaces
+(see [deep-quant/config/hyper-search.conf]() for an example). 
+The hyper-parameter search algorithms
+uses the template to definine the hyper-parameter search space (i.e., all possible parameter combinations). A user may specify
+one of two search algorithms: grid_search or genetic.
+
+```shell
+$ cd deep-quant
+$ mkdir exprmnts/search 
+$ exprmnts/search
+$ python hyper_param_search.py --template=$DEEP_QUANT_ROOT/config/hyper-search.conf --search_algorithm='genetic'
+```
+
 ## Contributors and Acknowledgement
 
 This repository was developed and is maintained by [Euclidean Technologies, LLC](http://www.euclidean.com/). Individual core contributors include [John Alberg](https://github.com/euclidjda), [Zachary Lipton](https://github.com/zackchase), [Lakshay Kumar Chauhan](https://github.com/lakshaykc), and [Ignacio Aranguren](https://github.com/nachoaz). 
