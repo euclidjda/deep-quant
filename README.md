@@ -95,12 +95,12 @@ exception that each configation parameter has multiple values, seperated by spac
 (for example an, see [hyper-search.conf](https://github.com/euclidjda/deep-quant/blob/master/config/hyper-search.conf)). 
 The hyper-parameter search algorithms
 uses the template to definine the hyper-parameter search space (i.e., all possible parameter combinations). A user may specify
-one of two search algorithms: grid_search or genetic. To test experiment with hyper-parameter search, execute the following 
+one of two search algorithms: grid_search or genetic. To experiment with hyper-parameter search, execute the following 
 from the deep-quant directory:
 
 ```shell
 $ mkdir search
-$ cd config/hyper-search.conf search/.
+$ cp config/hyper-search.conf search/.
 $ cd search
 $ python $DEEP_QUANT/scripts/hyper_param_search.py --template=hyper-search.conf --search_algorithm='genetic'
 ```
