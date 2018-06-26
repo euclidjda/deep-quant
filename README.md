@@ -33,7 +33,7 @@ to learn how to create a dataset for deep-quant.
 
 [WRDS instructions for creating a deep-quant data file for learning and forecasting.](https://github.com/euclidjda/deep-quant/tree/master/scripts/WRDS)
 
-**Do not use models built with the dataset described below for actually trading 
+**Do not use models built with the dataset described below for actual trading 
 or investing.
 This is a freely available dataset assembled from freely available sources and
 contains errors such as look-ahead bias and survivorship bias.**
