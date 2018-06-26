@@ -160,10 +160,6 @@ $ python scripts/deep_quant.py --config=config/wrds-rnn.conf --train=False --pre
 That'll produce a file called forecasts.txt with the predicted values for every
 financial feature at every timestep.
 
-## Contributors and Acknowledgement
-
-This repository was developed and is maintained by [Euclidean Technologies, LLC](http://www.euclidean.com/). 
-
 ## License 
 
 This is experimental software. It is provided under the [MIT license][mit], so you can do with it whatever you wish except hold the authors responsible if it does something you don't like.
