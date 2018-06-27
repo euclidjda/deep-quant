@@ -1,5 +1,4 @@
 argparse
-copy
 datetime
 gzip
 hashlib
