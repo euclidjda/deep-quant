@@ -1,6 +1,5 @@
 argparse
 datetime
-gzip
 hashlib
 math
 numpy
