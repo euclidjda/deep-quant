@@ -25,8 +25,6 @@ import wget
 
 import argparse
 
-from utils.data_utils import build_and_write_trimmed_datfile
-
 data_url = 'http://data.euclidean.com/open-data/'
 data_dir = 'datasets'
 s3_bucket = 'deep-quant-data'
@@ -51,7 +49,6 @@ def maybe_download(directory, filename, url):
         print("File %s already exists in %s" % (filename, directory))
     return filepath
 
-
 def gunzip_file(gz_path, new_path):
     """Unzips from gz_path into new_path unless it's already unzipped."""
     if not os.path.exists(new_path):
@@ -64,7 +61,6 @@ def gunzip_file(gz_path, new_path):
         print("Did not unzip %s because %s already exists." % (gz_path,
                                                                new_path))
 
-
 def download_data():
     print("Downloading data ...")
     maybe_download(data_dir, remote_file, data_url)
@@ -72,36 +68,9 @@ def download_data():
     datfile_path = os.path.join(data_dir, local_file)
     gunzip_file(gz_path, datfile_path)
 
-
-def main(ticlist, trimmed_datfile_name):
+def main():
     open_dataset_path = os.path.join(data_dir, local_file)
     download_data()
-    if ticlist is not None:
-        ticlist_path = os.path.join(data_dir, ticlist)
-        trimmed_datfile_path = os.path.join(data_dir, trimmed_datfile_name)
-        build_and_write_trimmed_datfile(open_dataset_path,
-                                        ticlist_path,
-                                        trimmed_datfile_path)
-
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument(
-            "--ticlist",
-            help="Specifies which tickers should be in the produced .dat "
-                 "file (NOTE: please postfix this with `.dat`)")
-
-    parser.add_argument(
-            "--trimmed_datfile_name",
-            help="The name you would like the produced .dat file to have. "
-                 "(NOTE: please postfix this with `.dat`)")
-
-    args = parser.parse_args()
-
-    if args.ticlist is not None and args.trimmed_datfile_name is None:
-        parser.error("Please specifiy a trimmed_datfile_name.")
-    elif args.ticlist is None and args.trimmed_datfile_name is not None:
-        parser.error("Please specify a ticlist.")
-
-    main(args.ticlist, args.trimmed_datfile_name)
+    main()
