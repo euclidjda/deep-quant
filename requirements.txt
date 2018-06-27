@@ -2,7 +2,6 @@ argparse
 datetime
 numpy
 pandas
-pickle
 random
 regex
 sklearn
