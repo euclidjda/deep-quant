@@ -119,7 +119,7 @@ class DeepRnnModel(BaseModel):
 
         outputs = tf.multiply(seqmask, outputs)
         targets = tf.multiply(seqmask, targets)
-        
+
         last_k_seqmask = seqmask[:,min_unrollings-1:,:]
         last_k_outputs = outputs[:,min_unrollings-1:,:]
         last_k_targets = targets[:,min_unrollings-1:,:]
@@ -151,17 +151,19 @@ class DeepRnnModel(BaseModel):
         self._o = outputs
 
         # Different components of mse definitions
-        self._mse_0 = self._mean_squared_error(last_k_targets[:,:,ktidx],
+        if config.backfill is True:
+            self._mse_0 = tf.losses.mean_squared_error(last_target[:,ktidx], last_output[:,ktidx])
+            self._mse_1 = tf.losses.mean_squared_error(last_target, last_output)
+        else:
+            self._mse_0 = self._mean_squared_error(last_k_targets[:,:,ktidx],
                                                    last_k_outputs[:,:,ktidx],
                                                    last_k_seqmask[:,:,ktidx])
-
-        self._mse_1 = self._mean_squared_error(last_k_targets, last_k_outputs, last_k_seqmask)
+            self._mse_1 = self._mean_squared_error(last_k_targets, last_k_outputs, last_k_seqmask)
 
         self._mse_2 = self._mean_squared_error(targets, outputs, seqmask)
 
         self._mse = tf.losses.mean_squared_error(last_target[:,ktidx], last_output[:,ktidx])
 
-        
         # here is the learning part of the graph
         p1 = config.target_lambda
         p2 = config.rnn_lambda
