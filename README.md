@@ -59,7 +59,7 @@ specifying that config file as the point of reference when running
 `open-dataset.dat`, as specified by `config/system-test.conf`:
 
 ```shell
-$ python scripts/deep_quant.py --config/system-test.conf --train=True
+$ python scripts/deep_quant.py --config=config/system-test.conf --train=True
 ```
 
 This will load the corresponding data and cache it in batches in a directory
