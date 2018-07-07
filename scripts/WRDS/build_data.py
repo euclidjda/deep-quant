@@ -11,16 +11,18 @@ Features: active, date, gvkey,  year,  month,  mom1m,   mom3m,  mom6m,  mom9m,
         ppentq_mrq,     aoq_mrq,        dlcq_mrq,       apq_mrq,        txpq_mrq,
         lcoq_mrq,   ltq_mrq,    csho_1yr_avg
 
-Takes about 40 minutes to build the dataset for top 2000 equities and outputs a dat file
+It takes around 30 mins to build the dataset for N=100 and date starting from 1980-01-01
+
 """
 
 import wrds
 import pandas as pd
 import datetime
+from dateutil.relativedelta import relativedelta
 import numpy as np
 import pickle
 from time import time
-from wrds_data_processing import data_processing
+from wrds_data_processing import DataProcessing
 from configparser import SafeConfigParser, NoOptionError
 import argparse as ap
 import sys
@@ -54,21 +56,44 @@ db = wrds.Connection()
 #### SQL Query-----------------------------------------------------------####
 #############################################################################
 
-# Query to get list of companies with top 2000 market cap
-q1a = ("select a.gvkey,a.latest,b.cshoq,b.prccq,b.mkvaltq,b.cshoq*b.prccq as market_cap,b.curcdq "
-     "from "
-        "(select gvkey,max(datadate) as latest "
-         "from "
-         "compm.fundq where datadate > '2017-01-01' "
-         "group by gvkey) a inner join "
-             "(select gvkey,datadate,mkvaltq,cshoq,prccq,curcdq "
-                "from compm.fundq where cshoq>0 and prccq>0 and curcdq='USD' and mkvaltq is not null) b "
-    "on a.gvkey = b.gvkey and a.latest=b.datadate "
-     "order by market_cap desc "
-    "limit %i")%N
+# Initialize dictionary to store top N gvkeys for every month
+top_gvkey_month = {}
+top_N_eq_gvkey_list_all = set()
 
-mrk_df = db.raw_sql(q1a)
-top_N_eq_gvkey_list_all = mrk_df['gvkey'].values.tolist()
+start_date = '1980-01-01'
+curr_date = datetime.datetime.strptime(start_date,'%Y-%m-%d')
+
+# Go through months starting with the start date and find top N companies by mrk cap
+# for that month.
+
+while curr_date < datetime.datetime.now():
+    prev_date = curr_date + relativedelta(months=-3)
+    curr_date_string = curr_date.strftime('%Y-%m-%d')
+    prev_date_string = prev_date.strftime('%Y-%m-%d')
+    print(curr_date.date())
+
+    # Query to get list of companies with top 2000 market cap for the given month
+    q1a = ("select a.gvkey,a.latest,b.cshoq,b.prccq,b.mkvaltq,b.cshoq*b.prccq as market_cap,b.curcdq "
+         "from "
+            "(select gvkey,max(datadate) as latest "
+             "from "
+             "compm.fundq where datadate between '%s' and '%s' "
+             "group by gvkey) a inner join "
+                 "(select gvkey,datadate,mkvaltq,cshoq,prccq,curcdq "
+                    "from compm.fundq where cshoq>0 and prccq>0 and curcdq='USD') b "
+        "on a.gvkey = b.gvkey and a.latest=b.datadate "
+         "order by market_cap desc "
+        "limit %i")%(prev_date_string,curr_date_string,N)
+
+    mrk_df = db.raw_sql(q1a)
+    gvkey_list_month = mrk_df['gvkey'].values.tolist()
+    top_gvkey_month[curr_date.date()] = gvkey_list_month
+    top_N_eq_gvkey_list_all |= set(gvkey_list_month)
+
+    # increment the date for next month
+    curr_date = curr_date + relativedelta(months=1)
+
+top_N_eq_gvkey_list_all = list(top_N_eq_gvkey_list_all)
 
 # Query to get GIC codes and remove the exclude_gics list
 q1b = ("select gvkey,gsector "
@@ -86,14 +111,14 @@ top_N_eq_gvkey_list = [k for k in top_N_eq_gvkey_list_all if k not in exclude_gv
 # Read the gvkey config file which contains the most recent list
 config_gvkey = SafeConfigParser()
 config_gvkey.read('gvkey-hist.dat')
-config_gvkey.set('gvkey_list','# Used to keep track of most recent requity list. No need to edit','')
+config_gvkey.set('gvkey_list', '# Used to keep track of most recent requity list. No need to edit', '')
 
 # Initialize active dict
-active = {key:1 for key in top_N_eq_gvkey_list}
+active = {key: 1 for key in top_N_eq_gvkey_list}
 
 if test_mode != 'yes':
     try:
-        mr_gvk_list = config_gvkey.get('gvkey_list','most_recent_list').split(',')
+        mr_gvk_list = config_gvkey.get('gvkey_list', 'most_recent_list').split(',')
         inactive_list = [k for k in mr_gvk_list if k not in top_N_eq_gvkey_list]
 
         # Add inactive gvkey
@@ -104,11 +129,11 @@ if test_mode != 'yes':
         top_N_eq_gvkey_list = list(set().union(top_N_eq_gvkey_list,inactive_list))
 
         # create the most recent list in the config file if it doesn't exist
-        config_gvkey.set('gvkey_list','most_recent_list',','.join(top_N_eq_gvkey_list))
+        config_gvkey.set('gvkey_list', 'most_recent_list', ','.join(top_N_eq_gvkey_list))
 
     except NoOptionError:
         # create the most recent list in the config file if it doesn't exist
-        config_gvkey.set('gvkey_list','most_recent_list',','.join(top_N_eq_gvkey_list))
+        config_gvkey.set('gvkey_list', 'most_recent_list', ','.join(top_N_eq_gvkey_list))
 
 
 # save to a file
@@ -176,6 +201,7 @@ def reorder_cols():
 # Create empty df to be appended for each equity
 df_all_eq = pd.DataFrame(columns=reorder_cols())
 
+
 # Start filling data by gvkey
 for key in gvkey_list:
     #print("GVKEY: %s"%key)
@@ -195,7 +221,7 @@ for key in gvkey_list:
     #print("\n")
 
     # Start data processing
-    dp = data_processing(lag=3)
+    dp = DataProcessing(lag=3, monthly_active_gvkey=top_gvkey_month)
 
     # Add the lag to the date index
     df = dp.add_lag(df)
@@ -204,25 +230,24 @@ for key in gvkey_list:
     new_df_empty = dp.create_df_monthly(df)
 
     # Add ttm and mrq data
-    status = active[key]
-    ttm_mrq_df = dp.create_ttm_mrq(df,new_df_empty,status)
+    ttm_mrq_df = dp.create_ttm_mrq(df, new_df_empty)
 
     # Adjust for stock split
-    df_split_adjusted = dp.adjust_cshoq(ttm_mrq_df,stock_split_df)
+    df_split_adjusted = dp.adjust_cshoq(ttm_mrq_df, stock_split_df)
 
     # Add price information
-    df_w_price,price_df_for_mom = dp.add_price_features(df_split_adjusted,price_df)
+    df_w_price, price_df_for_mom = dp.add_price_features(df_split_adjusted, price_df)
 
     # Add momentum features
-    df_w_mom = dp.get_mom(df_w_price,price_df_for_mom,[1,3,6,9])
+    df_w_mom = dp.get_mom(df_w_price, price_df_for_mom, [1, 3, 6, 9])
     
     # Add csho_1_year average
-    df_w_mom['csho_1yr_avg'] = df_w_mom['cshoq_mrq'].rolling(12,min_periods=1).mean()
+    df_w_mom['csho_1yr_avg'] = df_w_mom['cshoq_mrq'].rolling(12, min_periods=1).mean()
 
     # Reorder column names
     new_order = reorder_cols()
 
-    del df,price_df,stock_split_df
+    del df, price_df, stock_split_df
 
     df_out = df_w_mom[new_order]
 
@@ -231,28 +256,28 @@ for key in gvkey_list:
     df_out = df_out.reset_index(drop=True)
 
     # Append the current df to the full_df
-    df_all_eq = df_all_eq.append(df_out,ignore_index=True)
+    df_all_eq = df_all_eq.append(df_out, ignore_index=True)
 
 # Normalize the momentum features
 dates = df_all_eq['datadate'].unique()
 
-mom_f = ['mom1m','mom3m','mom6m','mom9m']
+mom_f = ['mom1m', 'mom3m', 'mom6m', 'mom9m']
 
 for date in dates:
     date = pd.Timestamp(date)
-    df_date = df_all_eq[mom_f][df_all_eq['datadate']==date]
+    df_date = df_all_eq[mom_f][df_all_eq['datadate'] == date]
 
     ix_dates = df_date.index
     df_norm = (df_date - df_date.min())/(df_date.max() - df_date.min())
 
     df_norm = df_norm.fillna(0.0)
 
-    df_all_eq.loc[ix_dates,mom_f] = df_norm
+    df_all_eq.loc[ix_dates, mom_f] = df_norm
 
     del df_date, df_norm
 
 # Change date label from 'datadate' to 'date'
-df_all_eq.rename(columns={'datadate':'date'},inplace=True)
+df_all_eq.rename(columns={'datadate':'date'}, inplace=True)
 
 # Change date from Y-m-d to ymd
 df_all_eq['date'] = df_all_eq['date'].dt.strftime('%Y%m')
@@ -261,7 +286,7 @@ df_all_eq['date'] = df_all_eq['date'].dt.strftime('%Y%m')
 df_all_eq = df_all_eq.rename(columns={'gsector':'gics-sector'})
 
 # Output the csv
-df_all_eq.to_csv(out_filename,sep=' ',index=False)
+df_all_eq.to_csv(out_filename, sep=' ', index=False)
 
 exec_time = time() -start_time
 
