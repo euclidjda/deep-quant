@@ -4,39 +4,42 @@ import datetime
 from dateutil.relativedelta import relativedelta
 import sys
 
-class data_processing(object):
-    """ Process data from wrds into usable format """
 
-    def __init__(self,lag = 3,equity_list=None):
+class DataProcessing(object):
+
+    """ Process data from wrds into usable format """
+    def __init__(self, lag=3, monthly_active_gvkey=None, equity_list=None):
         self.lag = lag
         self.equity_list = equity_list
 
-        if self.lag%3 != 0:
-            print("Enter the lag value in multples of 3. Lag frequency is in quarters")
+        if self.lag % 3 != 0:
+            print("Enter the lag value in multiples of 3. Lag frequency is in quarters")
 
-        self.income_list = ['saleq','cogsq','xsgaq','oiadpq','niq']
+        self.income_list = ['saleq', 'cogsq', 'xsgaq', 'oiadpq', 'niq']
         self.ttm_list = [x + '_ttm' for x in self.income_list]
 
         self.blnc_sheet_list = ['cheq','rectq','invtq','acoq','ppentq','aoq',
                                 'dlcq','apq','txpq','lcoq','ltq','dlttq','cshoq','seqq','atq']
         self.mrq_list = [x + '_mrq' for x in self.blnc_sheet_list]
 
-    def add_1_day(self,date):
+        self.monthly_active_gvkey = monthly_active_gvkey
+
+    def add_1_day(self, date):
         """Adds 1 day to the given date"""
         return date + datetime.timedelta(days=1)
 
-    def add_date_lag(self,date):
+    def add_date_lag(self, date):
         """Adds the lag to the given date"""
         return date + relativedelta(months=self.lag)
 
-    def add_lag(self,df):
+    def add_lag(self, df):
         """Adds the lag to the index of the dataframe"""
         df.index = df.index.map(self.add_date_lag)
         return df
 
-    def create_df_monthly(self,df):
+    def create_df_monthly(self, df):
         """Returns the new empty df with monthly frequency between start and
-            end of orginal dataframe.
+            end of original dataframe.
 
             Make sure index is date and data is date sorted
         """
@@ -52,36 +55,36 @@ class data_processing(object):
 
         return new_df
 
-    def get_mrq_date(self,date):
+    def get_mrq_date(self, date):
         """Returns last day of most recent quarter for which the financial
             data is present"""
 
-        q_last_days = ((3,31),(6,30),(9,30),(12,31))
+        q_last_days = ((3,31), (6,30), (9,30), (12,31))
 
         m = date.month
         d = date.day
         y = date.year
 
-        if (m,d) in q_last_days:
+        if (m, d) in q_last_days:
             mrq_date = date
 
         else:
-            if m>=1 and m<=3:
+            if 1 <= m <= 3:
                 mrq_date = datetime.date(y-1,12,31)
-            elif m>=4 and m<=6:
+            elif 4 <= m <= 6:
                 mrq_date = datetime.date(y,3,31)
-            elif m>=7 and m<=9:
+            elif 7 <= m <= 9:
                 mrq_date = datetime.date(y,6,30)
-            elif m>=10 and m<=12:
+            elif 10 <= m <= 12:
                 mrq_date = datetime.date(y,9,30)
 
         return mrq_date
 
-    def get_next_q_date(self,date):
+    def get_next_q_date(self, date):
         """Returns last day of most recent quarter for which the financial
             data is present"""
 
-        q_last_days = ((3,31),(6,30),(9,30),(12,31))
+        q_last_days = ((3,31), (6,30), (9,30), (12,31))
 
         m = date.month
         d = date.day
@@ -91,26 +94,24 @@ class data_processing(object):
             return date
 
         else:
-            if m>=1 and m<=3:
+            if 1 <= m <= 3:
                 return datetime.date(y,3,31)
-            elif m>=4 and m<=6:
+            elif 4 <= m <= 6:
                 return datetime.date(y,6,30)
-            elif m>=7 and m<=9:
+            elif 7 <= m <= 9:
                 return datetime.date(y,9,30)
-            elif m>=10 and m<=12:
+            elif 10 <= m <= 12:
                 return datetime.date(y,12,31)
 
-
-    def last_fin_year_range(self,date):
+    def last_fin_year_range(self, date):
         """Returns the range of last financial year"""
 
         mrq = self.get_mrq_date(date)
         last_year_start = date - relativedelta(years=1)
 
-        return [last_year_start,mrq]
+        return [last_year_start, mrq]
 
-
-    def fill_mrq(self,df,new_df):
+    def fill_mrq(self, df, new_df):
         # Create a copy of df and change the index with 1 day
         df_next_day = df.copy()
 
@@ -134,8 +135,7 @@ class data_processing(object):
 
         return new_df
 
-
-    def create_ttm_mrq(self,df,new_df,status):
+    def create_ttm_mrq(self, df, new_df):
         """Returns the dataframe with _ttm and _mrq fields"""
 
         # Forward fill the origianl dataframe
@@ -149,7 +149,6 @@ class data_processing(object):
         new_df = new_df[cols]
 
         # Update gvkey
-        new_df['active'] = status
         new_df['datadate'] = new_df.index.values
         new_df['gvkey'] = df['gvkey'].iloc[0]
         new_df['gsector'] = df['gsector'].iloc[0]
@@ -160,7 +159,15 @@ class data_processing(object):
         new_df = self.fill_mrq(df,new_df)
 
         # Fill TTM data
-        for i,date in enumerate(new_df.index):
+        for i, date in enumerate(new_df.index):
+
+            # Update active status if gvkey was in top N list for that month.
+            # Uses monthly_active_gvkey dict
+            tmp_gvkey = new_df.loc[date, 'gvkey']
+            if date.date() in self.monthly_active_gvkey:
+                if tmp_gvkey in self.monthly_active_gvkey[date.date()]:
+                    new_df.loc[date, 'active'] = 1
+
             fin_year = self.last_fin_year_range(date.date())
 
             # Calculate the dates in df index that lie in the range
@@ -171,7 +178,7 @@ class data_processing(object):
 
             ttm = last_4_q.sum().to_frame().transpose()
 
-            new_df.loc[date,self.ttm_list] = ttm[self.income_list].values[0]
+            new_df.loc[date, self.ttm_list] = ttm[self.income_list].values[0]
 
         return new_df
 
@@ -242,7 +249,6 @@ class data_processing(object):
         # To avoid zero divsion error, if the first element is NaN it is filled
         # 1e10 so that the division yields close to zero for momentum feature
 
-
         def period_price(row):
             """Returns the price p periods ago"""
             ix = row.name
@@ -271,6 +277,7 @@ class data_processing(object):
             del mom_p
 
         return new_df
+
 
 if __name__=='__main__':
 

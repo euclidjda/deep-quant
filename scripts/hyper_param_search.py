@@ -354,27 +354,28 @@ def execute_genetic_search(args):
         best_name = best[1]['--name'][0]
         error = float(best[0])
         print("Generation: %s Best: %s Error: %.4f Diversity: %.2f"%(gen,best_name,error,diversity))
+        sys.stdout.flush()
 
-def get_all_config_permutations(src,tbl,i,result):
+def get_all_config_permutations(src,tbl,i,allperms):
     flags = [f for f in sorted(src)]
     if i == len(flags):
-        result.append(tbl)
+        allperms.append(tbl)
     else:
         flag = flags[i]
         curr = src[flag]
         for param in curr:
             new_tbl = tbl.copy()
             new_tbl[flag] = [param]
-            get_all_config_permutations(src,new_tbl,i+1,result)
+            get_all_config_permutations(src,new_tbl,i+1,allperms)
 
 def execute_grid_search(args):
     config_filename = args.template
     # config is a dict of lists
     config = parse_config(config_filename)
-    result = list()
+    allperms = list()
     tbl = dict()
-    get_all_config_permutations(config,tbl,0,result)
-    train_population(result,0)
+    get_all_config_permutations(config,tbl,0,allperms)
+    train_population(allperms,0)
 
 def main():
 
