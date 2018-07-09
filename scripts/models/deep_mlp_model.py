@@ -40,6 +40,11 @@ class DeepMlpModel(BaseModel):
           config
         """
 
+        if hasattr(tf.nn,config.activation_fn):
+            self._activation_fn = getattr(tf.nn, config.activation_fn)
+        else:
+            raise RuntimeError("Unknown activation function = %s"%self._activation_fn)
+        
         self._max_unrollings = max_unrollings = config.max_unrollings
         self._num_inputs = num_inputs = config.num_inputs
         self._num_outputs = num_outputs = config.num_outputs
@@ -164,4 +169,5 @@ class DeepMlpModel(BaseModel):
                                               center=True, scale=True,
                                               is_training=self._phase,
                                               scope='bn')
-            return tf.nn.relu(h2, 'relu')
+            # return tf.nn.relu(h2, 'relu')
+            return self._activation_fn(h2,name='activation_fn')

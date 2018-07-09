@@ -48,6 +48,7 @@ def get_configs():
     configs.DEFINE_string("data_dir",'',"The data directory")
     configs.DEFINE_string("model_dir",'',"Model directory")
     configs.DEFINE_string("rnn_cell",'gru',"lstm or gru")
+    configs.DEFINE_string("activation_fn",'relu',"MLP activation function in tf.nn.*")
     configs.DEFINE_integer("num_inputs", -1,"")
     configs.DEFINE_integer("num_outputs", -1,"")
     configs.DEFINE_integer("target_idx",None,"")
