@@ -132,7 +132,7 @@ active date gvkey year month mom1m mom3m mom6m mom9m mrkcap ...
 Build a model with WRDS training data:
 
 ```shell
-$ python scripts/deep_quant.py --config/wrds-rnn.conf --train=True
+$ python scripts/deep_quant.py --config=config/wrds-rnn.conf --train=True
 ```
 
 This will load the corresponding data and cache it in batches in a directory
