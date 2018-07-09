@@ -111,10 +111,14 @@ def generate_results(pop,gen):
         # remove lines w/o error
         content = [s for s in content if re.search('MSE',s)]
         errors = [float(s.split()[_VALID_ERR_IDX]) for s in content]
-        errors.sort()
-        result.append(errors[0])
+        if len(errors) > 0:
+            errors.sort()
+            result.append(errors[0])
+        else:
+            result.append(float('inf'))
         if result[-1] == 'nan':
             result[-1] = float('inf')
+
     print("-"*80)
     print(result)
     assert(len(pop) == len(result))
@@ -353,7 +357,7 @@ def execute_genetic_search(args):
             best = new_best
         best_name = best[1]['--name'][0]
         error = float(best[0])
-        print("Generation: %s Best: %s Error: %.4f Diversity: %.2f"%(gen,best_name,error,diversity))
+        print("Generation: %s Best: %s Error: %.4f Diversity: %3d%%"%(gen,best_name,error,int(100*diversity)))
         sys.stdout.flush()
 
 def get_all_config_permutations(src,tbl,i,allperms):
