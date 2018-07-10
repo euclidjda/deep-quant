@@ -203,60 +203,67 @@ df_all_eq = pd.DataFrame(columns=reorder_cols())
 
 
 # Start filling data by gvkey
-for key in gvkey_list:
-    #print("GVKEY: %s"%key)
-    df = df_all[df_all['gvkey'] == key].copy()
-    df = df.sort_values('datadate')
-    df = df.set_index('datadate',drop=False)
-    df = df[~df.index.duplicated(keep='first')]
-    #print("df shape:%g,%g"%df.shape)
+for jj,key in enumerate(gvkey_list):
+    try:
+        t0=time()
+        #print("GVKEY: %s"%key)
+        df = df_all[df_all['gvkey'] == key].copy()
+        df = df.sort_values('datadate')
+        df = df.set_index('datadate',drop=False)
+        df = df[~df.index.duplicated(keep='first')]
+        #print("df shape:%g,%g"%df.shape)
 
-    # get price_df for the current gvkey
-    price_df = price_df_all[price_df_all['gvkey']==key].copy()
-    #print("price df shape:%g,%g"%price_df.shape)
+        # get price_df for the current gvkey
+        price_df = price_df_all[price_df_all['gvkey']==key].copy()
+        #print("price df shape:%g,%g"%price_df.shape)
 
-    # get stock_split_df for the current gvkey
-    stock_split_df = stock_split_df_all[stock_split_df_all['gvkey']==key].copy()
-    #print("stock split df shape:%g,%g"%stock_split_df.shape)
-    #print("\n")
+        # get stock_split_df for the current gvkey
+        stock_split_df = stock_split_df_all[stock_split_df_all['gvkey']==key].copy()
+        #print("stock split df shape:%g,%g"%stock_split_df.shape)
+        #print("\n")
 
-    # Start data processing
-    dp = DataProcessing(lag=3, monthly_active_gvkey=top_gvkey_month)
+        # Start data processing
+        dp = DataProcessing(lag=3, monthly_active_gvkey=top_gvkey_month)
 
-    # Add the lag to the date index
-    df = dp.add_lag(df)
+        # Add the lag to the date index
+        df = dp.add_lag(df)
 
-    # Create new df with monthly frequency (empty)
-    new_df_empty = dp.create_df_monthly(df)
+        # Create new df with monthly frequency (empty)
+        new_df_empty = dp.create_df_monthly(df)
 
-    # Add ttm and mrq data
-    ttm_mrq_df = dp.create_ttm_mrq(df, new_df_empty)
+        # Add ttm and mrq data
+        ttm_mrq_df = dp.create_ttm_mrq(df, new_df_empty)
 
-    # Adjust for stock split
-    df_split_adjusted = dp.adjust_cshoq(ttm_mrq_df, stock_split_df)
+        # Adjust for stock split
+        df_split_adjusted = dp.adjust_cshoq(ttm_mrq_df, stock_split_df)
 
-    # Add price information
-    df_w_price, price_df_for_mom = dp.add_price_features(df_split_adjusted, price_df)
+        # Add price information
+        df_w_price, price_df_for_mom = dp.add_price_features(df_split_adjusted, price_df)
 
-    # Add momentum features
-    df_w_mom = dp.get_mom(df_w_price, price_df_for_mom, [1, 3, 6, 9])
-    
-    # Add csho_1_year average
-    df_w_mom['csho_1yr_avg'] = df_w_mom['cshoq_mrq'].rolling(12, min_periods=1).mean()
+        # Add momentum features
+        df_w_mom = dp.get_mom(df_w_price, price_df_for_mom, [1, 3, 6, 9])
 
-    # Reorder column names
-    new_order = reorder_cols()
+        # Add csho_1_year average
+        df_w_mom['csho_1yr_avg'] = df_w_mom['cshoq_mrq'].rolling(12, min_periods=1).mean()
 
-    del df, price_df, stock_split_df
+        # Reorder column names
+        new_order = reorder_cols()
 
-    df_out = df_w_mom[new_order]
+        del df, price_df, stock_split_df
 
-    # Fill Nans with 0.0
-    df_out = df_out.fillna(0.0)
-    df_out = df_out.reset_index(drop=True)
+        df_out = df_w_mom[new_order]
 
-    # Append the current df to the full_df
-    df_all_eq = df_all_eq.append(df_out, ignore_index=True)
+        # Fill Nans with 0.0
+        df_out = df_out.fillna(0.0)
+        df_out = df_out.reset_index(drop=True)
+
+        # Append the current df to the full_df
+        df_all_eq = df_all_eq.append(df_out, ignore_index=True)
+
+        print("%i GVKEY: %s, Time %2.2f"%(jj,key,time()-t0))
+
+    except:
+        raise
 
 # Normalize the momentum features
 dates = df_all_eq['datadate'].unique()

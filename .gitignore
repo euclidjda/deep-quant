@@ -110,3 +110,9 @@ output.txt
 training.ckpt*
 checkpoint
 *.pkl
+
+#pycharm
+.idea/
+
+# temp files
+/error-analysis/test_EDA/
