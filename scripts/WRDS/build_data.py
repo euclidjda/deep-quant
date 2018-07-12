@@ -260,10 +260,10 @@ for jj,key in enumerate(gvkey_list):
         # Append the current df to the full_df
         df_all_eq = df_all_eq.append(df_out, ignore_index=True)
 
-        print("%i GVKEY: %s, Time %2.2f"%(jj,key,time()-t0))
+        print("%i GVKEY: %s, Time %2.2f"%(jj, key, time()-t0))
 
-    except:
-        raise
+    except ValueError:
+        pass
 
 # Normalize the momentum features
 dates = df_all_eq['datadate'].unique()
