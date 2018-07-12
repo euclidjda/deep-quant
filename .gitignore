@@ -116,3 +116,4 @@ checkpoint
 
 # temp files
 /error-analysis/test_EDA/
+/error-analysis/errorplotting.py
