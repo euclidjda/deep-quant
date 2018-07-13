@@ -67,9 +67,9 @@ curr_date = datetime.datetime.strptime(start_date,'%Y-%m-%d')
 # for that month.
 
 while curr_date < datetime.datetime.now():
-    prev_date = curr_date + relativedelta(months=-3)
+    # prev_date = curr_date + relativedelta(months=-3)
     curr_date_string = curr_date.strftime('%Y-%m-%d')
-    prev_date_string = prev_date.strftime('%Y-%m-%d')
+    # prev_date_string = prev_date.strftime('%Y-%m-%d')
     print(curr_date.date())
 
     # Query to get list of companies with top 2000 market cap for the given month
@@ -77,13 +77,13 @@ while curr_date < datetime.datetime.now():
          "from "
             "(select gvkey,max(datadate) as latest "
              "from "
-             "compm.fundq where datadate between '%s' and '%s' "
+             "compm.fundq where datadate < '%s' "
              "group by gvkey) a inner join "
                  "(select gvkey,datadate,mkvaltq,cshoq,prccq,curcdq "
                     "from compm.fundq where cshoq>0 and prccq>0 and curcdq='USD') b "
         "on a.gvkey = b.gvkey and a.latest=b.datadate "
          "order by market_cap desc "
-        "limit %i")%(prev_date_string,curr_date_string,N)
+        "limit %i")%(curr_date_string,N)
 
     mrk_df = db.raw_sql(q1a)
     gvkey_list_month = mrk_df['gvkey'].values.tolist()
@@ -148,11 +148,8 @@ top_N_eq_gvkey = ",".join(top_N_eq_gvkey)
 q2 = ("select datadate,gvkey,tic,saleq,cogsq,xsgaq,oiadpq,niq,"
       "cheq, rectq, invtq, acoq, ppentq, aoq, dlcq, apq, txpq, lcoq, ltq, dlttq, cshoq, seqq, atq "
     "from compm.fundq "
-     "where gvkey in (%s) ")%top_N_eq_gvkey
+     "where gvkey in (%s) and datadate > '%s' ")%(top_N_eq_gvkey,start_date)
 fundq_df = db.raw_sql(q2)
-print('\n')
-print("Shape of raw dataframe: %g,%g"%fundq_df.shape)
-print('\n')
 
 # Add gics_sector as a column
 fundq_df = pd.merge(fundq_df,df_gic,how='left',on=['gvkey'])
@@ -198,6 +195,7 @@ def reorder_cols():
     new_order = a + mom + prc + ttm_list_tmp + mrq_list_tmp + csho
     return new_order
 
+
 # Create empty df to be appended for each equity
 df_all_eq = pd.DataFrame(columns=reorder_cols())
 
@@ -206,21 +204,21 @@ df_all_eq = pd.DataFrame(columns=reorder_cols())
 for jj,key in enumerate(gvkey_list):
     try:
         t0=time()
-        #print("GVKEY: %s"%key)
+        # print("GVKEY: %s"%key)
         df = df_all[df_all['gvkey'] == key].copy()
         df = df.sort_values('datadate')
         df = df.set_index('datadate',drop=False)
         df = df[~df.index.duplicated(keep='first')]
-        #print("df shape:%g,%g"%df.shape)
+        # print("df shape:%g,%g"%df.shape)
 
         # get price_df for the current gvkey
         price_df = price_df_all[price_df_all['gvkey']==key].copy()
-        #print("price df shape:%g,%g"%price_df.shape)
+        # print("price df shape:%g,%g"%price_df.shape)
 
         # get stock_split_df for the current gvkey
         stock_split_df = stock_split_df_all[stock_split_df_all['gvkey']==key].copy()
-        #print("stock split df shape:%g,%g"%stock_split_df.shape)
-        #print("\n")
+        # print("stock split df shape:%g,%g"%stock_split_df.shape)
+        # print("\n")
 
         # Start data processing
         dp = DataProcessing(lag=3, monthly_active_gvkey=top_gvkey_month)
@@ -262,7 +260,7 @@ for jj,key in enumerate(gvkey_list):
 
         print("%i GVKEY: %s, Time %2.2f"%(jj, key, time()-t0))
 
-    except ValueError:
+    except (ValueError, IndexError):
         pass
 
 # Normalize the momentum features
@@ -294,6 +292,10 @@ df_all_eq = df_all_eq.rename(columns={'gsector':'gics-sector'})
 
 # Output the csv
 df_all_eq.to_csv(out_filename, sep=' ', index=False)
+
+print('\n')
+print("Shape of dataframe: %g,%g"%df_all_eq.shape)
+print('\n')
 
 exec_time = time() -start_time
 
