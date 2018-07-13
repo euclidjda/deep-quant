@@ -7,6 +7,8 @@ import datetime as dt
 import numpy as np
 from collections import OrderedDict
 
+from errorplots import ErrorPlots
+
 
 class ErrorAnalysis(object):
     """ Reads log and output files to analyze errors"""
@@ -171,5 +173,11 @@ if __name__ == '__main__':
     mse = EA.read_train_log()
     print(mse)
     print("getting errors")
-    df_err = EA.get_errors(save_csv=True)
+    df_err = EA.get_errors()
     print(df_err.head())
+
+    EP = ErrorPlots(mse, df_err)
+    EP.plot_train_hist()
+    EP.plot_cdf()
+    print("Threshold count: %2.2f"%EP.get_threshold_count())
+    EP.plot_error_dist()
