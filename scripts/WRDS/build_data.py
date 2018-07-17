@@ -80,7 +80,7 @@ while curr_date < datetime.datetime.now():
              "compm.fundq where datadate < '%s' "
              "group by gvkey) a inner join "
                  "(select gvkey,datadate,mkvaltq,cshoq,prccq,curcdq "
-                    "from compm.fundq where cshoq>0 and prccq>0 and curcdq='USD') b "
+                    "from compm.fundq where cshoq>0 and prccq>0 and curcdq='USD' and mkvaltq>0) b "
         "on a.gvkey = b.gvkey and a.latest=b.datadate "
          "order by market_cap desc "
         "limit %i")%(curr_date_string,N)
