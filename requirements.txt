@@ -4,5 +4,4 @@ pandas
 regex
 sklearn
 tensorflow
-utils
 wget
