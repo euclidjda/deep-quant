@@ -300,8 +300,8 @@ class BatchGenerator(object):
         self._fin_colixs = get_colixs_from_colname_range(
                 self._data, config.financial_fields)
 
-        self._aux_colixs += get_colixs_from_colname_range(
-                self._data, config.aux_fields)
+        self._aux_colixs += get_colixs_from_colname_range(self._data, 
+                                                          config.aux_fields)
 
         # Set up other attributes
         colnames = self._data.columns.values
