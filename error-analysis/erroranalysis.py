@@ -2,15 +2,12 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import matplotlib.pyplot as plt
 import pandas as pd
 import datetime as dt
 import numpy as np
 from collections import OrderedDict
-from dateutil.relativedelta import *
-import os
-import sys
-import pickle
+
+from errorplots import ErrorPlots
 
 
 class ErrorAnalysis(object):
@@ -176,5 +173,11 @@ if __name__ == '__main__':
     mse = EA.read_train_log()
     print(mse)
     print("getting errors")
-    df_err = EA.get_errors(save_csv=True)
+    df_err = EA.get_errors()
     print(df_err.head())
+
+    EP = ErrorPlots(mse, df_err)
+    EP.plot_train_hist()
+    EP.plot_cdf()
+    print("Threshold count: %2.2f"%EP.get_threshold_count())
+    EP.plot_error_dist()
