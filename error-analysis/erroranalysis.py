@@ -67,6 +67,8 @@ class ErrorAnalysis(object):
         if self.pred_file is None:
             print('Predictions file not provided')
             return
+        else:
+            print('Reading '+self.pred_file)
 
         # initialize the dicts
         companies={}
@@ -82,7 +84,7 @@ class ErrorAnalysis(object):
                     cur_target = lines[i + 7].split('  ')[self.output_field]
 
                     if cur_target == 'nan':
-                        cur_target = 0.
+                        cur_target = 0.0
 
                     cur_output = float(cur_output)
                     cur_target = float(cur_target)
@@ -166,15 +168,15 @@ if __name__ == '__main__':
 
     # Test
     train_file='test_EA/train-log-12.txt'
-    pred_file='test_EA/predicts-rnn-fcst-pretty.dat'
+    pred_file='test_EA/pretty-preds.dat'
 
     EA = ErrorAnalysis(train_file, pred_file)
     print("Reading train log")
     mse = EA.read_train_log()
     print(mse)
     print("getting errors")
-    df_err = EA.get_errors()
-    print(df_err.head())
+    df_err = EA.get_errors(save_csv=True)
+    print(df_err.head(20))
 
     EP = ErrorPlots(mse, df_err)
     EP.plot_train_hist()
