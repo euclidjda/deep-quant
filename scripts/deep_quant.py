@@ -46,7 +46,7 @@ def get_configs():
     configs.DEFINE_string("financial_fields", '',"shared input and target field names")
     configs.DEFINE_string("aux_fields", None,"non-target, input only fields")
     configs.DEFINE_string("data_dir",'',"The data directory")
-    configs.DEFINE_string("model_dir",'',"Model directory")
+    configs.DEFINE_string("model_dir",'chkpts',"Model (checkpoint) directory")
     configs.DEFINE_string("rnn_cell",'gru',"lstm or gru")
     configs.DEFINE_string("activation_fn",'relu',"MLP activation function in tf.nn.*")
     configs.DEFINE_integer("num_inputs", -1,"")
