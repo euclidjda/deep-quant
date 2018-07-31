@@ -92,21 +92,21 @@ def stop_training(config, perfs):
         return False
 
 def train_model(config):
-    print("Loading training data from %s ..."%config.datafile)
-    train_data = None
-    valid_data = None
-
-    if config.validation_size > 0.0:
-        train_data, valid_data = data_utils.load_train_valid_data(config)
-    else:
-        train_data = data_utils.load_all_data(config, is_training_only=True)
-        valid_data = train_data
-        
     if config.start_date is not None:
         print("Training start date: ", config.start_date)
     if config.start_date is not None:
         print("Training end date: ", config.end_date)
 
+    print("Loading training data from %s ..."%config.datafile)
+    train_data = None
+    valid_data = None
+
+    if (config.validation_size > 0.0) or (config.split_date is not None):
+        train_data, valid_data = data_utils.load_train_valid_data(config)
+    else:
+        train_data = data_utils.load_all_data(config, is_training_only=True)
+        valid_data = train_data
+        
     tf_config = tf.ConfigProto(allow_soft_placement=True,
                                log_device_placement=False)
 
