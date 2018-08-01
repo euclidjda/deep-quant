@@ -182,32 +182,27 @@ class DataProcessing(object):
 
         return new_df
 
-    def adjust_cshoq(self,new_df,split_data):
-        """Returns the new_df adjusted for stock split for number of shares
-            outstanding"""
+    def adjust_for_split(self, price_data, split_data):
+        """Returns the new_df adjusted for stock split for price"""
 
-        for j,date in enumerate(split_data['datadate']):
+        price_data['split'] = 1.0
+        split_data['cumul_split'] = split_data['split'].cumprod()
 
-            if (date.month,date.day) not in ((3,31),(6,30),(9,30),(12,31)):
-                # Adjust with +1 day for the begining of the month
-                next_q = self.get_next_q_date(date) +  datetime.timedelta(days=1)
-                next_q_m = next_q.month
-                split_date_list = [datetime.date(date.year,m,1) for m in range(date.month+1,next_q_m)]
+        for j in split_data.index:
+            date = split_data.loc[j, 'datadate']
+            price_data.loc[price_data.datadate > date, 'split'] = split_data.loc[j, 'cumul_split']
 
-                for split_date in split_date_list:
-                    try:
-                        new_df.loc[split_date,'cshoq_mrq'] = \
-                        new_df.loc[split_date,'cshoq_mrq']*split_data['split'].iloc[j]
-                    except KeyError:
-                        pass
+            price_data['adjusted_price'] = price_data['prccm'] * price_data['split']
 
-        return new_df
+        return price_data
 
-    def add_price_features(self,new_df,price_df):
+    def add_price_features(self, new_df, price_df, split_data):
         """Returns the new_df with market cap and enterprise value features.
             Also returns the price_df without date as index to be used in mom
 
         """
+
+        price_df = self.adjust_for_split(price_df, split_data)
 
         # Adjust for date by adding 1 day. Price information is for the last
         # day of the month
@@ -255,7 +250,7 @@ class DataProcessing(object):
             period_ix = ix - p
 
             try:
-                return price_df['prccm'].loc[period_ix]
+                return price_df['adjusted_price'].loc[period_ix]
             except KeyError:
                 return 1e10
 
@@ -265,7 +260,7 @@ class DataProcessing(object):
             price_df_copy = price_df.copy().fillna(0.0)
 
             feature_name = 'mom' + str(p) + 'm'
-            mom_p = price_df_copy['prccm'].div(price_df_p)
+            mom_p = price_df_copy['adjusted_price'].div(price_df_p)
             mom_p.index = pd.to_datetime(price_df_copy['datadate'].values)
             mom_p = mom_p.to_frame(name=feature_name)
 
