@@ -187,6 +187,7 @@ class DataProcessing(object):
 
         price_data['split'] = 1.0
         split_data['cumul_split'] = split_data['split'].cumprod()
+        price_data['adjusted_price'] = price_data['prccm'] * price_data['split']
 
         for j in split_data.index:
             date = split_data.loc[j, 'datadate']
