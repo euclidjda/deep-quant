@@ -80,7 +80,7 @@ while curr_date < datetime.datetime.now():
              "compm.fundq where datadate < '%s' "
              "group by gvkey) a inner join "
                  "(select gvkey,datadate,mkvaltq,cshoq,prccq,curcdq "
-                    "from compm.fundq where cshoq>0 and prccq>0 and curcdq='USD') b "
+                    "from compm.fundq where cshoq>0 and prccq>0 and curcdq='USD' and mkvaltq>0) b "
         "on a.gvkey = b.gvkey and a.latest=b.datadate "
          "order by market_cap desc "
         "limit %i")%(curr_date_string,N)
@@ -159,12 +159,14 @@ q3 = ("select gvkey,datadate,prccm "
      "from compm.secm "
      "where gvkey in (%s) ")%top_N_eq_gvkey
 price_df_all = db.raw_sql(q3).sort_values('datadate')
+price_df_all.datadate = pd.to_datetime(price_df_all.datadate,format='%Y-%m-%d')
 
 # Query to get stock_split data
 q4 = ("select gvkey,datadate,split "
      "from compm.sec_split "
      "where gvkey in (%s) ")%top_N_eq_gvkey
 stock_split_df_all = db.raw_sql(q4).sort_values('datadate')
+stock_split_df_all.datadate = pd.to_datetime(stock_split_df_all.datadate,format='%Y-%m-%d')
 
 ####--END OF SQL QUERYING-------------------------------------------------------
 
@@ -191,8 +193,9 @@ def reorder_cols():
     mrq_list_tmp.remove('cshoq_mrq')
     mrq_list_tmp.remove('dlttq_mrq')
     csho = ['csho_1yr_avg']
+    price = ['adjusted_price','prccm','split']
 
-    new_order = a + mom + prc + ttm_list_tmp + mrq_list_tmp + csho
+    new_order = a + mom + prc + ttm_list_tmp + mrq_list_tmp + csho + price
     return new_order
 
 
@@ -232,11 +235,8 @@ for jj,key in enumerate(gvkey_list):
         # Add ttm and mrq data
         ttm_mrq_df = dp.create_ttm_mrq(df, new_df_empty)
 
-        # Adjust for stock split
-        df_split_adjusted = dp.adjust_cshoq(ttm_mrq_df, stock_split_df)
-
         # Add price information
-        df_w_price, price_df_for_mom = dp.add_price_features(df_split_adjusted, price_df)
+        df_w_price, price_df_for_mom = dp.add_price_features(ttm_mrq_df, price_df, stock_split_df)
 
         # Add momentum features
         df_w_mom = dp.get_mom(df_w_price, price_df_for_mom, [1, 3, 6, 9])
