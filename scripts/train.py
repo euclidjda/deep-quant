@@ -123,9 +123,11 @@ def train_model(config):
             scaling_params = train_data.get_scaling_params(config.data_scaler)
             model.set_scaling_params(session,**scaling_params)
             print("done in %.2f seconds."%(time.time() - start_time))
-            #print(scaling_params['center'])
-            #print(scaling_params['scale'])
-            #exit(0)
+            for i in range(len(train_data.feature_names)):
+                print("%s mean=%.4f stddev=%.4f"%(train_data.feature_names[i],
+                                                  scaling_params['center'][i],
+                                                  scaling_params['scale'][i]))
+            sys.stdout.flush()
 
         if config.early_stop is not None:
             print("Training will early stop without "

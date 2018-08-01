@@ -214,6 +214,9 @@ class BatchGenerator(object):
             cur_length += 1
             last_key = key
 
+        if verbose is True:
+            print("Number of batch indices: %d"%(len(self._start_indices)))
+
         # Create a cursor of equally spaced indices into the dataset. Each index
         # in the cursor points to one sequence in a batch and is used to keep
         # track of where we are in the dataset.
@@ -309,8 +312,8 @@ class BatchGenerator(object):
         self._normalizer_idx = np_array_index(colnames, config.scale_field)
 
         # Set up input-related attributes
-        self._input_names = list(colnames[self._fin_colixs + self._aux_colixs])
-        self._num_inputs = config.num_inputs = len(self._input_names)
+        self._feature_names = list(colnames[self._fin_colixs + self._aux_colixs])
+        self._num_inputs = config.num_inputs = len(self._feature_names)
 
         # Set up target index
         idx = np_array_index(colnames, config.target_field)
@@ -572,7 +575,7 @@ class BatchGenerator(object):
         num_batches = self.num_batches
         start_time = time.time()
         if verbose is True:
-            print("\nCaching %d batches ..."%(num_batches),end='')
+            print("Caching %d batches ..."%(num_batches),end='')
             sys.stdout.flush()
 
         self.rewind()
@@ -691,7 +694,7 @@ class BatchGenerator(object):
 
     @property
     def feature_names(self):
-        return self._input_names
+        return self._feature_names
 
     @property
     def dataframe(self):
