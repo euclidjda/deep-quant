@@ -182,28 +182,12 @@ class DataProcessing(object):
 
         return new_df
 
-    def adjust_for_split(self, price_data, split_data):
-        """Returns the new_df adjusted for stock split for price"""
-
-        price_data['split'] = 1.0
-        split_data['cumul_split'] = split_data['split'].cumprod()
-        price_data['adjusted_price'] = price_data['prccm'] * price_data['split']
-
-        for j in split_data.index:
-            date = split_data.loc[j, 'datadate']
-            price_data.loc[price_data.datadate > date, 'split'] = split_data.loc[j, 'cumul_split']
-
-            price_data['adjusted_price'] = price_data['prccm'] * price_data['split']
-
-        return price_data
-
-    def add_price_features(self, new_df, price_df, split_data):
+    def add_price_features(self, new_df, price_df):
         """Returns the new_df with market cap and enterprise value features.
             Also returns the price_df without date as index to be used in mom
 
         """
-
-        price_df = self.adjust_for_split(price_df, split_data)
+        price_df['adjusted_price'] = price_df['prccm']/price_df['ajexm']
 
         # Adjust for date by adding 1 day. Price information is for the last
         # day of the month
