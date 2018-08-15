@@ -60,11 +60,15 @@ db = wrds.Connection()
 top_gvkey_month = {}
 top_N_eq_gvkey_list_all = set()
 
-start_date = '1980-01-01'
+start_date = '2013-01-01'
 curr_date = datetime.datetime.strptime(start_date,'%Y-%m-%d')
 
 # Go through months starting with the start date and find top N companies by mrk cap
 # for that month.
+
+# Reference df for primary security
+q10 = ("select gvkey,primiss from compm.secm")
+primiss_df = db.raw_sql(q10)
 
 while curr_date < datetime.datetime.now():
     # prev_date = curr_date + relativedelta(months=-3)
@@ -73,7 +77,7 @@ while curr_date < datetime.datetime.now():
     print(curr_date.date())
 
     # Query to get list of companies with top 2000 market cap for the given month
-    q1a = ("select a.gvkey,a.latest,b.cshoq,b.prccq,b.mkvaltq,b.cshoq*b.prccq as market_cap,b.curcdq "
+    q1a = ("select distinct a.gvkey,a.latest,b.cshoq,b.prccq,b.mkvaltq,b.cshoq*b.prccq as market_cap,b.curcdq "
          "from "
             "(select gvkey,max(datadate) as latest "
              "from "
@@ -86,7 +90,9 @@ while curr_date < datetime.datetime.now():
         "limit %i")%(curr_date_string,N)
 
     mrk_df = db.raw_sql(q1a)
-    gvkey_list_month = mrk_df['gvkey'].values.tolist()
+    # merge the security flag
+    mrk_df = mrk_df.merge(primiss_df,on='gvkey',how='left')
+    gvkey_list_month = mrk_df['gvkey'][mrk_df['primiss']=='P'].values.tolist()
     top_gvkey_month[curr_date.date()] = gvkey_list_month
     top_N_eq_gvkey_list_all |= set(gvkey_list_month)
 
@@ -155,7 +161,7 @@ fundq_df = db.raw_sql(q2)
 fundq_df = pd.merge(fundq_df,df_gic,how='left',on=['gvkey'])
 
 # Query to get price data
-q3 = ("select gvkey,datadate,prccm "
+q3 = ("select gvkey,datadate,prccm,ajexm "
      "from compm.secm "
      "where gvkey in (%s) ")%top_N_eq_gvkey
 price_df_all = db.raw_sql(q3).sort_values('datadate')
@@ -184,6 +190,7 @@ print('\n')
 df_all = fundq_df[['gvkey','gsector','datadate'] + income_list + blnc_sheet_list]
 df_all['active'] = np.nan
 
+
 def reorder_cols():
     a = ['active','datadate','gvkey','gsector','year','month']
     mom = ['mom1m','mom3m','mom6m','mom9m']
@@ -193,7 +200,7 @@ def reorder_cols():
     mrq_list_tmp.remove('cshoq_mrq')
     mrq_list_tmp.remove('dlttq_mrq')
     csho = ['csho_1yr_avg']
-    price = ['adjusted_price','prccm','split']
+    price = ['adjusted_price','prccm','ajexm']
 
     new_order = a + mom + prc + ttm_list_tmp + mrq_list_tmp + csho + price
     return new_order
@@ -236,7 +243,7 @@ for jj,key in enumerate(gvkey_list):
         ttm_mrq_df = dp.create_ttm_mrq(df, new_df_empty)
 
         # Add price information
-        df_w_price, price_df_for_mom = dp.add_price_features(ttm_mrq_df, price_df, stock_split_df)
+        df_w_price, price_df_for_mom = dp.add_price_features(ttm_mrq_df, price_df)
 
         # Add momentum features
         df_w_mom = dp.get_mom(df_w_price, price_df_for_mom, [1, 3, 6, 9])
