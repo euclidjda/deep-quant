@@ -92,22 +92,21 @@ def stop_training(config, perfs):
         return False
 
 def train_model(config):
-    print("Loading training data ...")
-    train_data = None
-    valid_data = None
-
-    if config.early_stop is None:
-        train_data = data_utils.load_all_data(config, is_training_only=True)
-        valid_data = train_data
-    else:
-        train_data, valid_data = data_utils.load_train_valid_data(config)
-        
-
     if config.start_date is not None:
         print("Training start date: ", config.start_date)
     if config.start_date is not None:
         print("Training end date: ", config.end_date)
 
+    print("Loading training data from %s ..."%config.datafile)
+    train_data = None
+    valid_data = None
+
+    if (config.validation_size > 0.0) or (config.split_date is not None):
+        train_data, valid_data = data_utils.load_train_valid_data(config)
+    else:
+        train_data = data_utils.load_all_data(config, is_training_only=True)
+        valid_data = train_data
+        
     tf_config = tf.ConfigProto(allow_soft_placement=True,
                                log_device_placement=False)
 
@@ -124,9 +123,11 @@ def train_model(config):
             scaling_params = train_data.get_scaling_params(config.data_scaler)
             model.set_scaling_params(session,**scaling_params)
             print("done in %.2f seconds."%(time.time() - start_time))
-            #print(scaling_params['center'])
-            #print(scaling_params['scale'])
-            #exit(0)
+            for i in range(len(train_data.feature_names)):
+                print("%s mean=%.4f stddev=%.4f"%(train_data.feature_names[i],
+                                                  scaling_params['center'][i],
+                                                  scaling_params['scale'][i]))
+            sys.stdout.flush()
 
         if config.early_stop is not None:
             print("Training will early stop without "

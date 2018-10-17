@@ -77,7 +77,7 @@ class NaiveModel(BaseModel):
             self._seq_lengths,seq_axis=1,batch_axis=0),axis=1)[0]
 
         # center and scale
-        if config.data_scaler is not None:
+        if config.data_scaler is not None and config.scale_targets is True:
             targets = self._center_and_scale( targets )
             outputs = self._center_and_scale( outputs )
 

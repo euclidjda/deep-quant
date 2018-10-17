@@ -21,12 +21,17 @@ class ErrorPlots(object):
     def plot_train_hist(self):
         """ Plots the training and validation error history """
 
+        if not self.train_mse_data:
+            print("MSE data not provided")
+            return
+
         epoch = self.train_mse_data.keys()
         train_err = [x[0] for x in self.train_mse_data.values()]
         val_err = [x[1] for x in self.train_mse_data.values()]
 
         plt.plot(epoch, train_err, label='Train Error')
         plt.plot(epoch, val_err, label='Val Error')
+        plt.title("Training MSE History")
         plt.xlabel('Epochs')
         plt.ylabel('MSE')
         plt.legend()
@@ -36,6 +41,10 @@ class ErrorPlots(object):
 
     def plot_cdf(self, threshold=1.):
         """ Plots the cumulative distribution of mean percentage error"""
+
+        if not self.err_df:
+            print("Error DF not provided")
+            return
 
         mean = self.err_df.mean().dropna()
         sns.distplot(mean[mean < threshold], hist_kws=dict(cumulative=True), kde_kws=dict(cumulative=True))

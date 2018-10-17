@@ -103,7 +103,7 @@ def load_train_valid_data(config):
     """
     batches = load_all_data(config)
 
-    train_data = batches.train_batches()
-    valid_data = batches.valid_batches()
+    train_data = batches.train_batches(verbose=True)
+    valid_data = batches.valid_batches(verbose=True)
 
     return train_data, valid_data

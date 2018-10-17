@@ -104,13 +104,17 @@ class DeepMlpModel(BaseModel):
 
         if config.skip_connections is True:
             num_prev = num_inputs+num_prev
-            skip_inputs = tf.slice(inputs, [0, 0], [batch_size, num_inputs] )
+            # skip_inputs = tf.slice(inputs, [0, 0], [batch_size, num_inputs] )
+            skip_inputs = inputs[:,:num_inputs]
             outputs  = tf.concat( [ skip_inputs, outputs], 1)
 
         # final regression layer
         linear_b = tf.get_variable("linear_b", [num_outputs])
         linear_w = tf.get_variable("linear_w", [num_prev, num_outputs])
         outputs = tf.nn.xw_plus_b(outputs, linear_w, linear_b)
+
+        if config.direct_connections is True:
+            outputs = outputs + inputs[:,:num_outputs]
 
         self._inps = inputs
         self._tars = targets

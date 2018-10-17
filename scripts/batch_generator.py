@@ -225,6 +225,7 @@ class BatchGenerator(object):
         self._index_cursor = [offset*num_batches for offset in range(batch_size)]
         self._init_index_cursor = self._index_cursor[:]
         self._num_batches = num_batches
+        assert(num_batches > 0)
         self._batch_cache = [None]*num_batches
         self._batch_cursor = 0
 
@@ -300,8 +301,8 @@ class BatchGenerator(object):
         self._fin_colixs = get_colixs_from_colname_range(
                 self._data, config.financial_fields)
 
-        self._aux_colixs += get_colixs_from_colname_range(
-                self._data, config.aux_fields)
+        self._aux_colixs += get_colixs_from_colname_range(self._data, 
+                                                          config.aux_fields)
 
         # Set up other attributes
         colnames = self._data.columns.values
@@ -311,8 +312,8 @@ class BatchGenerator(object):
         self._normalizer_idx = np_array_index(colnames, config.scale_field)
 
         # Set up input-related attributes
-        self._input_names = list(colnames[self._fin_colixs + self._aux_colixs])
-        self._num_inputs = config.num_inputs = len(self._input_names)
+        self._feature_names = list(colnames[self._fin_colixs + self._aux_colixs])
+        self._num_inputs = config.num_inputs = len(self._feature_names)
 
         # Set up target index
         idx = np_array_index(colnames, config.target_field)
@@ -345,7 +346,7 @@ class BatchGenerator(object):
         if validation is True:
             if config.seed is not None:
                 if verbose is True:
-                    print("\nSetting random seed to "+str(config.seed))
+                    print("Setting random seed to "+str(config.seed))
                 random.seed( config.seed )
                 np.random.seed( config.seed )
             # get number of keys
@@ -353,10 +354,6 @@ class BatchGenerator(object):
             sample_size = int(config.validation_size * len(keys))
             sample = random.sample(keys, sample_size)
             self._validation_set = dict(zip(sample, [1]*sample_size))  
-            #TODO: store as set instead of as dict?
-            if verbose is True:
-                print("Num training entities: %d"%(len(keys)-sample_size))
-                print("Num validation entities: %d"%sample_size)
 
     def _get_normalizer(self, end_idx):
         val = max(self._normalizers[end_idx], _MIN_SEQ_NORM)
@@ -527,12 +524,6 @@ class BatchGenerator(object):
             params = dict()
             params['center'] = scaler.center_ if hasattr(scaler,'center_') else scaler.mean_
             params['scale'] = scaler.scale_
-
-            #num_aux = len(self._aux_colixs)
-            #if num_aux > 0:
-            #    params['center'] = np.append(params['center'], np.full( (num_aux), 0.0 ))
-            #    params['scale'] = np.append(params['scale'], np.full( (num_aux), 1.0 ))
-
             self._scaling_params = params
 
         return self._scaling_params
@@ -584,7 +575,7 @@ class BatchGenerator(object):
         num_batches = self.num_batches
         start_time = time.time()
         if verbose is True:
-            print("\nCaching %d batches ..."%(num_batches),end='')
+            print("Caching %d batches ..."%(num_batches),end='')
             sys.stdout.flush()
 
         self.rewind()
@@ -633,54 +624,61 @@ class BatchGenerator(object):
                 if verbose is True:
                     print("done in %.2f seconds."%(time.time() - start_time))
 
-    def _train_dates(self):
-        data = self._data
-        dates = list(set(data[self._config.date_field]))
-        dates.sort()
-        i = int(len(dates)*(1.0-self._config.validation_size))-1
-        assert(i < len(dates))
-        train_dates = [d for d in dates if d < dates[i]]
-        return train_dates
-
     def _valid_dates(self):
         data = self._data
         dates = list(set(data[self._config.date_field]))
         dates.sort()
-        i = int(len(dates)*(1.0-self._config.validation_size))-1
-        i = max(i - (self._min_unrollings-1)*self._stride-1,0)
-        assert(i < len(dates))
-        valid_dates = [d for d in dates if d >= dates[i]]
+        split_date = self._config.split_date
+        valid_dates = [d for d in dates if d >= split_date]
         return valid_dates
 
-    def train_batches(self):
+    def train_batches(self, verbose=False):
         """
         Returns a BatchGenerator object built from the subset of self._data that
         corresponds to the 'keys' (uniquely-identified companies) that are _not_
         in the validation set.
         """
-        valid_keys = list(self._validation_set.keys())
-        indexes = self._data[self._config.key_field].isin(valid_keys)
-        # indexes = self._data['date'].isin(self._train_dates())
+        config = self._config
+        if config.split_date is not None:
+            valid_dates = self._valid_dates()
+            indexes = self._data[config.date_field].isin(valid_dates)
+            if verbose is True:
+                print("Training period: %s to %s"%(config.start_date,min(valid_dates)))
+        else:
+            valid_keys = list(self._validation_set.keys())
+            indexes = self._data[config.key_field].isin(valid_keys)
+            if verbose is True:
+                all_keys = sorted(set(self._data[config.key_field]))
+                print("Num training entities: %d"%(len(all_keys)-len(valid_keys)))
         train_data = self._data[~indexes]
-        #sd = max(self._config.start_date,min(train_data['date']))
-        #print("Train period: %d to %d"%(sd,max(train_data['date'])))
-        return BatchGenerator("", self._config, validation=False,
-                                  data=train_data, is_training_only=True)
+        assert(len(train_data))
+        return BatchGenerator("", config, validation=False,
+                              data=train_data, is_training_only=True)
 
-    def valid_batches(self):
+    def valid_batches(self, verbose=False):
         """
         Returns a BatchGenerator object built from the subset of self._data that
         corresponds to the 'keys' (uniquely-identified companies) that _are_ in
         the validation set.
         """
-        valid_keys = list(self._validation_set.keys())
-        indexes = self._data[self._config.key_field].isin(valid_keys)
-        # indexes = self._data['date'].isin(self._valid_dates())
+        config = self._config
+        if config.split_date is not None:
+            valid_dates = self._valid_dates()
+            indexes = self._data[config.date_field].isin(valid_dates)
+            if verbose is True:
+                print("Validation period: %s to %s"%(min(valid_dates),
+                                                     max(valid_dates)))
+        else:
+            valid_keys = list(self._validation_set.keys())
+            indexes = self._data[config.key_field].isin(valid_keys)
+            if verbose is True:
+                print("Num validation entities: %d"%len(valid_keys))
+
         valid_data = self._data[indexes]
-        #print("Validation period: %d to %d"%(min(valid_data['date']),
-        #                                     max(valid_data['date'])))
-        return BatchGenerator("", self._config, validation=False,
-                                  data=valid_data)
+        assert(len(valid_data))
+        return BatchGenerator("", config, validation=False,
+                              data=valid_data)
+
 
     def shuffle(self):
         # We cannot shuffle until the entire dataset is cached
@@ -696,7 +694,7 @@ class BatchGenerator(object):
 
     @property
     def feature_names(self):
-        return self._input_names
+        return self._feature_names
 
     @property
     def dataframe(self):
