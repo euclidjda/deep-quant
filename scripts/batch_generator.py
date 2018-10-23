@@ -99,58 +99,8 @@ class BatchGenerator(object):
         assert(self._data_len)
 
         # Setup data
-        self._encode_categoricals(config)
         self._init_column_indices(config)
         self._init_validation_set(config, validation, verbose)
-
-    def _encode_categoricals(self, config):
-        def encode_categorical(self, cat_attribute):
-            """
-            Gets one-hot representation of the categorical attribute under
-            `colname`, appends that at right-end of `self._data` dataframe,
-            populates `self._onehot_colnames` and `self._onehot_colixs`.
-            """
-            encoding_file = "{}-encoding.dat".format(cat_attribute.lower())
-            encoding_path = os.path.join(DATASETS_PATH, encoding_file)
-            encoding_df = pd.read_csv(encoding_path, sep=' ')
-            cat_encoder = LabelEncoder().fit(encoding_df[cat_attribute].values)
-            categories = self._data[cat_attribute].values
-            codes = cat_encoder.transform(categories).reshape(-1, 1)
-            onehot_encoder = OneHotEncoder(n_values=len(cat_encoder.classes_))
-            onehot_vecs = onehot_encoder.fit_transform(codes).toarray()
-            onehot_colnames = ['is_' + attr for attr in cat_encoder.classes_]
-
-            # TODO: fix this it's kind of hacky
-            # If all of onehot_colnames are already in self._data, just get
-            # those column indices
-            if len(set(onehot_colnames) - set(self._data.columns)) == 0:
-                onehot_colixs = list()
-                for i, colname in enumerate(self._data.columns.values):
-                    if colname in onehot_colnames:
-                        onehot_colixs.append(i)
-            # if there's any that ISNT in self._data
-            else:
-                # drop the ones that are
-                cols_to_drop = set(onehot_colnames).intersection(
-                    set(self._data.columns))
-                if cols_to_drop:
-                    self._data.drop(cols_to_drop)
-                # write everything in again
-                _, m = self._data.shape
-                codes_df = pd.DataFrame(onehot_vecs, columns=onehot_colnames)
-                self._data = pd.concat([self._data, codes_df], axis=1)
-                onehot_colixs = list(range(m, m + onehot_encoder.n_values))
-
-            self._aux_colixs.extend(onehot_colixs)
-
-        self._aux_colixs = list()
-
-        cat_fields = config.categorical_fields
-        cat_attributes = cat_fields.split(',') if cat_fields is not None else []
-        for cat_attribute in cat_attributes:
-            encode_categorical(self, cat_attribute)
-        
-        return
 
     def _init_batch_cursor(self, config, require_targets=True, verbose=True):
         """
@@ -260,78 +210,66 @@ class BatchGenerator(object):
                         target is specified by config.
         """
         assert config.financial_fields
-        def get_colixs_from_colname_range(data, colname_range):
+        def get_colidxs_from_colnames(data, columns):
             """
-            Returns indexes of columns of data that are in the range of
-            `names`, inclusive. `names` should be a string with the following
-            format: start_column_name-end_column_name (saleq_ttm-ltq_mrq, for
-            example).
+            Returns indexes of columns of data that are included in columns.
+            columns are seperated by commas and can include ranges. For example,
+            f1-f5,f7,f9 whould be feature one through 5, and feature 7 and 9.
             """
-            if colname_range is None:
-                colixs = []
-            else:
-                assert 0 < colname_range.find('-') < len(colname_range)-1
-                first, last = colname_range.split('-')
-                start_ix = list(data.columns.values).index(first)
-                end_ix = list(data.columns.values).index(last)
-                assert start_ix >= 0
-                assert start_ix <= end_ix
-                colixs = list(range(start_ix, end_ix+1))
-            return colixs
+            colidxs = []
+            if columns is not None:
+                colnames = list(data.columns.values)
+                col_list = columns.split(',')
+                for col in col_list:
+                    col_range = col.split('-')
+                    if len(col_range) == 1:
+                        colidxs.append(list(colnames).index(col_range[0]))
+                    elif len(col_range) == 2:
+                        start_idx = list(colnames).index(col_range[0])
+                        end_idx = list(colnames).index(col_range[1])
+                        assert(start_idx >= 0)
+                        assert(start_idx <= end_idx)
+                        colidxs.extend(list(range(start_idx,end_idx+1)))
+            return colidxs
         
-        def np_array_index(arr, value):
-            """
-            Replicates the Python list's `index` method (that is, it returns the
-            first appearance of value in the array
-            
-            Raises `ValueError` if `value` is not present in `arr`.
-            """
-            index = None
-            for i, element in enumerate(arr):
-                if element == value:
-                    index = i
-                    break
-
-            if index is None:
-                raise ValueError("{} is not in arr.".format(value))
-
-            return index
-
         # Set up financials column indices and auxiliaries column indices
-        self._fin_colixs = get_colixs_from_colname_range(
-                self._data, config.financial_fields)
+        self._fin_colidxs = get_colidxs_from_colnames(
+            self._data, config.financial_fields)
 
-        self._aux_colixs += get_colixs_from_colname_range(self._data, 
-                                                          config.aux_fields)
+        self._aux_colidxs = get_colidxs_from_colnames(
+            self._data, config.aux_fields)
+ 
+        # save feature names
+        colnames = self._data.columns.values
+        self._feature_names = colnames[self._fin_colidxs + self._aux_colidxs]
 
         # Set up other attributes
-        colnames = self._data.columns.values
-        self._key_idx = np_array_index(colnames, config.key_field)
-        self._active_idx = np_array_index(colnames, config.active_field)
-        self._date_idx = np_array_index(colnames, config.date_field)
-        self._normalizer_idx = np_array_index(colnames, config.scale_field)
+        colnames = list(colnames)
+        self._key_idx = colnames.index(config.key_field)
+        self._active_idx = colnames.index(config.active_field)
+        self._date_idx = colnames.index(config.date_field)
+        self._normalizer_idx = colnames.index(config.scale_field)
 
         # Set up input-related attributes
-        self._feature_names = list(colnames[self._fin_colixs + self._aux_colixs])
         self._num_inputs = config.num_inputs = len(self._feature_names)
 
         # Set up target index
-        idx = np_array_index(colnames, config.target_field)
+        idx = colnames.index(config.target_field)
         if config.target_field == 'target':
             config.target_idx = 0
             self._num_outputs = config.num_outputs = 1
             self._price_target_idx = idx
         else:
-            config.target_idx = idx - self._fin_colixs[0]
+            config.target_idx = idx - self._fin_colidxs[0]
             self._num_outputs = config.num_outputs = self._num_inputs \
-                                                     - len(self._aux_colixs)
+                                                     - len(self._aux_colidxs)
             self._price_target_idx = -1
 
         assert(config.target_idx >= 0)
 
         # Set up fin_inputs attribute and aux_inputs attribute
-        self._fin_inputs  = self._data.iloc[:, self._fin_colixs].as_matrix()
-        self._aux_inputs  = self._data.iloc[:, self._aux_colixs].as_matrix()
+        self._fin_inputs  = self._data.iloc[:, self._fin_colidxs].as_matrix()
+        self._aux_inputs  = self._data.iloc[:, self._aux_colidxs].as_matrix()
         self._normalizers = self._data.iloc[:, self._normalizer_idx].as_matrix()
 
     def _init_validation_set(self, config, validation, verbose=True):
@@ -394,14 +332,14 @@ class BatchGenerator(object):
                 y = np.multiply(np.sign(y),np.log1p(y_abs))
             return y
         else:
-            return np.zeros(shape=[len(self._fin_colixs)])
+            return np.zeros(shape=[len(self._fin_colidxs)])
 
     def _get_aux_vector(self,cur_idx):
         if cur_idx < self._data_len:
             x = self._aux_inputs[cur_idx]
             return x
         else:
-            return np.zeros(shape=[len(self._aux_colixs)])
+            return np.zeros(shape=[len(self._aux_colidxs)])
 
     def _next_step(self, step, seq_lengths):
         """
@@ -413,8 +351,8 @@ class BatchGenerator(object):
         attr = list()
         stride = self._stride
         forecast_n = self._forecast_n
-        len1 = len(self._fin_colixs)
-        len2 = len(self._aux_colixs)
+        len1 = len(self._fin_colidxs)
+        len2 = len(self._aux_colidxs)
 
         for b in range(self._batch_size):
             cursor = self._index_cursor[b]
@@ -529,8 +467,8 @@ class BatchGenerator(object):
         return self._scaling_params
 
     def get_raw_inputs(self,batch,idx,vec):
-        len1 = len(self._fin_colixs)
-        len2 = len(self._aux_colixs)
+        len1 = len(self._fin_colidxs)
+        len2 = len(self._aux_colidxs)
         n = batch.normalizers[idx]
         y = vec[0:len1]
         if self._log_squasher is True:
