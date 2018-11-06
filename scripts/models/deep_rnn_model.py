@@ -106,7 +106,10 @@ class DeepRnnModel(BaseModel):
 
         self._outputs = list()
         for i in range(max_unrollings):
-            self._outputs.append( tf.nn.xw_plus_b( rnn_outputs[i], output_w, output_b ) )
+            output = tf.nn.xw_plus_b( rnn_outputs[i], output_w, output_b )
+            if config.direct_connections is True:
+                output = output + self._scaled_inputs[i][:,:num_outputs]
+            self._outputs.append( output )
 
         seqmask = tf.sequence_mask(self._seq_lengths*num_outputs,
                                     max_unrollings*num_outputs, dtype=tf.float32)

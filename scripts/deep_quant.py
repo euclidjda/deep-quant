@@ -78,7 +78,7 @@ def get_configs():
     configs.DEFINE_boolean("hidden_dropout",False,"Do dropout on hidden layers")
     configs.DEFINE_boolean("rnn_dropout",False,"Do dropout on recurrent connections")
     configs.DEFINE_boolean("skip_connections",False,"Have a linear fully connected weight skip hidden units in MLP")
-    configs.DEFINE_boolean("direct_connections",False,"Have direct connections between input and output in MLP")
+    configs.DEFINE_boolean("direct_connections",False,"Have direct connections between input and output in MLP or RNN")
     configs.DEFINE_boolean("use_cache",True,"Load data for logreg from cache (vs processing from batch generator)")
     configs.DEFINE_boolean("pretty_print_preds",False,"Print predictions in tabular format with inputs, targets, and keys")
     configs.DEFINE_boolean("scale_targets",True,"")
