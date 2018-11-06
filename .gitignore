@@ -114,6 +114,11 @@ checkpoint
 #pycharm
 .idea/
 
-# temp files
+# Error-Analysis temp files
 /error-analysis/test_EA/
 /error-analysis/errorplotting.py
+/error-analysis/**/*.txt
+/error-analysis/**/*.pyc
+/error-analysis/**/*.png
+/error-analysis/**/*.jpg
+/error-analysis/**/*.csv
