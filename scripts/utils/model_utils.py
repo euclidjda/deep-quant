@@ -23,6 +23,7 @@ import os
 
 import numpy as np
 import tensorflow as tf
+import pickle
 
 from tensorflow.python.platform import gfile
 from models.deep_mlp_model import DeepMlpModel
@@ -67,39 +68,59 @@ def adjust_learning_rate(session, model,
     model.set_learning_rate(session, learning_rate)
     return learning_rate
 
-def get_model(session, config, verbose=False):
+def get_model(session, config, train_data=None, verbose=False):
     """
     Args:
       session: the tf session
       config: a config that specifies the model geometry and learning params
+      train_data: if we are initializing a model, we may need the training data
+                  to set the feature scaling parameters            
       verbose: print status output if true
     Returns:
       the model
     """
-    if config.nn_type == 'logreg':
-        model_file = os.path.join(config.model_dir, "logreg.pkl" )
-        clf = LogRegModel(load_from=model_file)
-        mtrain, mdeploy = clf, clf
 
+    model = _create_model(session, config, verbose)
+
+    ckpt = tf.train.get_checkpoint_state(config.model_dir)
+    start_time = time.time()
+    if ckpt and gfile.Exists(ckpt.model_checkpoint_path+".index"):
+        if verbose:
+            print("Reading model parameters from {}...".format(
+                ckpt.model_checkpoint_path), end=' ')
+        tf.train.Saver(max_to_keep=200).restore(session,
+                                                ckpt.model_checkpoint_path)
+        if verbose:
+            print("done in %.2f seconds."%(time.time() - start_time))
     else:
-        model = _create_model(session, config, verbose)
+        if verbose:
+            print("Creating model with fresh parameters ...", end=' ')
+        session.run(tf.global_variables_initializer())
+        if verbose:
+            print("done in %.2f seconds."%(time.time() - start_time))
+        # Initialize scaling params
+        if config.data_scaler is not None:
+            scaling_params = None
+            if config.scalesfile is not None and os.path.isfile(config.scalesfile):
+                scaling_params = pickle.load( open( config.scalesfile, "rb" ) )
+                if verbose:
+                    print("Reading scaling params from %s"%config.scalesfile);
+            else:
+                scaling_params = train_data.get_scaling_params(config.data_scaler)
+                if config.scalesfile is not None:
+                    pickle.dump(scaling_params, open( config.scalesfile, "wb" ))
+                    if verbose:
+                        print("Writing scaling params to %s"%config.scalesfile);
 
-        ckpt = tf.train.get_checkpoint_state(config.model_dir)
-        start_time = time.time()
-        if ckpt and gfile.Exists(ckpt.model_checkpoint_path+".index"):
+            model.set_scaling_params(session,**scaling_params)
             if verbose:
-                print("Reading model parameters from {}...".format(
-                    ckpt.model_checkpoint_path), end=' ')
-            tf.train.Saver(max_to_keep=200).restore(session,
-                                                    ckpt.model_checkpoint_path)
-            if verbose:
-                print("done in %.2f seconds."%(time.time() - start_time))
-        else:
-            if verbose:
-                print("Creating model with fresh parameters ...", end=' ')
-            session.run(tf.global_variables_initializer())
-            if verbose:
-                print("done in %.2f seconds."%(time.time() - start_time))
+                print("Scaling params are:")
+                print("%-10s %-6s %-6s"%('feature','mean','std'))
+                for i in range(len(train_data.feature_names)):
+                    center = "%.4f"%scaling_params['center'][i];
+                    scale  = "%.4f"%scaling_params['scale'][i];
+                    print("%-10s %-6s %-6s"%(train_data.feature_names[i],
+                                             center,scale))
 
     return model
 

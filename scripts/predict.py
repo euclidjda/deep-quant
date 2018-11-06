@@ -115,11 +115,12 @@ def pretty_print_predictions(batches, batch, preds, mse):
     L = batch.seq_lengths[0]
     targets = batch.targets[L-1][0]
     outputs = preds[0]
+    normalizer = batch.normalizers[0]
 
     np.set_printoptions(suppress=True)
     np.set_printoptions(precision=3)
 
-    print("%s %s mse=%.4f"%(date,key,mse))
+    print("%s %s mse %.8f %.2f"%(date,key,mse,normalizer))
     inputs = batch.inputs
     for i in range(L):
         print_vector("input[t-%d]"%(L-i-1),batches.get_raw_inputs(batch,0,inputs[i][0]) )
