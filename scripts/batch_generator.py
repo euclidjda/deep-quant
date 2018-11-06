@@ -99,58 +99,8 @@ class BatchGenerator(object):
         assert(self._data_len)
 
         # Setup data
-        self._encode_categoricals(config)
         self._init_column_indices(config)
         self._init_validation_set(config, validation, verbose)
-
-    def _encode_categoricals(self, config):
-        def encode_categorical(self, cat_attribute):
-            """
-            Gets one-hot representation of the categorical attribute under
-            `colname`, appends that at right-end of `self._data` dataframe,
-            populates `self._onehot_colnames` and `self._onehot_colixs`.
-            """
-            encoding_file = "{}-encoding.dat".format(cat_attribute.lower())
-            encoding_path = os.path.join(DATASETS_PATH, encoding_file)
-            encoding_df = pd.read_csv(encoding_path, sep=' ')
-            cat_encoder = LabelEncoder().fit(encoding_df[cat_attribute].values)
-            categories = self._data[cat_attribute].values
-            codes = cat_encoder.transform(categories).reshape(-1, 1)
-            onehot_encoder = OneHotEncoder(n_values=len(cat_encoder.classes_))
-            onehot_vecs = onehot_encoder.fit_transform(codes).toarray()
-            onehot_colnames = ['is_' + attr for attr in cat_encoder.classes_]
-
-            # TODO: fix this it's kind of hacky
-            # If all of onehot_colnames are already in self._data, just get
-            # those column indices
-            if len(set(onehot_colnames) - set(self._data.columns)) == 0:
-                onehot_colixs = list()
-                for i, colname in enumerate(self._data.columns.values):
-                    if colname in onehot_colnames:
-                        onehot_colixs.append(i)
-            # if there's any that ISNT in self._data
-            else:
-                # drop the ones that are
-                cols_to_drop = set(onehot_colnames).intersection(
-                    set(self._data.columns))
-                if cols_to_drop:
-                    self._data.drop(cols_to_drop)
-                # write everything in again
-                _, m = self._data.shape
-                codes_df = pd.DataFrame(onehot_vecs, columns=onehot_colnames)
-                self._data = pd.concat([self._data, codes_df], axis=1)
-                onehot_colixs = list(range(m, m + onehot_encoder.n_values))
-
-            self._aux_colixs.extend(onehot_colixs)
-
-        self._aux_colixs = list()
-
-        cat_fields = config.categorical_fields
-        cat_attributes = cat_fields.split(',') if cat_fields is not None else []
-        for cat_attribute in cat_attributes:
-            encode_categorical(self, cat_attribute)
-        
-        return
 
     def _init_batch_cursor(self, config, require_targets=True, verbose=True):
         """
@@ -225,6 +175,7 @@ class BatchGenerator(object):
         self._index_cursor = [offset*num_batches for offset in range(batch_size)]
         self._init_index_cursor = self._index_cursor[:]
         self._num_batches = num_batches
+        assert(num_batches > 0)
         self._batch_cache = [None]*num_batches
         self._batch_cursor = 0
 
@@ -259,78 +210,66 @@ class BatchGenerator(object):
                         target is specified by config.
         """
         assert config.financial_fields
-        def get_colixs_from_colname_range(data, colname_range):
+        def get_colidxs_from_colnames(data, columns):
             """
-            Returns indexes of columns of data that are in the range of
-            `names`, inclusive. `names` should be a string with the following
-            format: start_column_name-end_column_name (saleq_ttm-ltq_mrq, for
-            example).
+            Returns indexes of columns of data that are included in columns.
+            columns are seperated by commas and can include ranges. For example,
+            f1-f5,f7,f9 whould be feature one through 5, and feature 7 and 9.
             """
-            if colname_range is None:
-                colixs = []
-            else:
-                assert 0 < colname_range.find('-') < len(colname_range)-1
-                first, last = colname_range.split('-')
-                start_ix = list(data.columns.values).index(first)
-                end_ix = list(data.columns.values).index(last)
-                assert start_ix >= 0
-                assert start_ix <= end_ix
-                colixs = list(range(start_ix, end_ix+1))
-            return colixs
+            colidxs = []
+            if columns is not None:
+                colnames = list(data.columns.values)
+                col_list = columns.split(',')
+                for col in col_list:
+                    col_range = col.split('-')
+                    if len(col_range) == 1:
+                        colidxs.append(list(colnames).index(col_range[0]))
+                    elif len(col_range) == 2:
+                        start_idx = list(colnames).index(col_range[0])
+                        end_idx = list(colnames).index(col_range[1])
+                        assert(start_idx >= 0)
+                        assert(start_idx <= end_idx)
+                        colidxs.extend(list(range(start_idx,end_idx+1)))
+            return colidxs
         
-        def np_array_index(arr, value):
-            """
-            Replicates the Python list's `index` method (that is, it returns the
-            first appearance of value in the array
-            
-            Raises `ValueError` if `value` is not present in `arr`.
-            """
-            index = None
-            for i, element in enumerate(arr):
-                if element == value:
-                    index = i
-                    break
-
-            if index is None:
-                raise ValueError("{} is not in arr.".format(value))
-
-            return index
-
         # Set up financials column indices and auxiliaries column indices
-        self._fin_colixs = get_colixs_from_colname_range(
-                self._data, config.financial_fields)
+        self._fin_colidxs = get_colidxs_from_colnames(
+            self._data, config.financial_fields)
 
-        self._aux_colixs += get_colixs_from_colname_range(
-                self._data, config.aux_fields)
+        self._aux_colidxs = get_colidxs_from_colnames(
+            self._data, config.aux_fields)
+ 
+        # save feature names
+        colnames = self._data.columns.values
+        self._feature_names = colnames[self._fin_colidxs + self._aux_colidxs]
 
         # Set up other attributes
-        colnames = self._data.columns.values
-        self._key_idx = np_array_index(colnames, config.key_field)
-        self._active_idx = np_array_index(colnames, config.active_field)
-        self._date_idx = np_array_index(colnames, config.date_field)
-        self._normalizer_idx = np_array_index(colnames, config.scale_field)
+        colnames = list(colnames)
+        self._key_idx = colnames.index(config.key_field)
+        self._active_idx = colnames.index(config.active_field)
+        self._date_idx = colnames.index(config.date_field)
+        self._normalizer_idx = colnames.index(config.scale_field)
 
         # Set up input-related attributes
-        self._input_names = list(colnames[self._fin_colixs + self._aux_colixs])
-        self._num_inputs = config.num_inputs = len(self._input_names)
+        self._num_inputs = config.num_inputs = len(self._feature_names)
 
         # Set up target index
-        idx = np_array_index(colnames, config.target_field)
+        idx = colnames.index(config.target_field)
         if config.target_field == 'target':
             config.target_idx = 0
             self._num_outputs = config.num_outputs = 1
             self._price_target_idx = idx
         else:
-            config.target_idx = idx - self._fin_colixs[0]
+            config.target_idx = idx - self._fin_colidxs[0]
             self._num_outputs = config.num_outputs = self._num_inputs \
-                                                     - len(self._aux_colixs)
+                                                     - len(self._aux_colidxs)
             self._price_target_idx = -1
 
         assert(config.target_idx >= 0)
 
         # Set up fin_inputs attribute and aux_inputs attribute
-        self._fin_inputs  = self._data.iloc[:, self._fin_colixs].as_matrix()
-        self._aux_inputs  = self._data.iloc[:, self._aux_colixs].as_matrix()
+        self._fin_inputs  = self._data.iloc[:, self._fin_colidxs].as_matrix()
+        self._aux_inputs  = self._data.iloc[:, self._aux_colidxs].as_matrix()
         self._normalizers = self._data.iloc[:, self._normalizer_idx].as_matrix()
 
     def _init_validation_set(self, config, validation, verbose=True):
@@ -345,7 +284,7 @@ class BatchGenerator(object):
         if validation is True:
             if config.seed is not None:
                 if verbose is True:
-                    print("\nSetting random seed to "+str(config.seed))
+                    print("Setting random seed to "+str(config.seed))
                 random.seed( config.seed )
                 np.random.seed( config.seed )
             # get number of keys
@@ -353,10 +292,6 @@ class BatchGenerator(object):
             sample_size = int(config.validation_size * len(keys))
             sample = random.sample(keys, sample_size)
             self._validation_set = dict(zip(sample, [1]*sample_size))  
-            #TODO: store as set instead of as dict?
-            if verbose is True:
-                print("Num training entities: %d"%(len(keys)-sample_size))
-                print("Num validation entities: %d"%sample_size)
 
     def _get_normalizer(self, end_idx):
         val = max(self._normalizers[end_idx], _MIN_SEQ_NORM)
@@ -397,14 +332,14 @@ class BatchGenerator(object):
                 y = np.multiply(np.sign(y),np.log1p(y_abs))
             return y
         else:
-            return np.zeros(shape=[len(self._fin_colixs)])
+            return np.zeros(shape=[len(self._fin_colidxs)])
 
     def _get_aux_vector(self,cur_idx):
         if cur_idx < self._data_len:
             x = self._aux_inputs[cur_idx]
             return x
         else:
-            return np.zeros(shape=[len(self._aux_colixs)])
+            return np.zeros(shape=[len(self._aux_colidxs)])
 
     def _next_step(self, step, seq_lengths):
         """
@@ -416,8 +351,8 @@ class BatchGenerator(object):
         attr = list()
         stride = self._stride
         forecast_n = self._forecast_n
-        len1 = len(self._fin_colixs)
-        len2 = len(self._aux_colixs)
+        len1 = len(self._fin_colidxs)
+        len2 = len(self._aux_colidxs)
 
         for b in range(self._batch_size):
             cursor = self._index_cursor[b]
@@ -527,19 +462,13 @@ class BatchGenerator(object):
             params = dict()
             params['center'] = scaler.center_ if hasattr(scaler,'center_') else scaler.mean_
             params['scale'] = scaler.scale_
-
-            #num_aux = len(self._aux_colixs)
-            #if num_aux > 0:
-            #    params['center'] = np.append(params['center'], np.full( (num_aux), 0.0 ))
-            #    params['scale'] = np.append(params['scale'], np.full( (num_aux), 1.0 ))
-
             self._scaling_params = params
 
         return self._scaling_params
 
     def get_raw_inputs(self,batch,idx,vec):
-        len1 = len(self._fin_colixs)
-        len2 = len(self._aux_colixs)
+        len1 = len(self._fin_colidxs)
+        len2 = len(self._aux_colidxs)
         n = batch.normalizers[idx]
         y = vec[0:len1]
         if self._log_squasher is True:
@@ -584,7 +513,7 @@ class BatchGenerator(object):
         num_batches = self.num_batches
         start_time = time.time()
         if verbose is True:
-            print("\nCaching %d batches ..."%(num_batches),end='')
+            print("Caching %d batches ..."%(num_batches),end='')
             sys.stdout.flush()
 
         self.rewind()
@@ -633,54 +562,61 @@ class BatchGenerator(object):
                 if verbose is True:
                     print("done in %.2f seconds."%(time.time() - start_time))
 
-    def _train_dates(self):
-        data = self._data
-        dates = list(set(data[self._config.date_field]))
-        dates.sort()
-        i = int(len(dates)*(1.0-self._config.validation_size))-1
-        assert(i < len(dates))
-        train_dates = [d for d in dates if d < dates[i]]
-        return train_dates
-
     def _valid_dates(self):
         data = self._data
         dates = list(set(data[self._config.date_field]))
         dates.sort()
-        i = int(len(dates)*(1.0-self._config.validation_size))-1
-        i = max(i - (self._min_unrollings-1)*self._stride-1,0)
-        assert(i < len(dates))
-        valid_dates = [d for d in dates if d >= dates[i]]
+        split_date = self._config.split_date
+        valid_dates = [d for d in dates if d >= split_date]
         return valid_dates
 
-    def train_batches(self):
+    def train_batches(self, verbose=False):
         """
         Returns a BatchGenerator object built from the subset of self._data that
         corresponds to the 'keys' (uniquely-identified companies) that are _not_
         in the validation set.
         """
-        valid_keys = list(self._validation_set.keys())
-        indexes = self._data[self._config.key_field].isin(valid_keys)
-        # indexes = self._data['date'].isin(self._train_dates())
+        config = self._config
+        if config.split_date is not None:
+            valid_dates = self._valid_dates()
+            indexes = self._data[config.date_field].isin(valid_dates)
+            if verbose is True:
+                print("Training period: %s to %s"%(config.start_date,min(valid_dates)))
+        else:
+            valid_keys = list(self._validation_set.keys())
+            indexes = self._data[config.key_field].isin(valid_keys)
+            if verbose is True:
+                all_keys = sorted(set(self._data[config.key_field]))
+                print("Num training entities: %d"%(len(all_keys)-len(valid_keys)))
         train_data = self._data[~indexes]
-        #sd = max(self._config.start_date,min(train_data['date']))
-        #print("Train period: %d to %d"%(sd,max(train_data['date'])))
-        return BatchGenerator("", self._config, validation=False,
-                                  data=train_data, is_training_only=True)
+        assert(len(train_data))
+        return BatchGenerator("", config, validation=False,
+                              data=train_data, is_training_only=True)
 
-    def valid_batches(self):
+    def valid_batches(self, verbose=False):
         """
         Returns a BatchGenerator object built from the subset of self._data that
         corresponds to the 'keys' (uniquely-identified companies) that _are_ in
         the validation set.
         """
-        valid_keys = list(self._validation_set.keys())
-        indexes = self._data[self._config.key_field].isin(valid_keys)
-        # indexes = self._data['date'].isin(self._valid_dates())
+        config = self._config
+        if config.split_date is not None:
+            valid_dates = self._valid_dates()
+            indexes = self._data[config.date_field].isin(valid_dates)
+            if verbose is True:
+                print("Validation period: %s to %s"%(min(valid_dates),
+                                                     max(valid_dates)))
+        else:
+            valid_keys = list(self._validation_set.keys())
+            indexes = self._data[config.key_field].isin(valid_keys)
+            if verbose is True:
+                print("Num validation entities: %d"%len(valid_keys))
+
         valid_data = self._data[indexes]
-        #print("Validation period: %d to %d"%(min(valid_data['date']),
-        #                                     max(valid_data['date'])))
-        return BatchGenerator("", self._config, validation=False,
-                                  data=valid_data)
+        assert(len(valid_data))
+        return BatchGenerator("", config, validation=False,
+                              data=valid_data)
+
 
     def shuffle(self):
         # We cannot shuffle until the entire dataset is cached
@@ -696,7 +632,7 @@ class BatchGenerator(object):
 
     @property
     def feature_names(self):
-        return self._input_names
+        return self._feature_names
 
     @property
     def dataframe(self):

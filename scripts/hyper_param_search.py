@@ -312,7 +312,8 @@ def parse_config(filename):
     with open(filename) as f:
         content = f.readlines()
     # remove whitespace characters like `\n` at the end of each line
-    content = [x.strip() for x in content]
+    # and remove empty lines
+    content = [x.strip() for x in content if len(x)]
     config = dict()
     for i in range(len(content)):
         elements = content[i].split()

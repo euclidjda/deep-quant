@@ -57,7 +57,7 @@ class ErrorPlots(object):
         plt.clf()
         return
 
-    def get_threshold_count(self, threshold=0.2):
+    def get_threshold_count(self, threshold=1.0):
         """ Returns the percentage of equities with mean percentage error below the threshold value"""
 
         mean = self.err_df.mean().dropna()
@@ -65,7 +65,7 @@ class ErrorPlots(object):
         perc_lt_thrshld = mean[mean < threshold].count() * 1.0 / total_comps
         return perc_lt_thrshld
 
-    def plot_error_dist(self, threshold=0.2):
+    def plot_error_dist(self, threshold=1.0):
         """ Returns the error distribution of mean percentage errors"""
 
         mean = self.err_df.mean().dropna()

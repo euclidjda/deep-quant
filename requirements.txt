@@ -5,3 +5,4 @@ regex
 sklearn
 tensorflow
 wget
+scipy

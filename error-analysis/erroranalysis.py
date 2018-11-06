@@ -69,6 +69,8 @@ class ErrorAnalysis(object):
         if self.pred_file is None:
             print('Predictions file not provided')
             return
+        else:
+            print('Reading '+self.pred_file)
 
         # initialize the dicts
         companies={}
@@ -85,7 +87,7 @@ class ErrorAnalysis(object):
                     cur_target = float(lines[i + 7].split('  ')[self.output_field])
 
                     if cur_target == 'nan':
-                        cur_target = 0.
+                        cur_target = 0.0
 
                     gvkey = row[1]
 
@@ -180,16 +182,19 @@ class ErrorAnalysis(object):
 if __name__ == '__main__':
 
     # Test
+
     pred_file = ("D:\\gcp_deep_cloud\\recreate-nips-2017-v3\\rnn\\predicts-rnn-pretty.dat")
     train_file = ("D:\\gcp_deep_cloud\\recreate-nips-2017-v3\\rnn\\output-rnn-train.txt")
     
     EA = ErrorAnalysis(train_file,pred_file)
     #EA = ErrorAnalysis(train_file)
+
     print("Reading train log")
     mse = EA.read_train_log()
     #print(mse)
     print("getting errors")
     df_err = EA.get_errors(save_csv=True)
+
     #df_err = pd.read_csv('errors.csv')
     print(df_err.head())
 

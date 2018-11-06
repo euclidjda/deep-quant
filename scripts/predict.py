@@ -41,11 +41,19 @@ def print_vector(name,v):
 
 def predict(config):
 
-    path = utils.data_utils.get_data_path(config.data_dir,config.datafile)
+    datafile = config.datafile
+
+    if config.predict_datafile is not None:
+        datafile = config.predict_datafile
+
+    print("Loading data from %s ..."%datafile)
+    path = utils.data_utils.get_data_path(config.data_dir,datafile)
 
     config.batch_size = 1
-    batches = BatchGenerator(path, config,
-                             require_targets=False, verbose=True)
+    batches = BatchGenerator(path, 
+                             config,
+                             require_targets=config.require_targets, 
+                             verbose=True)
     batches.cache(verbose=True)
 
     tf_config = tf.ConfigProto( allow_soft_placement=True  ,
