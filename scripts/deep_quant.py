@@ -99,6 +99,7 @@ def get_configs():
     configs.DEFINE_integer("seed",None,"Seed for deterministic training")
     configs.DEFINE_integer("cache_id",None,"A unique experiment key for traking a cahce")
     configs.DEFINE_float("keep_prob_pred",1.0,"Keep Prob for dropout during prediction")
+    configs.DEFINE_boolean("print_normalized_outputs", False, "Print normalized outputs. Doesn't apply to pretty print")
 
     c = configs.ConfigValues()
 

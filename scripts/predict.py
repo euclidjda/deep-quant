@@ -33,11 +33,13 @@ from batch_generator import BatchGenerator
 from utils import model_utils,data_utils
 import utils
 
+
 def print_vector(name,v):
     print("%s: "%name,end='')
     for i in range(len(v)):
         print("%.2f "%v[i],end=' ')
     print()
+
 
 def predict(config):
 
@@ -78,9 +80,9 @@ def predict(config):
                 perfs[date].append(mse)
 
             if config.pretty_print_preds is True:
-                pretty_print_predictions(batches, batch, preds, mse)
+                pretty_print_predictions( batches, batch, preds, mse)
             else:
-                print_predictions(batches, batch, preds)
+                print_predictions(config, batches, batch, preds)
 
         if config.mse_outfile is not None:
             with open(config.mse_outfile,"w") as f:
@@ -93,11 +95,13 @@ def predict(config):
         else:
             exit()
 
+
 def batch_to_key(batch):
     idx = batch.seq_lengths[0]-1
     assert( 0<= idx )
     assert( idx < len(batch.attribs) )
     return batch.attribs[idx][0][0]
+
 
 def batch_to_date(batch):
     idx = batch.seq_lengths[0]-1
@@ -107,6 +111,7 @@ def batch_to_date(batch):
         print(idx)
         exit()
     return batch.attribs[idx][0][1]
+
 
 def pretty_print_predictions(batches, batch, preds, mse):
     key     = batch_to_key(batch)
@@ -128,7 +133,8 @@ def pretty_print_predictions(batches, batch, preds, mse):
     print("--------------------------------")
     sys.stdout.flush()
 
-def print_predictions(batches, batch, preds):
+
+def print_predictions(config, batches, batch, preds):
     key     = batch_to_key(batch)
     date    = batch_to_date(batch)
     inputs  = batch.inputs[-1][0]
@@ -136,8 +142,12 @@ def print_predictions(batches, batch, preds):
 
     np.set_printoptions(suppress=True)
     np.set_printoptions(precision=3)
-    out = batches.get_raw_outputs(batch,0,outputs)
-    out_str = ' '.join(["%.3f"%out[i] for i in range(len(out))])
+    out = batches.get_raw_outputs(batch, 0, outputs)
 
-    print("%s %s %s"%(date,key,out_str))
+    if config.print_normalized_outputs:
+        out_str = ' '.join(["%.3f" % outputs[i] for i in range(len(outputs))])
+    else:
+        out_str = ' '.join(["%.3f"%out[i] for i in range(len(out))])
+
+    print("%s %s %s"%(date, key, out_str))
     sys.stdout.flush()
