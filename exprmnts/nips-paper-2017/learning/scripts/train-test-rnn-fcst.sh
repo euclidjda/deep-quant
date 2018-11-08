@@ -2,8 +2,7 @@
 
 BIN=~/work/deep-quant/scripts
 
-CUDA_VISIBLE_DEVICES="" $BIN/deep_quant.py --config=config/rnn-fcst.conf \
-    --train=True > output/ouput-rnn-fcst-train.txt  2> stderr-rnn-fcst.txt  ;
+CUDA_VISIBLE_DEVICES="" $BIN/deep_quant.py --config=config/rnn-fcst.conf --train=True > output/ouput-rnn-fcst-train.txt  2> stderr-rnn-fcst.txt  ;
 
 CUDA_VISIBLE_DEVICES="" $BIN/deep_quant.py --config=config/rnn-fcst.conf \
     --train=False --pretty_print_preds=True  \

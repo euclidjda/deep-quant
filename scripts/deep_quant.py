@@ -37,7 +37,6 @@ def get_configs():
     configs.DEFINE_string("datafile", 'open_dataset.dat', "a datafile name.")
     configs.DEFINE_string("predict_datafile", None, "If predict_datafile is not None, use it instead of datafile for predictions")
     configs.DEFINE_string("mse_outfile", None, "A file to write mse values during predict phase.")
-    configs.DEFINE_string("scalesfile", None, "Optional file for storing scaling params")
     configs.DEFINE_string("default_gpu", '', "The default GPU to use e.g., /gpu:0")
     configs.DEFINE_string("nn_type",'DeepRnnModel',"Model type")
     configs.DEFINE_string("active_field", 'active', "Key column name header for active indicator")
@@ -78,7 +77,7 @@ def get_configs():
     configs.DEFINE_boolean("hidden_dropout",False,"Do dropout on hidden layers")
     configs.DEFINE_boolean("rnn_dropout",False,"Do dropout on recurrent connections")
     configs.DEFINE_boolean("skip_connections",False,"Have a linear fully connected weight skip hidden units in MLP")
-    configs.DEFINE_boolean("direct_connections",False,"Have direct connections between input and output in MLP or RNN")
+    configs.DEFINE_boolean("direct_connections",False,"Have direct connections between input and output in MLP")
     configs.DEFINE_boolean("use_cache",True,"Load data for logreg from cache (vs processing from batch generator)")
     configs.DEFINE_boolean("pretty_print_preds",False,"Print predictions in tabular format with inputs, targets, and keys")
     configs.DEFINE_boolean("scale_targets",True,"")
@@ -99,6 +98,7 @@ def get_configs():
     configs.DEFINE_integer("early_stop",None,"Early stop parameter")
     configs.DEFINE_integer("seed",None,"Seed for deterministic training")
     configs.DEFINE_integer("cache_id",None,"A unique experiment key for traking a cahce")
+    configs.DEFINE_float("keep_prob_pred",1.0,"Keep Prob for dropout during prediction")
 
     c = configs.ConfigValues()
 

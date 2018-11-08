@@ -48,7 +48,7 @@ class BaseModel(object):
 
         return mse
 
-    def step(self, sess, batch):
+    def step(self, sess, batch, keep_prob=1.0):
         """
         Take one step through the data set. A step contains a sequences of batches
         where the sequence is of size max_unrollings. The batches are size
@@ -61,7 +61,7 @@ class BaseModel(object):
           predictions: the model predictions for each data point in batch
         """
 
-        feed_dict = self._get_feed_dict(batch,keep_prob=1.0,training=False)
+        feed_dict = self._get_feed_dict(batch,keep_prob=keep_prob,training=False)
 
         (mse, preds) = sess.run([self._mse,self._predictions],feed_dict)
 

@@ -68,7 +68,7 @@ def predict(config):
         for i in range(batches.num_batches):
             batch = batches.next_batch()
 
-            (mse, preds) = model.step(session, batch)
+            (mse, preds) = model.step(session, batch,keep_prob=config.keep_prob_pred)
             # (mse, preds) = model.debug_step(session, batch)
 
             if math.isnan(mse) is False:
@@ -115,12 +115,11 @@ def pretty_print_predictions(batches, batch, preds, mse):
     L = batch.seq_lengths[0]
     targets = batch.targets[L-1][0]
     outputs = preds[0]
-    normalizer = batch.normalizers[0]
 
     np.set_printoptions(suppress=True)
     np.set_printoptions(precision=3)
 
-    print("%s %s mse %.8f %.2f"%(date,key,mse,normalizer))
+    print("%s %s mse=%.4f"%(date,key,mse))
     inputs = batch.inputs
     for i in range(L):
         print_vector("input[t-%d]"%(L-i-1),batches.get_raw_inputs(batch,0,inputs[i][0]) )

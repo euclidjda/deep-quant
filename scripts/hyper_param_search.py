@@ -159,10 +159,10 @@ def create_train_scripts(pop,gen):
             for i in pop_idxs:
                 # Add GPU number to the members of the generation
                 if _NUM_GPU!=0:
-                    str = "CUDA_VISIBLE_DEVICES=%d"%thread
+                    str = "CUDA_VISIBLE_DEVICES=%d"%(thread%_NUM_GPU)
                 elif _NUM_GPU==0:
                     str = "CUDA_VISIBLE_DEVICES=''"
-                str += " deep_quant.py"
+                str += " ~/deep-quant/scripts/deep_quant.py"
                 str += " --config=config/"+config_filename(gen,i)
                 str += " > " + output_filename(gen,i) 
                 str += " 2> output/stderr-%s.txt"%get_name(gen,i)
@@ -337,7 +337,7 @@ def execute_genetic_search(args):
 
     # Read user specified or latest population
     if args.init_pop:
-        pop = pickle.load(open(str(args.init_pop)),"rb")
+        pop = pickle.load(open(str(args.init_pop),"rb"))
     else:
         pop = init_population(config)
 

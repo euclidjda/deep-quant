@@ -115,14 +115,25 @@ def train_model(config):
             tf.set_random_seed(config.seed)
 
         print("Constructing model ...")
-        model = model_utils.get_model(session, config, 
-                                      train_data=train_data, 
-                                      verbose=True)
+        model = model_utils.get_model(session, config, verbose=True)
+
+        if config.data_scaler is not None:
+            start_time = time.time()
+            print("Calculating scaling parameters ...", end=' '); sys.stdout.flush()
+            scaling_params = train_data.get_scaling_params(config.data_scaler)
+            model.set_scaling_params(session,**scaling_params)
+            print("done in %.2f seconds."%(time.time() - start_time))
+            print("%-10s %-6s %-6s"%('feature','mean','std'))
+            for i in range(len(train_data.feature_names)):
+                center = "%.4f"%scaling_params['center'][i];
+                scale  = "%.4f"%scaling_params['scale'][i];
+                print("%-10s %-6s %-6s"%(train_data.feature_names[i],
+                                         center,scale))
+            sys.stdout.flush()
 
         if config.early_stop is not None:
             print("Training will early stop without "
               "improvement after %d epochs."%config.early_stop)
-        sys.stdout.flush()
 
         train_history = list()
         valid_history = list()

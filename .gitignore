@@ -122,3 +122,9 @@ checkpoint
 /error-analysis/**/*.png
 /error-analysis/**/*.jpg
 /error-analysis/**/*.csv
+
+# Experiments
+/exprmnts/
+
+# Datasets
+/datasets/

@@ -18,8 +18,8 @@ class ErrorPlots(object):
         self.train_mse_data = train_mse_data
         self.err_df = err_df
 
-    def plot_train_hist(self,filename=None):
-        """ Plots the training and validation error history and saves with the given filename"""
+    def plot_train_hist(self):
+        """ Plots the training and validation error history """
 
         if not self.train_mse_data:
             print("MSE data not provided")
@@ -30,22 +30,19 @@ class ErrorPlots(object):
         val_err = [x[1] for x in self.train_mse_data.values()]
 
         plt.plot(epoch, train_err, label='Train Error')
-        plt.plot(epoch, val_err,'--',label='Val Error')
+        plt.plot(epoch, val_err, label='Val Error')
         plt.title("Training MSE History")
         plt.xlabel('Epochs')
         plt.ylabel('MSE')
         plt.legend()
-        if filename == None:
-            plt.savefig('train_hist.png')
-        else:
-            plt.savefig(filename)
+        plt.savefig('train_hist.png')
         plt.clf()
         return
 
     def plot_cdf(self, threshold=1.):
         """ Plots the cumulative distribution of mean percentage error"""
 
-        if self.err_df is None:
+        if not self.err_df:
             print("Error DF not provided")
             return
 
