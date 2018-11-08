@@ -157,13 +157,16 @@ def create_train_scripts(pop,gen):
             m = len(pop)//_NUM_THREADS
             pop_idxs = [thread*m + i for i in range(m)]
             for i in pop_idxs:
+                id_seed = int(17*gen + i)
                 # Add GPU number to the members of the generation
                 if _NUM_GPU!=0:
                     str = "CUDA_VISIBLE_DEVICES=%d"%(thread%_NUM_GPU)
                 elif _NUM_GPU==0:
                     str = "CUDA_VISIBLE_DEVICES=''"
-                str += " ~/deep-quant/scripts/deep_quant.py"
+                str += " /home/lchauhan/deep-quant/scripts/deep_quant.py"
                 str += " --config=config/"+config_filename(gen,i)
+                str += " --seed=%i"%id_seed
+                str += " --cache_id=%i"%id_seed
                 str += " > " + output_filename(gen,i) 
                 str += " 2> output/stderr-%s.txt"%get_name(gen,i)
                 str += "; rm -rf chkpts/chkpts-%s"%get_name(gen,i)+";"
