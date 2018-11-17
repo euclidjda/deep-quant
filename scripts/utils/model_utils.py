@@ -29,6 +29,7 @@ from models.deep_mlp_model import DeepMlpModel
 from models.clvynt_model import ClvyntModel
 from models.naive_model import NaiveModel
 from models.deep_rnn_model import DeepRnnModel
+from models.deep_bayes_uq_model import DeepBayesUQModel
 
 #from log_reg_model import LogRegModel
 

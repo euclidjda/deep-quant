@@ -24,8 +24,8 @@ from __future__ import print_function
 import tensorflow as tf
 
 import configs as configs
-from train import train_model
-from predict import predict
+from train_uq import train_model
+from predict_uq import predict
 
 
 def get_configs():
