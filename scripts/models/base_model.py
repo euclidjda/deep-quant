@@ -27,7 +27,7 @@ class BaseModel(object):
     """
     """
 
-    def train_step(self, sess, batch, keep_prob=1.0):
+    def train_step(self, sess, batch, keep_prob=1.0, uq=False):
         """
         Take one step through the data set. A step contains a sequences of batches
         where the sequence is of size max_unrollings. The batches are size
@@ -36,6 +36,7 @@ class BaseModel(object):
           sess: current tf session the model is being run in
           batch: batch of data of type Batch (see batch_generator.py)
           keep_prob: keep_prob for dropout
+          uq: uncertainty quantification - boolean
         Returns:
            mse: mean squared error scalar for batch
            predictions: the model predictions for each data point in batch
@@ -43,12 +44,16 @@ class BaseModel(object):
 
         feed_dict = self._get_feed_dict(batch,keep_prob=keep_prob,training=True)
 
-        (mse, _) = sess.run([self._mse,self._train_op],feed_dict)
-        # assert( train_evals > 0 )
+        if uq:
+            (mse, mse_p, _) = sess.run([self._mse, self._mse_p, self._train_op], feed_dict)
+            return mse, mse_p
 
-        return mse
+        else:
+            (mse, _) = sess.run([self._mse, self._train_op], feed_dict)
+            # assert( train_evals > 0 )
+            return mse
 
-    def step(self, sess, batch, keep_prob=1.0):
+    def step(self, sess, batch, keep_prob=1.0, uq=False):
         """
         Take one step through the data set. A step contains a sequences of batches
         where the sequence is of size max_unrollings. The batches are size
@@ -56,6 +61,7 @@ class BaseModel(object):
         Args:
           sess: current tf session the model is being run in
           batch: batch of data of type Batch
+          uq: uncertainty quantification (boolean)
         Returns:
           mse: mean squared error scalar for batch
           predictions: the model predictions for each data point in batch
@@ -63,11 +69,16 @@ class BaseModel(object):
 
         feed_dict = self._get_feed_dict(batch,keep_prob=keep_prob,training=False)
 
-        (mse, preds) = sess.run([self._mse,self._predictions],feed_dict)
+        if uq:
+            (mse, mse_p, preds, preds_precision) = sess.run(
+                [self._mse, self._mse_p, self._predictions, self._predictions_p],
+                feed_dict)
+            return mse, mse_p, preds, preds_precision
+        else:
+            (mse, preds) = sess.run([self._mse,self._predictions],feed_dict)
+            return mse, preds
 
-        return mse, preds
-
-    def debug_step(self, sess, batch, training=False):
+    def debug_step(self, sess, batch, training=False, uq=False):
         """
         Take one step through the data set. A step contains a sequences of batches
         where the sequence is of size max_unrollings. The batches are size
@@ -76,6 +87,7 @@ class BaseModel(object):
           sess: current tf session the model is being run in
           batch: batch of data of type Batch (see batch_generator.py)
           keep_prob: keep_prob for dropout
+          uq: uncertainty quantification (boolean)
         Returns:
            mse: mean squared error scalar for batch
            predictions: the model predictions for each data point in batch
@@ -91,10 +103,14 @@ class BaseModel(object):
 
         # (s,t,lt,lkt,lkti,o,lo,lko,lkoi) = sess.run([self._seq_lengths,self._t,self._lt,self._lkt,self._lkti,self._o,self._lo,self._lko,self._lkoi],feed_dict)
 
-        (mse, preds) = sess.run([self._mse,self._predictions],feed_dict)
-        # assert( train_evals > 0 )
-
-        return mse, preds
+        if uq:
+            (mse, mse_p, preds, preds_precision) = sess.run([self._mse, self._mse_p,
+                                                             self._predictions, self._predictions_p], feed_dict)
+            return mse, mse_p, preds, preds_precision
+        else:
+            (mse, preds) = sess.run([self._mse,self._predictions],feed_dict)
+            # assert( train_evals > 0 )
+            return mse, preds
 
     def _get_feed_dict(self, batch, keep_prob=1.0, training=False):
 
