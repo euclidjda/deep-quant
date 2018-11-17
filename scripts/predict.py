@@ -82,7 +82,7 @@ def predict(config):
             if config.pretty_print_preds is True:
                 pretty_print_predictions( batches, batch, preds, mse)
             else:
-                print_predictions(config, batches, batch, preds)
+                print_predictions(config, batches, batch, preds, mse)
 
         if config.mse_outfile is not None:
             with open(config.mse_outfile,"w") as f:
@@ -134,7 +134,7 @@ def pretty_print_predictions(batches, batch, preds, mse):
     sys.stdout.flush()
 
 
-def print_predictions(config, batches, batch, preds):
+def print_predictions(config, batches, batch, preds, mse):
     key     = batch_to_key(batch)
     date    = batch_to_date(batch)
     inputs  = batch.inputs[-1][0]
@@ -142,6 +142,7 @@ def print_predictions(config, batches, batch, preds):
 
     np.set_printoptions(suppress=True)
     np.set_printoptions(precision=3)
+
     out = batches.get_raw_outputs(batch, 0, outputs)
 
     if config.print_normalized_outputs:
@@ -149,5 +150,5 @@ def print_predictions(config, batches, batch, preds):
     else:
         out_str = ' '.join(["%.3f"%out[i] for i in range(len(out))])
 
-    print("%s %s %s"%(date, key, out_str))
+    print("%s %s %s %s"%(date, key, out_str, mse))
     sys.stdout.flush()
