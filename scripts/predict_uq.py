@@ -83,9 +83,9 @@ def predict(config):
                 perfs_p[date].append(mse_p)
 
             if config.pretty_print_preds is True:
-                pretty_print_predictions( batches, batch, preds, mse)
+                pretty_print_predictions( batches, batch, preds, preds_precision,  mse, mse_p)
             else:
-                print_predictions(config, batches, batch, preds, mse)
+                print_predictions(config, batches, batch, preds, preds_precision,  mse, mse_p)
 
         # MSE Outfile
         if config.mse_outfile is not None:
@@ -141,7 +141,7 @@ def pretty_print_predictions(batches, batch, preds, preds_precisions, mse, mse_p
     np.set_printoptions(suppress=True)
     np.set_printoptions(precision=3)
 
-    print("%s %s mse=%.4f"%(date, key, mse, mse_p))
+    print("%s %s mse=%.8f mse_p=%.8f"%(date, key, mse, mse_p))
     inputs = batch.inputs
     for i in range(L):
         print_vector("input[t-%d]"%(L-i-1), batches.get_raw_inputs(batch, 0, inputs[i][0]))
@@ -174,7 +174,7 @@ def print_predictions(config, batches, batch, preds, preds_precisions, mse, mse_
         out_str = 'out ' + ' '.join(["%.3f"%out[i] for i in range(len(out))])
         prec_str = 'prec ' + ' '.join(["%.3f" % prec[i] for i in range(len(prec))])
 
-    print("%s %s %s %s"%(date, key, out_str, mse))
-    print("%s %s %s %s" % (date, key, prec_str, mse_p))
+    print("%s %s %s %s"%(date, key, out_str, str(mse)))
+    print("%s %s %s %s" % (date, key, prec_str, str(mse_p)))
 
     sys.stdout.flush()

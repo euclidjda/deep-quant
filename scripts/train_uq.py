@@ -67,7 +67,7 @@ def run_epoch(session, model, train_data, valid_data,
         batch = valid_data.next_batch()
         (mse, mse_p, _, _) = model.step(session, batch, uq=uq)
         valid_mse += mse
-        valid_mse_p += mse
+        valid_mse_p += mse_p
         if verbose: dot_count = pretty_progress(train_steps+step,prog_int,dot_count)
 
     # evaluate validation data
@@ -158,9 +158,9 @@ def train_model(config):
                                                keep_prob=config.keep_prob, 
                                                passes=config.passes,
                                                verbose=True)
-            print( ('Epoch: %d Train MSE: %.6f Valid MSE: %.6f Learning rate: %.4f') %
+            print( ('Epoch: %d Train MSE: %.8f Valid MSE: %.8f Learning rate: %.4f') %
                   (i + 1, train_mse, valid_mse, lr) )
-            print(('Epoch: %d Train MSE_w_precision: %.6f Valid MSE_w_precision: %.6f Learning rate: %.4f') %
+            print(('Epoch: %d Train MSE_w_precision: %.8f Valid MSE_w_precision: %.8f Learning rate: %.4f') %
                   (i + 1, train_mse_p, valid_mse_p, lr))
             sys.stdout.flush()
 
