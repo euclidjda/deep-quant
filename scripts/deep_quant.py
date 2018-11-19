@@ -24,8 +24,11 @@ from __future__ import print_function
 import tensorflow as tf
 
 import configs as configs
-from train_uq import train_model
-from predict_uq import predict
+
+from train import train_model
+from predict import predict
+from train_uq import train_model as train_model_uq
+from predict_uq import predict as predict_uq
 
 
 def get_configs():
@@ -100,6 +103,7 @@ def get_configs():
     configs.DEFINE_integer("cache_id",None,"A unique experiment key for traking a cahce")
     configs.DEFINE_float("keep_prob_pred",1.0,"Keep Prob for dropout during prediction")
     configs.DEFINE_boolean("print_normalized_outputs", False, "Print normalized outputs. Doesn't apply to pretty print")
+    configs.DEFINE_boolean("UQ", False, "Uncertainty Quantification Mode")
 
     c = configs.ConfigValues()
 
@@ -136,11 +140,20 @@ def get_configs():
 def main(_):
     config = get_configs()
 
-    # Check to see if we are in training or testing mode
-    if config.train is True:
-        train_model(config)
+    # Check if Uncertainty Quantification mode
+    if config.UQ:
+        # Check to see if we are in training or testing mode
+        if config.train is True:
+            train_model_uq(config)
+        else:
+            predict_uq(config)
+
     else:
-        predict(config)
+        # Check to see if we are in training or testing mode
+        if config.train is True:
+            train_model(config)
+        else:
+            predict(config)
 
 if __name__ == "__main__":
     tf.app.run()
