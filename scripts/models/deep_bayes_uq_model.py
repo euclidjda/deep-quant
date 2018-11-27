@@ -39,7 +39,7 @@ class DeepBayesUQModel(BaseModel):
         Args:
           config
         """
-
+        self.config = config
         self._max_unrollings = max_unrollings = config.max_unrollings
         self._min_unrollings = min_unrollings = config.min_unrollings
         self._num_inputs = num_inputs = config.num_inputs
@@ -222,10 +222,10 @@ class DeepBayesUQModel(BaseModel):
 
         self._train_op = optimizer.apply_gradients(zip(grads, tvars))
 
-    def _mean_squared_error_w_precision(self, targets, outputs, precisions, mask ):
+    def _mean_squared_error_w_precision(self, targets, outputs, precisions, mask):
         """ Returns mean squared error modified with precision"""
-        noise = tf.math.exp(-precisions)
-        loss = tf.multiply(tf.squared_difference(targets, outputs), noise)
+        precisions = tf.math.exp(-1*precisions)
+        loss = tf.multiply(tf.squared_difference(targets, outputs), precisions) - tf.log(precisions)
         # TODO: Make the below safe to div by zero
         mse_p = tf.reduce_sum(loss)/tf.reduce_sum(mask)
         return mse_p

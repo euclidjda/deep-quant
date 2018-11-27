@@ -105,6 +105,7 @@ def get_configs():
     configs.DEFINE_float("keep_prob_pred",1.0,"Keep Prob for dropout during prediction")
     configs.DEFINE_boolean("print_normalized_outputs", False, "Print normalized outputs. Doesn't apply to pretty print")
     configs.DEFINE_boolean("UQ", False, "Uncertainty Quantification Mode")
+    configs.DEFINE_float("noise_lambda",1.0,"Weight decay for noise in the loss function. Refer to DeepBayesUQ Model")
 
     c = configs.ConfigValues()
 
