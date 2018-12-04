@@ -53,7 +53,7 @@ def get_search_configs():
     configurations.DEFINE_integer("num_threads",4,"NUmber of parallel threads (Number of parallel executions)")
     configurations.DEFINE_integer("num_gpu",1,"Number of GPU on the machine, Use 0 if there are None")
     configurations.DEFINE_integer("sleep_time",1,"Sleep time")
-    configurations.DEFINE_float("mutate_rate",0.2,"Mutation rate for genetic algorithm")
+    configurations.DEFINE_float("mutate_rate",0.02,"Mutation rate for genetic algorithm")
     configurations.DEFINE_string("init_pop",None,"Specify starting population. Path to the pickle file")
 
     c = configurations.ConfigValues()
@@ -165,7 +165,7 @@ def create_train_scripts(pop,gen):
                     str = "CUDA_VISIBLE_DEVICES=''"
                 str += " /home/lchauhan/deep-quant/scripts/deep_quant.py"
                 str += " --config=config/"+config_filename(gen,i)
-                str += " --seed=%i"%id_seed
+                #str += " --seed=%i"%id_seed
                 str += " --cache_id=%i"%id_seed
                 str += " > " + output_filename(gen,i) 
                 str += " 2> output/stderr-%s.txt"%get_name(gen,i)
