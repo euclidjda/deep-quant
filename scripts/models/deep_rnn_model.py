@@ -101,7 +101,8 @@ class DeepRnnModel(BaseModel):
                                                        dtype=tf.float32,
                                                        sequence_length=self._seq_lengths)
 
-        self._w = output_w = tf.get_variable("output_w", [num_hidden, num_outputs])
+        regularizer = tf.contrib.layers.l2_regularizer(config.weight_decay)
+        self._w = output_w = tf.get_variable("output_w", [num_hidden, num_outputs], regularizer=regularizer)
         output_b = tf.get_variable("output_b", [num_outputs])
 
         self._outputs = list()
@@ -167,7 +168,8 @@ class DeepRnnModel(BaseModel):
         # here is the learning part of the graph
         p1 = config.target_lambda
         p2 = config.rnn_lambda
-        loss = p1 * self._mse_0 + (1.0-p1)*(p2*self._mse_1 + (1.0-p2)*self._mse_2)
+        loss = p1 * self._mse_0 + (1.0-p1)*(p2*self._mse_1 + (1.0-p2)*self._mse_2) + \
+               tf.losses.get_regularization_loss(scope='output_w')
         tvars = tf.trainable_variables()
         grads = tf.gradients(loss,tvars)
 
