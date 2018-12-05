@@ -167,7 +167,7 @@ class DeepRnnModel(BaseModel):
         # here is the learning part of the graph
         p1 = config.target_lambda
         p2 = config.rnn_lambda
-        l2 = config.l2_alpha*sum(tf.nn.l2_loss(tf_var) for tf_var in tf.trainable_variables if "_b" not in tf_var.name)
+        l2 = config.l2_alpha*sum(tf.nn.l2_loss(tf_var) for tf_var in tf.trainable_variables() if "_b" not in tf_var.name)
         loss = p1 * self._mse_0 + (1.0-p1)*(p2*self._mse_1 + (1.0-p2)*self._mse_2) + l2
         tvars = tf.trainable_variables()
         grads = tf.gradients(loss, tvars)
@@ -186,6 +186,7 @@ class DeepRnnModel(BaseModel):
             raise RuntimeError("Unknown optimizer = %s"%config.optimizer)
 
         self._train_op = optimizer.apply_gradients(zip(grads, tvars))
+
 
     def _mean_squared_error(self, targets, outputs, mask):
         loss = math_ops.squared_difference(targets, outputs)

@@ -100,8 +100,9 @@ def config_filename(gen,i):
 
 
 def script_filename(gen,thread):
+    print(gen)
     dirname = 'scripts'
-    basename = dirname + "/train-g%04d"%gen
+    basename = dirname + "/train-g%04d".format(gen)
     scriptname = basename + "-u%03d.sh"%thread
     return scriptname
 
@@ -112,10 +113,10 @@ def execute_train_scripts(gen=0):
     :param gen: default 0
     :return:
     """
-    str = ""
+    str1 = ""
     for thread in range(_NUM_THREADS):
-        str += script_filename(gen, thread) + " & "
-    os.system(str)
+        str1 += script_filename(gen, thread) + " & "
+    os.system(str1)
 
 
 def create_train_scripts(pop, args, gen=0):
