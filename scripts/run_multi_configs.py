@@ -173,7 +173,7 @@ def create_train_scripts(pop, args, gen=0):
                     str1 += " --train=False"
                     str1 += " --start_date=%i"%args.start_date
                     str1 += " --end_date=%i"%args.end_date
-                    str1 += " --mse_outfile=mse-" + output_filename(gen, i)
+                    str1 += " --mse_outfile=" + output_filename(gen, i) + "-mse"
                     str1 += " > " + output_filename(gen, i) + "-pred"
                     str1 += " 2> output/pred-stderr-%s.txt" % get_name(gen, i)
                     print(str1, file=f)
