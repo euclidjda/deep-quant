@@ -160,10 +160,10 @@ class DeepLogLikelihoodUQModel(BaseModel):
 
         if config.data_scaler is not None and config.scale_targets is True:
             self._predictions = self._reverse_center_and_scale(last_output)
-            self._predictions_v = self._reverse_center_and_scale(last_variance)
+            self._predictions_p = self._reverse_center_and_scale(last_variance)
         else:
             self._predictions = last_output
-            self._predictions_v = last_variance
+            self._predictions_p = last_variance
 
         ktidx = config.target_idx
 
