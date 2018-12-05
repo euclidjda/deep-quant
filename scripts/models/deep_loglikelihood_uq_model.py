@@ -226,8 +226,9 @@ class DeepLogLikelihoodUQModel(BaseModel):
 
     def _mean_squared_error_w_variance(self, targets, outputs, variances, mask):
         """ Returns mean squared error modified with variance"""
-        variances = tf.multiply(variances, variances)
+        variances = tf.multiply(variances*variances)
         loss = tf.multiply(tf.squared_difference(targets, outputs), 1./variances) + tf.log(variances)
+        loss = tf.multiply(loss, loss)
         # TODO: Make the below safe to div by zero
         mse_v = tf.reduce_sum(loss)/tf.reduce_sum(mask)
         return mse_v
