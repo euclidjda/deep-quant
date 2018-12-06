@@ -115,7 +115,7 @@ class DeepLogLikelihoodUQModel(BaseModel):
         self._variance = list()
         for i in range(max_unrollings):
             output = tf.nn.xw_plus_b(rnn_outputs[i], output_w, output_b)
-            variance = tf.nn.xw_plus_b(rnn_outputs[i], variance_w, variance_b)
+            variance = tf.softplus(tf.nn.xw_plus_b(rnn_outputs[i], variance_w, variance_b))
             if config.direct_connections is True:
                 self._outputs += self._scaled_inputs[i][:, :num_outputs]
 
@@ -226,9 +226,7 @@ class DeepLogLikelihoodUQModel(BaseModel):
 
     def _mean_squared_error_w_variance(self, targets, outputs, variances, mask):
         """ Returns mean squared error modified with variance"""
-        variances = tf.multiply(variances,variances)
         loss = tf.multiply(tf.squared_difference(targets, outputs), 1./variances) + tf.log(variances)
-        loss = tf.multiply(loss, loss)
         # TODO: Make the below safe to div by zero
         mse_v = tf.reduce_sum(loss)/tf.reduce_sum(mask)
         return mse_v
