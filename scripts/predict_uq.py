@@ -137,7 +137,7 @@ def pretty_print_predictions(batches, batch, preds, preds_precisions, mse, mse_p
     targets = batch.targets[L-1][0]
     outputs = preds[0]
     precisions = preds_precisions[0]
-    precisions = np.exp(-1*precisions)
+    # precisions = np.exp(-1*precisions)
 
     np.set_printoptions(suppress=True)
     np.set_printoptions(precision=3)

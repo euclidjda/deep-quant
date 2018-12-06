@@ -115,7 +115,8 @@ class DeepLogLikelihoodUQModel(BaseModel):
         self._variance = list()
         for i in range(max_unrollings):
             output = tf.nn.xw_plus_b(rnn_outputs[i], output_w, output_b)
-            variance = tf.softplus(tf.nn.xw_plus_b(rnn_outputs[i], variance_w, variance_b))
+            # 1e-6 is added to variance for numerical stability
+            variance = tf.math.add(tf.nn.softplus(tf.nn.xw_plus_b(rnn_outputs[i], variance_w, variance_b)),1e-6)
             if config.direct_connections is True:
                 self._outputs += self._scaled_inputs[i][:, :num_outputs]
 
