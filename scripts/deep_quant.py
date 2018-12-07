@@ -84,6 +84,10 @@ def get_configs():
     configs.DEFINE_boolean("direct_connections",False,"Have direct connections between input and output in MLP")
     configs.DEFINE_boolean("use_cache",True,"Load data for logreg from cache (vs processing from batch generator)")
     configs.DEFINE_boolean("pretty_print_preds",False,"Print predictions in tabular format with inputs, targets, and keys")
+    configs.DEFINE_boolean("print_preds", False,
+                           "Print predictions with just date, gvkey and output values")
+    configs.DEFINE_string("df_dirname", None,
+                           "Saves dataframes for target, output, precision/variance, mse and mse_p in df_dirname")
     configs.DEFINE_boolean("scale_targets",True,"")
     configs.DEFINE_boolean("backfill",False,"Backfill seq history to max_unrollings with data in first time step")
     configs.DEFINE_boolean("log_squasher",True,"Squash large normalized inputs with natural log function")
