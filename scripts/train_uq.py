@@ -43,7 +43,7 @@ def run_epoch(session, model, train_data, valid_data,
 
     uq = True
     start_time = time.time()
-    train_mse = train_mse_p = valid_mse = valid_mse_p = 0.0
+    train_mse = train_mse_var = valid_mse = valid_mse_var = 0.0
     dot_count = 0
     train_steps = int(passes*train_data.num_batches)
     valid_steps = valid_data.num_batches
@@ -59,15 +59,15 @@ def run_epoch(session, model, train_data, valid_data,
         batch = train_data.next_batch()
         step_mse = model.train_step(session, batch, keep_prob=keep_prob, uq=uq)
         train_mse += step_mse[0]
-        train_mse_p += step_mse[1]
+        train_mse_var += step_mse[1]
 
         if verbose: dot_count = pretty_progress(step,prog_int,dot_count)
 
     for step in range(valid_steps):
         batch = valid_data.next_batch()
-        (mse, mse_p, _, _) = model.step(session, batch, uq=uq)
+        (mse, mse_var, _, _) = model.step(session, batch, uq=uq)
         valid_mse += mse
-        valid_mse_p += mse_p
+        valid_mse_var += mse_var
         if verbose: dot_count = pretty_progress(train_steps+step,prog_int,dot_count)
 
     # evaluate validation data
@@ -78,7 +78,7 @@ def run_epoch(session, model, train_data, valid_data,
               "speed: %.0f seconds" % (passes, (time.time() - start_time)))
     sys.stdout.flush()
 
-    return train_mse/train_steps, train_mse_p/train_steps, valid_mse/valid_steps, valid_mse_p/valid_steps
+    return train_mse/train_steps, train_mse_var/train_steps, valid_mse/valid_steps, valid_mse_var/valid_steps
 
 
 def stop_training(config, perfs):
@@ -154,18 +154,18 @@ def train_model(config):
 
         for i in range(config.max_epoch):
 
-            (train_mse, train_mse_p, valid_mse, valid_mse_p) = run_epoch(session, model, train_data, valid_data,
+            (train_mse, train_mse_var, valid_mse, valid_mse_var) = run_epoch(session, model, train_data, valid_data,
                                                keep_prob=config.keep_prob, 
                                                passes=config.passes,
                                                verbose=True)
             print( ('Epoch: %d Train MSE: %.8f Valid MSE: %.8f Learning rate: %.4f') %
                   (i + 1, train_mse, valid_mse, lr) )
-            print(('Epoch: %d Train MSE_w_precision: %.8f Valid MSE_w_precision: %.8f Learning rate: %.4f') %
-                  (i + 1, train_mse_p, valid_mse_p, lr))
+            print(('Epoch: %d Train MSE_w_variance: %.8f Valid MSE_w_variance: %.8f Learning rate: %.4f') %
+                  (i + 1, train_mse_var, valid_mse_var, lr))
             sys.stdout.flush()
 
-            train_history.append(train_mse_p)
-            valid_history.append(valid_mse_p)
+            train_history.append(train_mse_var)
+            valid_history.append(valid_mse_var)
 
             if re.match("Gradient|Momentum",config.optimizer):
                 lr = model_utils.adjust_learning_rate(session, model, 

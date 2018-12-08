@@ -118,7 +118,7 @@ def generate_results(pop,gen):
             content = f.readlines()
         content = [x.strip() for x in content]
         # remove lines w/o error
-        content = [s for s in content if re.search('MSE_w_precision',s)]
+        content = [s for s in content if re.search('MSE_w_variance',s)]
         errors = [float(s.split()[_VALID_ERR_IDX]) for s in content]
         if len(errors) > 0:
             errors.sort()

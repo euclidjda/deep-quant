@@ -40,7 +40,7 @@ def get_configs():
     configs.DEFINE_string("datafile", 'open_dataset.dat', "a datafile name.")
     configs.DEFINE_string("predict_datafile", None, "If predict_datafile is not None, use it instead of datafile for predictions")
     configs.DEFINE_string("mse_outfile", None, "A file to write mse values during predict phase.")
-    configs.DEFINE_string("mse_p_outfile", None, "A file to write mse_p values during predict phase.")
+    configs.DEFINE_string("mse_var_outfile", None, "A file to write mse_var values during predict phase.")
     configs.DEFINE_string("default_gpu", '', "The default GPU to use e.g., /gpu:0")
     configs.DEFINE_string("nn_type",'DeepRnnModel',"Model type")
     configs.DEFINE_string("active_field", 'active', "Key column name header for active indicator")
@@ -87,7 +87,7 @@ def get_configs():
     configs.DEFINE_boolean("print_preds", False,
                            "Print predictions with just date, gvkey and output values")
     configs.DEFINE_string("df_dirname", None,
-                           "Saves dataframes for target, output, precision/variance, mse and mse_p in df_dirname")
+                           "Saves dataframes for target, output, variance/variance, mse and mse_var in df_dirname")
     configs.DEFINE_boolean("scale_targets",True,"")
     configs.DEFINE_boolean("backfill",False,"Backfill seq history to max_unrollings with data in first time step")
     configs.DEFINE_boolean("log_squasher",True,"Squash large normalized inputs with natural log function")

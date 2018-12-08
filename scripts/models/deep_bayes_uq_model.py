@@ -160,10 +160,10 @@ class DeepBayesUQModel(BaseModel):
 
         if config.data_scaler is not None and config.scale_targets is True:
             self._predictions = self._reverse_center_and_scale(last_output)
-            self._predictions_p = self._reverse_center_and_scale(last_precision)
+            self._predictions_var = self._reverse_center_and_scale(last_precision)
         else:
             self._predictions = last_output
-            self._predictions_p = last_precision
+            self._predictions_var = last_precision
 
         ktidx = config.target_idx
 
@@ -197,7 +197,7 @@ class DeepBayesUQModel(BaseModel):
         self._mse_2 = self._mean_squared_error_w_precision(targets, outputs, precisions, seqmask)
 
         self._mse = tf.losses.mean_squared_error(last_target[:, ktidx], last_output[:, ktidx])
-        self._mse_p = self._mean_squared_error_w_precision(last_target[:, ktidx], last_output[:, ktidx],
+        self._mse_var = self._mean_squared_error_w_precision(last_target[:, ktidx], last_output[:, ktidx],
                                                         last_precision[:, ktidx], last_seqmask[:, ktidx])
 
         # here is the learning part of the graph
@@ -227,5 +227,5 @@ class DeepBayesUQModel(BaseModel):
         precisions = tf.math.exp(-1*precisions)
         loss = tf.multiply(tf.squared_difference(targets, outputs), precisions) - tf.log(precisions)
         # TODO: Make the below safe to div by zero
-        mse_p = tf.reduce_sum(loss)/tf.reduce_sum(mask)
-        return mse_p
+        mse_var = tf.reduce_sum(loss)/tf.reduce_sum(mask)
+        return mse_var

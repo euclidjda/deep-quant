@@ -65,11 +65,11 @@ def predict(config):
     # Initialize DataFrames
     df_target = pd.DataFrame()
     df_output = pd.DataFrame()
-    df_precision = pd.DataFrame()
+    df_variance = pd.DataFrame()
     df_mse = pd.DataFrame()
-    df_mse_p = pd.DataFrame()
+    df_mse_var = pd.DataFrame()
 
-    df_list = [df_target, df_output, df_precision, df_mse, df_mse_p]
+    df_list = [df_target, df_output, df_variance, df_mse, df_mse_var]
 
     with tf.Graph().as_default(), tf.Session(config=tf_config) as session:
 
@@ -81,7 +81,7 @@ def predict(config):
         for i in range(batches.num_batches):
             batch = batches.next_batch()
 
-            (mse, mse_p, preds, preds_precision) = model.step(session, batch, keep_prob=config.keep_prob_pred, uq=uq)
+            (mse, mse_var, preds, preds_variance) = model.step(session, batch, keep_prob=config.keep_prob_pred, uq=uq)
             # (mse, preds) = model.debug_step(session, batch)
 
             if math.isnan(mse) is False:
@@ -91,13 +91,13 @@ def predict(config):
                     perfs[date] = list()
                     perfs_p[date] = list()
                 perfs[date].append(mse)
-                perfs_p[date].append(mse_p)
+                perfs_p[date].append(mse_var)
 
             # Print according to the options
             if config.pretty_print_preds:
-                pretty_print_predictions( batches, batch, preds, preds_precision,  mse, mse_p)
+                pretty_print_predictions( batches, batch, preds, preds_variance,  mse, mse_var)
             elif config.print_preds:
-                print_predictions(config, batches, batch, preds, preds_precision,  mse, mse_p)
+                print_predictions(config, batches, batch, preds, preds_variance,  mse, mse_var)
 
             # Get values and update DataFrames if df_dirname is provided in config
             if config.df_dirname is not None:
@@ -105,10 +105,10 @@ def predict(config):
                     # Get all values
                     target_val = get_value(batches, batch, 'target')
                     output_val = get_value(batches, batch, 'output', preds)
-                    precision_val = get_value(batches, batch, 'precision', preds_precision)
+                    variance_val = get_value(batches, batch, 'variance', preds_variance)
                     mse_val = mse
-                    mse_p_val = mse_p
-                    values_list = [target_val, output_val, precision_val, mse_val, mse_p_val]
+                    mse_var_val = mse_var
+                    values_list = [target_val, output_val, variance_val, mse_val, mse_var_val]
 
                     # Update DataFrames
                     for j in range(len(df_list)):
@@ -119,7 +119,7 @@ def predict(config):
         # Save the DataFrames
         if not os.path.isdir(config.df_dirname):
             os.makedirs(config.df_dirname)
-        save_names = ['target-df.pkl', 'output-df.pkl', 'precision-df.pkl', 'mse-df.pkl', 'mse-p-df.pkl']
+        save_names = ['target-df.pkl', 'output-df.pkl', 'variance-df.pkl', 'mse-df.pkl', 'mse-p-df.pkl']
 
         for j in range(len(df_list)):
             assert(len(df_list) == len(save_names))
@@ -137,9 +137,9 @@ def predict(config):
         else:
             exit()
 
-        # MSE with precision outfile
-        if config.mse_p_outfile is not None:
-            with open(config.mse_p_outfile, "w") as f:
+        # MSE with variance outfile
+        if config.mse_var_outfile is not None:
+            with open(config.mse_var_outfile, "w") as f:
                 for date in sorted(perfs_p):
                     mean = np.mean(perfs_p[date])
                     print("%s %.6f %d"%(date, mean, len(perfs_p[date])), file=f)
@@ -167,54 +167,54 @@ def batch_to_date(batch):
     return batch.attribs[idx][0][1]
 
 
-def pretty_print_predictions(batches, batch, preds, preds_precisions, mse, mse_p):
+def pretty_print_predictions(batches, batch, preds, preds_variances, mse, mse_var):
     key     = batch_to_key(batch)
     date    = batch_to_date(batch)
 
     L = batch.seq_lengths[0]
     targets = batch.targets[L-1][0]
     outputs = preds[0]
-    precisions = preds_precisions[0]
-    # precisions = np.exp(-1*precisions)
+    variances = preds_variances[0]
+    # variances = np.exp(-1*variances) # for precision formulation
 
     np.set_printoptions(suppress=True)
-    np.set_printoptions(precision=3)
+    np.set_printoptions(variance=3)
 
-    print("%s %s mse=%.8f mse_p=%.8f"%(date, key, mse, mse_p))
+    print("%s %s mse=%.8f mse_var=%.8f"%(date, key, mse, mse_var))
     inputs = batch.inputs
     for i in range(L):
         print_vector("input[t-%d]"%(L-i-1), batches.get_raw_inputs(batch, 0, inputs[i][0]))
     print_vector("output[t+1]", batches.get_raw_outputs(batch, 0, outputs))
     print_vector("target[t+1]", batches.get_raw_outputs(batch, 0, targets))
-    print_vector("precision[t+1]", batches.get_raw_outputs(batch, 0, precisions))
+    print_vector("variance[t+1]", batches.get_raw_outputs(batch, 0, variances))
 
     print("--------------------------------")
     sys.stdout.flush()
 
 
-def print_predictions(config, batches, batch, preds, preds_precisions, mse, mse_p):
+def print_predictions(config, batches, batch, preds, preds_variances, mse, mse_var):
     key     = batch_to_key(batch)
     date    = batch_to_date(batch)
     inputs  = batch.inputs[-1][0]
     outputs = preds[0]
-    precisions = preds_precisions[0]
+    variances = preds_variances[0]
 
     np.set_printoptions(suppress=True)
-    np.set_printoptions(precision=3)
+    np.set_printoptions(variance=3)
 
     # Raw outputs
     out = batches.get_raw_outputs(batch, 0, outputs)
-    prec = batches.get_raw_outputs(batch, 0, precisions)
+    prec = batches.get_raw_outputs(batch, 0, variances)
 
     if config.print_normalized_outputs:
         out_str = 'out ' + ' '.join(["%.3f" % outputs[i] for i in range(len(outputs))])
-        prec_str = 'prec ' + ' '.join(["%.3f" % precisions[i] for i in range(len(precisions))])
+        prec_str = 'prec ' + ' '.join(["%.3f" % variances[i] for i in range(len(variances))])
     else:
         out_str = 'out ' + ' '.join(["%.3f"%out[i] for i in range(len(out))])
         prec_str = 'prec ' + ' '.join(["%.3f" % prec[i] for i in range(len(prec))])
 
     print("%s %s %s %s"%(date, key, out_str, str(mse)))
-    print("%s %s %s %s" % (date, key, prec_str, str(mse_p)))
+    print("%s %s %s %s" % (date, key, prec_str, str(mse_var)))
 
     sys.stdout.flush()
 
@@ -238,12 +238,12 @@ def get_value(batches, batch, field, predictions=None, output_field=3):
     Extracts the appropriate field value from batch or predictions
     :param batches:
     :param batch: batch
-    :param predictions: predictions eg outputs, precisions
+    :param predictions: predictions eg outputs, variances
     :param field: field to be extracted
     :return: value from batch or mse value
     """
 
-    assert(field in ['target', 'output', 'precision'])
+    assert(field in ['target', 'output', 'variance'])
 
     if field == 'target':
         L = batch.seq_lengths[0]
@@ -252,9 +252,9 @@ def get_value(batches, batch, field, predictions=None, output_field=3):
     elif field == 'output':
         outputs = predictions[0]
         value = batches.get_raw_outputs(batch, 0, outputs)[output_field]
-    elif field == 'precision':
-        precisions = predictions[0]
-        value = batches.get_raw_outputs(batch, 0, precisions)[output_field]
+    elif field == 'variance':
+        variances = predictions[0]
+        value = batches.get_raw_outputs(batch, 0, variances)[output_field]
 
     return value
 

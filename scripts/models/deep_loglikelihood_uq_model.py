@@ -116,7 +116,7 @@ class DeepLogLikelihoodUQModel(BaseModel):
         for i in range(max_unrollings):
             output = tf.nn.xw_plus_b(rnn_outputs[i], output_w, output_b)
             # 1e-6 is added to variance for numerical stability
-            variance = tf.math.add(tf.nn.softplus(tf.nn.xw_plus_b(rnn_outputs[i], variance_w, variance_b)),1e-6)
+            variance = tf.math.add(tf.nn.softplus(tf.nn.xw_plus_b(rnn_outputs[i], variance_w, variance_b)), 1e-6)
             if config.direct_connections is True:
                 self._outputs += self._scaled_inputs[i][:, :num_outputs]
 
@@ -161,10 +161,10 @@ class DeepLogLikelihoodUQModel(BaseModel):
 
         if config.data_scaler is not None and config.scale_targets is True:
             self._predictions = self._reverse_center_and_scale(last_output)
-            self._predictions_p = self._reverse_center_and_scale(last_variance)
+            self._predictions_var = self._reverse_center_and_scale(last_variance)
         else:
             self._predictions = last_output
-            self._predictions_p = last_variance
+            self._predictions_var = last_variance
 
         ktidx = config.target_idx
 
@@ -198,7 +198,7 @@ class DeepLogLikelihoodUQModel(BaseModel):
         self._mse_2 = self._mean_squared_error_w_variance(targets, outputs, variances, seqmask)
 
         self._mse = tf.losses.mean_squared_error(last_target[:, ktidx], last_output[:, ktidx])
-        self._mse_p = self._mean_squared_error_w_variance(last_target[:, ktidx], last_output[:, ktidx],
+        self._mse_var = self._mean_squared_error_w_variance(last_target[:, ktidx], last_output[:, ktidx],
                                                         last_variance[:, ktidx], last_seqmask[:, ktidx])
 
         # here is the learning part of the graph

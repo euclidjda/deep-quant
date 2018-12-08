@@ -45,8 +45,8 @@ class BaseModel(object):
         feed_dict = self._get_feed_dict(batch,keep_prob=keep_prob,training=True)
 
         if uq:
-            (mse, mse_p, _) = sess.run([self._mse, self._mse_p, self._train_op], feed_dict)
-            return mse, mse_p
+            (mse, mse_var, _) = sess.run([self._mse, self._mse_var, self._train_op], feed_dict)
+            return mse, mse_var
 
         else:
             (mse, _) = sess.run([self._mse, self._train_op], feed_dict)
@@ -70,10 +70,10 @@ class BaseModel(object):
         feed_dict = self._get_feed_dict(batch,keep_prob=keep_prob,training=False)
 
         if uq:
-            (mse, mse_p, preds, preds_precision) = sess.run(
-                [self._mse, self._mse_p, self._predictions, self._predictions_p],
+            (mse, mse_var, preds, preds_variance) = sess.run(
+                [self._mse, self._mse_var, self._predictions, self._predictions_var],
                 feed_dict)
-            return mse, mse_p, preds, preds_precision
+            return mse, mse_var, preds, preds_variance
         else:
             (mse, preds) = sess.run([self._mse,self._predictions],feed_dict)
             return mse, preds
@@ -94,7 +94,7 @@ class BaseModel(object):
         """
 
         np.set_printoptions(suppress=True)
-        np.set_printoptions(precision=3)
+        np.set_printoptions(variance=3)
 
         print()
         print(batch.inputs[-1][0][18:22])
@@ -104,9 +104,9 @@ class BaseModel(object):
         # (s,t,lt,lkt,lkti,o,lo,lko,lkoi) = sess.run([self._seq_lengths,self._t,self._lt,self._lkt,self._lkti,self._o,self._lo,self._lko,self._lkoi],feed_dict)
 
         if uq:
-            (mse, mse_p, preds, preds_precision) = sess.run([self._mse, self._mse_p,
-                                                             self._predictions, self._predictions_p], feed_dict)
-            return mse, mse_p, preds, preds_precision
+            (mse, mse_var, preds, preds_variance) = sess.run([self._mse, self._mse_var,
+                                                             self._predictions, self._predictions_var], feed_dict)
+            return mse, mse_var, preds, preds_variance
         else:
             (mse, preds) = sess.run([self._mse,self._predictions],feed_dict)
             # assert( train_evals > 0 )
