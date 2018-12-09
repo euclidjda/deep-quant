@@ -119,7 +119,7 @@ def predict(config):
         # Save the DataFrames
         if not os.path.isdir(config.df_dirname):
             os.makedirs(config.df_dirname)
-        save_names = ['target-df.pkl', 'output-df.pkl', 'variance-df.pkl', 'mse-df.pkl', 'mse-p-df.pkl']
+        save_names = ['target-df.pkl', 'output-df.pkl', 'variance-df.pkl', 'mse-df.pkl', 'mse-var-df.pkl']
 
         for j in range(len(df_list)):
             assert(len(df_list) == len(save_names))
