@@ -189,7 +189,7 @@ def create_train_scripts(pop,gen):
                 str += " --cache_id=%i"%id_seed
                 str += " > " + output_filename(gen,i) 
                 str += " 2> output/stderr-%s.txt"%get_name(gen,i)
-                str += "; rm -rf chkpts/chkpts-%s"%get_name(gen,i)+";"
+                #str += "; rm -rf chkpts/chkpts-%s"%get_name(gen,i)+";"
                 print(str,file=f)
             donefile = donefile_filename(gen,thread)
             print("echo 'done.' > %s"%donefile,file=f)
