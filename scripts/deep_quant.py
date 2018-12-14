@@ -109,8 +109,12 @@ def get_configs():
     configs.DEFINE_float("keep_prob_pred",1.0,"Keep Prob for dropout during prediction")
     configs.DEFINE_boolean("print_normalized_outputs", False, "Print normalized outputs. Doesn't apply to pretty print")
     configs.DEFINE_boolean("UQ", False, "Uncertainty Quantification Mode")
+    configs.DEFINE_string("UQ_model_type", 'MVE', "Select between MVE or PIE")
     configs.DEFINE_float("noise_lambda",1.0,"Weight decay for noise in the loss function. Refer to DeepBayesUQ Model")
     configs.DEFINE_float("l2_alpha",0.0,"L2 regularization for weight parameters.")
+    configs.DEFINE_float("picp_lambda",1.0, "Contribution of PICP loss term for HQPI UQ model")
+    configs.DEFINE_float("smoothing_pi_check", 100, "Smoothing parameter for calculation of PI check in HQPI UQ model")
+    configs.DEFINE_float("confidence_alpha", 0.1, "Alpha used for calculating confidence level (= 1 - alpha)")
 
     c = configs.ConfigValues()
 
@@ -149,6 +153,7 @@ def main(_):
 
     # Check if Uncertainty Quantification mode
     if config.UQ:
+        assert (config.UQ_model_type in ['MVE', 'PIE'])
         # Check to see if we are in training or testing mode
         if config.train is True:
             train_model_uq(config)

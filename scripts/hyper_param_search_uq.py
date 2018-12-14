@@ -118,8 +118,15 @@ def generate_results(pop,gen):
             content = f.readlines()
         content = [x.strip() for x in content]
         # remove lines w/o error
-        content = [s for s in content if re.search('MSE_w_variance',s)]
-        errors = [float(s.split()[_VALID_ERR_IDX]) for s in content]
+        try:
+            content = [s for s in content if re.search('MSE_w_variance',s)]
+            errors = [float(s.split()[_VALID_ERR_IDX]) for s in content]
+            assert len(content) > 0
+        except AssertionError:
+            content = [s for s in content if re.search('Valid LOSS',s)]
+            errors = [float(s.split()[-1]) for s in content]
+
+
         if len(errors) > 0:
             errors.sort()
             result.append(errors[0])

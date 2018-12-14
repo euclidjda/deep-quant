@@ -27,7 +27,7 @@ class BaseModel(object):
     """
     """
 
-    def train_step(self, sess, batch, keep_prob=1.0, uq=False):
+    def train_step(self, sess, batch, keep_prob=1.0, uq=False, UQ_model_type='MVE'):
         """
         Take one step through the data set. A step contains a sequences of batches
         where the sequence is of size max_unrollings. The batches are size
@@ -45,15 +45,20 @@ class BaseModel(object):
         feed_dict = self._get_feed_dict(batch,keep_prob=keep_prob,training=True)
 
         if uq:
-            (mse, mse_var, _) = sess.run([self._mse, self._mse_var, self._train_op], feed_dict)
-            return mse, mse_var
+            if UQ_model_type == 'MVE':
+                (mse, mse_var, _) = sess.run([self._mse, self._mse_var, self._train_op], feed_dict)
+                return mse, mse_var
+            elif UQ_model_type == 'PIE':
+                (mpiw, picp_loss, picp, _) = sess.run([self._mpiw, self._picp_loss, self._picp, self._train_op],
+                                                      feed_dict)
+                return mpiw, picp_loss, picp
 
         else:
             (mse, _) = sess.run([self._mse, self._train_op], feed_dict)
             # assert( train_evals > 0 )
             return mse
 
-    def step(self, sess, batch, keep_prob=1.0, uq=False):
+    def step(self, sess, batch, keep_prob=1.0, uq=False, UQ_model_type='MVE'):
         """
         Take one step through the data set. A step contains a sequences of batches
         where the sequence is of size max_unrollings. The batches are size
@@ -70,15 +75,22 @@ class BaseModel(object):
         feed_dict = self._get_feed_dict(batch,keep_prob=keep_prob,training=False)
 
         if uq:
-            (mse, mse_var, preds, preds_variance) = sess.run(
-                [self._mse, self._mse_var, self._predictions, self._predictions_var],
-                feed_dict)
-            return mse, mse_var, preds, preds_variance
+            if UQ_model_type == 'MVE':
+                (mse, mse_var, preds, preds_variance) = sess.run([self._mse, self._mse_var,
+                                                                  self._predictions, self._predictions_var],
+                                                                 feed_dict)
+                return mse, mse_var, preds, preds_variance
+            elif UQ_model_type == 'PIE':
+                (mpiw, picp_loss, picp, preds_lb, preds_ub) = sess.run([self._mpiw, self._picp_loss, self._picp,
+                                                                        self._predictions_lb, self._predictions_ub],
+                                                                       feed_dict)
+                return mpiw, picp_loss, picp, preds_lb, preds_ub
+
         else:
-            (mse, preds) = sess.run([self._mse,self._predictions],feed_dict)
+            (mse, preds) = sess.run([self._mse, self._predictions], feed_dict)
             return mse, preds
 
-    def debug_step(self, sess, batch, training=False, uq=False):
+    def debug_step(self, sess, batch, training=False, uq=False, UQ_model_type='MVE'):
         """
         Take one step through the data set. A step contains a sequences of batches
         where the sequence is of size max_unrollings. The batches are size
@@ -94,7 +106,7 @@ class BaseModel(object):
         """
 
         np.set_printoptions(suppress=True)
-        np.set_printoptions(variance=3)
+        np.set_printoptions(precision=3)
 
         print()
         print(batch.inputs[-1][0][18:22])
@@ -104,9 +116,17 @@ class BaseModel(object):
         # (s,t,lt,lkt,lkti,o,lo,lko,lkoi) = sess.run([self._seq_lengths,self._t,self._lt,self._lkt,self._lkti,self._o,self._lo,self._lko,self._lkoi],feed_dict)
 
         if uq:
-            (mse, mse_var, preds, preds_variance) = sess.run([self._mse, self._mse_var,
-                                                             self._predictions, self._predictions_var], feed_dict)
-            return mse, mse_var, preds, preds_variance
+            if UQ_model_type == 'MVE':
+                (mse, mse_var, preds, preds_variance) = sess.run([self._mse, self._mse_var,
+                                                                  self._predictions, self._predictions_var],
+                                                                 feed_dict)
+                return mse, mse_var, preds, preds_variance
+            elif UQ_model_type == 'PIE':
+                (mpiw, picp_loss, picp, preds_lb, preds_ub) = sess.run([self._mpiw, self._picp_loss, self._picp,
+                                                                        self._predictions_lb, self._predictions_ub],
+                                                                       feed_dict)
+                return mpiw, picp_loss, picp, preds_lb, preds_ub
+
         else:
             (mse, preds) = sess.run([self._mse,self._predictions],feed_dict)
             # assert( train_evals > 0 )

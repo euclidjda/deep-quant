@@ -31,6 +31,7 @@ from models.naive_model import NaiveModel
 from models.deep_rnn_model import DeepRnnModel
 from models.deep_bayes_uq_model import DeepBayesUQModel
 from models.deep_loglikelihood_uq_model import DeepLogLikelihoodUQModel
+from models.deep_hqpi_uq_model import DeepHqpiUQModel
 
 #from log_reg_model import LogRegModel
 

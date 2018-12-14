@@ -31,6 +31,8 @@ class DeepBayesUQModel(BaseModel):
     """
     A Deep Rnn Model that supports regression with
     arbitrary number of fixed width hidden layers.
+
+    Model Type: Mean Variance Estimation or MVE
     """
 
     def __init__(self, config):

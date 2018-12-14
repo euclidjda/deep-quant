@@ -34,8 +34,9 @@ def pretty_progress(step, prog_int, dot_count):
     return dot_count
 
 
-def run_epoch(session, model, train_data, valid_data,
+def run_epoch_mve(session, model, train_data, valid_data,
                 keep_prob=1.0, passes=1.0, verbose=False):
+    """Runs epoch for MVE type UQ Model"""
 
     if not train_data.num_batches > 0:
         raise RuntimeError("batch_size*max_unrollings is larger "
@@ -57,7 +58,7 @@ def run_epoch(session, model, train_data, valid_data,
 
     for step in range(train_steps):
         batch = train_data.next_batch()
-        step_mse = model.train_step(session, batch, keep_prob=keep_prob, uq=uq)
+        step_mse = model.train_step(session, batch, keep_prob=keep_prob, uq=uq, UQ_model_type='MVE')
         train_mse += step_mse[0]
         train_mse_var += step_mse[1]
 
@@ -65,7 +66,7 @@ def run_epoch(session, model, train_data, valid_data,
 
     for step in range(valid_steps):
         batch = valid_data.next_batch()
-        (mse, mse_var, _, _) = model.step(session, batch, uq=uq)
+        (mse, mse_var, _, _) = model.step(session, batch, uq=uq, UQ_model_type='MVE')
         valid_mse += mse
         valid_mse_var += mse_var
         if verbose: dot_count = pretty_progress(train_steps+step,prog_int,dot_count)
@@ -79,6 +80,57 @@ def run_epoch(session, model, train_data, valid_data,
     sys.stdout.flush()
 
     return train_mse/train_steps, train_mse_var/train_steps, valid_mse/valid_steps, valid_mse_var/valid_steps
+
+
+def run_epoch_pie(session, model, train_data, valid_data,
+                keep_prob=1.0, passes=1.0, verbose=False):
+    """Runs epoch for PIE type UQ Model"""
+
+    if not train_data.num_batches > 0:
+        raise RuntimeError("batch_size*max_unrollings is larger "
+                             "than the training set size.")
+
+    uq = True
+    start_time = time.time()
+    train_mpiw = train_picp = train_picp_loss = valid_mpiw = valid_picp = valid_picp_loss = 0.0
+    dot_count = 0
+    train_steps = int(passes*train_data.num_batches)
+    valid_steps = valid_data.num_batches
+    total_steps = train_steps+valid_steps
+    prog_int = total_steps/100 # progress interval for stdout
+
+    train_data.shuffle() # we want to randomly shuffle train data
+    valid_data.rewind()  # make sure we start a beginning
+
+    print("Steps: %d "%total_steps,end=' ')
+
+    for step in range(train_steps):
+        batch = train_data.next_batch()
+        step_mpiw_picp = model.train_step(session, batch, keep_prob=keep_prob, uq=uq, UQ_model_type='PIE')
+        train_mpiw += step_mpiw_picp[0]
+        train_picp += step_mpiw_picp[2]
+        train_picp_loss += step_mpiw_picp[1]
+
+        if verbose: dot_count = pretty_progress(step, prog_int, dot_count)
+
+    for step in range(valid_steps):
+        batch = valid_data.next_batch()
+        (mpiw, picp_loss, picp, _, _) = model.step(session, batch, uq=uq, UQ_model_type='PIE')
+        valid_mpiw += mpiw
+        valid_picp += picp
+        valid_picp_loss += picp_loss
+        if verbose: dot_count = pretty_progress(train_steps+step, prog_int, dot_count)
+
+    # evaluate validation data
+
+    if verbose:
+        print("."*(100-dot_count),end='')
+        print(" passes: %.2f  "
+              "speed: %.0f seconds" % (passes, (time.time() - start_time)))
+    sys.stdout.flush()
+
+    return train_mpiw/train_steps, train_picp/train_steps, train_picp_loss/train_steps, \
+           valid_mpiw/valid_steps, valid_picp/valid_steps, valid_picp_loss/valid_steps
 
 
 def stop_training(config, perfs):
@@ -154,20 +206,56 @@ def train_model(config):
 
         for i in range(config.max_epoch):
 
-            (train_mse, train_mse_var, valid_mse, valid_mse_var) = run_epoch(session, model, train_data, valid_data,
-                                               keep_prob=config.keep_prob, 
-                                               passes=config.passes,
-                                               verbose=True)
-            print( ('Epoch: %d Train MSE: %.8f Valid MSE: %.8f Learning rate: %.4f') %
-                  (i + 1, train_mse, valid_mse, lr) )
-            print(('Epoch: %d Train MSE_w_variance: %.8f Valid MSE_w_variance: %.8f Learning rate: %.4f') %
-                  (i + 1, train_mse_var, valid_mse_var, lr))
-            sys.stdout.flush()
+            # MVE Epoch
+            if config.UQ_model_type == 'MVE':
+                (train_mse, train_mse_var, valid_mse, valid_mse_var) = run_epoch_mve(session, model, train_data,
+                                                                                     valid_data,
+                                                                                     keep_prob=config.keep_prob,
+                                                                                     passes=config.passes,
+                                                                                     verbose=True)
+                # Status to check if valid mse is nan, used to stop training
+                if math.isnan(valid_mse):
+                    is_metric_nan = True
+                else:
+                    is_metric_nan = False
+                print('Epoch: %d Train MSE: %.8f Valid MSE: %.8f Learning rate: %.4f' %
+                      (i + 1, train_mse, valid_mse, lr))
+                print('Epoch: %d Train MSE_w_variance: %.8f Valid MSE_w_variance: %.8f Learning rate: %.4f' %
+                      (i + 1, train_mse_var, valid_mse_var, lr))
+                sys.stdout.flush()
 
-            train_history.append(train_mse_var)
-            valid_history.append(valid_mse_var)
+                train_history.append(train_mse_var)
+                valid_history.append(valid_mse_var)
 
-            if re.match("Gradient|Momentum",config.optimizer):
+            # PIE Epoch
+            elif config.UQ_model_type == 'PIE':
+                (train_mpiw, train_picp, train_picp_loss, valid_mpiw, valid_picp, valid_picp_loss) = \
+                    run_epoch_pie(session, model, train_data, valid_data,
+                                  keep_prob=config.keep_prob,
+                                  passes=config.passes,
+                                  verbose=True)
+
+                train_loss = train_mpiw + config.picp_lambda*train_picp_loss
+                valid_loss = valid_mpiw + config.picp_lambda*valid_picp_loss
+                # Status to check if valid loss is nan, used to stop training
+                if math.isnan(valid_loss):
+                    is_metric_nan = True
+                else:
+                    is_metric_nan = False
+
+                print('Epoch: %d Train MPIW: %.8f Valid MPIW: %.8f Learning rate: %.4f' %
+                      (i + 1, train_mpiw, valid_mpiw, lr))
+                print('Epoch: %d Train PICP: %.8f Valid PICP: %.8f' %
+                      (i + 1, train_picp, valid_picp))
+                print('Epoch: %d Train LOSS: %.8f Valid LOSS: %.8f' %
+                      (i + 1, train_loss, valid_loss ))
+
+                sys.stdout.flush()
+
+                train_history.append(train_loss)
+                valid_history.append(valid_loss)
+
+            if re.match("Gradient|Momentum", config.optimizer):
                 lr = model_utils.adjust_learning_rate(session, model, 
                                                       lr, config.lr_decay, train_history)
 
@@ -175,7 +263,7 @@ def train_model(config):
                 print("Creating directory %s" % config.model_dir)
                 os.mkdir(config.model_dir)
 
-            if math.isnan(valid_mse):
+            if is_metric_nan:
                 print("Training failed due to nan.")
                 quit()
             elif stop_training(config, valid_history):
@@ -184,4 +272,4 @@ def train_model(config):
             else:
                 if ( (config.early_stop is None) or 
                      (valid_history[-1] <= min(valid_history)) ):
-                    model_utils.save_model(session,config,i)
+                    model_utils.save_model(session, config, i)
