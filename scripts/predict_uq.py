@@ -123,13 +123,14 @@ def predict_mve(config):
                         df_list[j] = update_df(df_list[j], date, key, values_list[j])
 
         # Save the DataFrames
-        if not os.path.isdir(config.df_dirname):
-            os.makedirs(config.df_dirname)
-        save_names = ['target-df.pkl', 'output-df.pkl', 'variance-df.pkl', 'mse-df.pkl', 'mse-var-df.pkl']
+        if config.df_dirname:
+            if not os.path.isdir(config.df_dirname):
+                os.makedirs(config.df_dirname)
+            save_names = ['target-df.pkl', 'output-df.pkl', 'variance-df.pkl', 'mse-df.pkl', 'mse-var-df.pkl']
 
-        for j in range(len(df_list)):
-            assert(len(df_list) == len(save_names))
-            df_list[j].to_pickle(os.path.join(config.df_dirname, save_names[j]))
+            for j in range(len(df_list)):
+                assert(len(df_list) == len(save_names))
+                df_list[j].to_pickle(os.path.join(config.df_dirname, save_names[j]))
 
         # MSE Outfile
         if config.mse_outfile is not None:
