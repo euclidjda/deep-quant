@@ -53,7 +53,7 @@ def get_search_configs():
     configurations.DEFINE_integer("num_threads",4,"NUmber of parallel threads (Number of parallel executions)")
     configurations.DEFINE_integer("num_gpu",1,"Number of GPU on the machine, Use 0 if there are None")
     configurations.DEFINE_integer("sleep_time",1,"Sleep time")
-    configurations.DEFINE_float("mutate_rate",0.2,"Mutation rate for genetic algorithm")
+    configurations.DEFINE_float("mutate_rate",0.02,"Mutation rate for genetic algorithm")
     configurations.DEFINE_string("init_pop",None,"Specify starting population. Path to the pickle file")
 
     c = configurations.ConfigValues()
@@ -157,16 +157,19 @@ def create_train_scripts(pop,gen):
             m = len(pop)//_NUM_THREADS
             pop_idxs = [thread*m + i for i in range(m)]
             for i in pop_idxs:
+                id_seed = int(17*gen + i)
                 # Add GPU number to the members of the generation
                 if _NUM_GPU!=0:
-                    str = "CUDA_VISIBLE_DEVICES=%d"%thread
+                    str = "CUDA_VISIBLE_DEVICES=%d"%(thread%_NUM_GPU)
                 elif _NUM_GPU==0:
                     str = "CUDA_VISIBLE_DEVICES=''"
                 str += " deep_quant.py"
                 str += " --config=config/"+config_filename(gen,i)
+                #str += " --seed=%i"%id_seed
+                str += " --cache_id=%i"%id_seed
                 str += " > " + output_filename(gen,i) 
                 str += " 2> output/stderr-%s.txt"%get_name(gen,i)
-                str += "; rm -rf chkpts/chkpts-%s"%get_name(gen,i)+";"
+                #str += "; rm -rf chkpts/chkpts-%s"%get_name(gen,i)+";"
                 print(str,file=f)
             donefile = donefile_filename(gen,thread)
             print("echo 'done.' > %s"%donefile,file=f)
@@ -337,7 +340,7 @@ def execute_genetic_search(args):
 
     # Read user specified or latest population
     if args.init_pop:
-        pop = pickle.load(open(str(args.init_pop)),"rb")
+        pop = pickle.load(open(str(args.init_pop),"rb"))
     else:
         pop = init_population(config)
 
