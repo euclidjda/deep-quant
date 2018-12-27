@@ -48,7 +48,7 @@ def run_epoch(session, model, train_data, valid_data,
     prog_int = total_steps/100 # progress interval for stdout
 
     train_data.shuffle() # we want to randomly shuffle train data
-    valid_data.rewind()  # make sure we start a beggining
+    valid_data.rewind()  # make sure we start a beginning
 
     print("Steps: %d "%total_steps,end=' ')
 

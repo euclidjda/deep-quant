@@ -32,7 +32,7 @@ from models.deep_rnn_model import DeepRnnModel
 from models.deep_bayes_uq_model import DeepBayesUQModel
 from models.deep_loglikelihood_uq_model import DeepLogLikelihoodUQModel
 from models.deep_hqpi_uq_model import DeepHqpiUQModel
-
+from models.deep_rnn_model_huber_loss import DeepRnnModelHL
 #from log_reg_model import LogRegModel
 
 def save_model(session, config, step):

@@ -163,7 +163,7 @@ def create_train_scripts(pop,gen):
                     str = "CUDA_VISIBLE_DEVICES=%d"%(thread%_NUM_GPU)
                 elif _NUM_GPU==0:
                     str = "CUDA_VISIBLE_DEVICES=''"
-                str += " /home/lchauhan/deep-quant/scripts/deep_quant.py"
+                str += " deep_quant.py"
                 str += " --config=config/"+config_filename(gen,i)
                 #str += " --seed=%i"%id_seed
                 str += " --cache_id=%i"%id_seed
