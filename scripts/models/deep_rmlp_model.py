@@ -118,6 +118,8 @@ class DeepRmlpModel(BaseModel):
 
         for i in range(config.num_layers):
             mlp_output = tf.contrib.layers.fully_connected(mlp_output, num_hidden)
+            if config.hidden_dropout is True:
+                mlp_output = tf.nn.dropout(mlp_output, self._keep_prob)
 
         mlp_output_w = tf.get_variable("mlp_output_w", [num_hidden, num_outputs])
         mlp_output_b = tf.get_variable("mlp_output_b", [num_outputs])
