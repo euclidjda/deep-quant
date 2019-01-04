@@ -126,7 +126,7 @@ class DeepRmlpModel(BaseModel):
 
         output = tf.nn.xw_plus_b( mlp_output, mlp_output_w, mlp_output_b )
         if config.direct_connections is True:
-            output = output + self._scaled_inputs[i][:,:num_outputs]
+            output = output + self._scaled_inputs[-1][:,:num_outputs]
         self._outputs.append( output )
 
         # Prepare loss function input
@@ -189,8 +189,17 @@ class DeepRmlpModel(BaseModel):
         # here is the learning part of the graph
         p1 = config.target_lambda
         p2 = config.rnn_lambda
-        loss = p1 * self._mse_0 + (1.0-p1)*(p2*self._mse_1 + (1.0-p2)*self._mse_2)
         tvars = tf.trainable_variables()
+
+        loss = p1 * self._mse_0 + (1.0-p1)*(p2*self._mse_1 + (1.0-p2)*self._mse_2)
+
+        #l2 = config.l2_alpha * sum(
+        #    tf.nn.l2_loss(tf_var)
+        #    for tf_var in tvars
+        #    if not ("_b" in tf_var.name)
+        #)
+        #loss += l2
+
         grads = tf.gradients(loss,tvars)
 
         if (config.max_grad_norm > 0):
