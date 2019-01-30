@@ -68,7 +68,32 @@ def adjust_learning_rate(session, model,
     model.set_learning_rate(session, learning_rate)
     return learning_rate
 
-def get_model(session, config, train_data=None, verbose=False):
+def get_scaling_params(config, data, verbose=False):
+    # Initialize scaling params
+    scaling_params = None
+    if config.scalesfile is not None and os.path.isfile(config.scalesfile):
+        scaling_params = pickle.load( open( config.scalesfile, "rb" ) )
+        if verbose:
+            print("Reading scaling params from %s"%config.scalesfile);
+    else:
+        scaling_params = data.get_scaling_params(config.data_scaler)
+        if config.scalesfile is not None:
+            pickle.dump(scaling_params, open( config.scalesfile, "wb" ))
+            if verbose:
+                print("Writing scaling params to %s"%config.scalesfile);
+
+    if verbose:
+        print("Scaling params are:")
+        print("%-10s %-6s %-6s"%('feature','mean','std'))
+        for i in range(len(data.feature_names)):
+            center = "%.4f"%scaling_params['center'][i];
+            scale  = "%.4f"%scaling_params['scale'][i];
+            print("%-10s %-6s %-6s"%(data.feature_names[i],
+                                     center,scale))
+    return scaling_params
+
+
+def get_model(session, config, verbose=False):
     """
     Args:
       session: the tf session
@@ -79,7 +104,6 @@ def get_model(session, config, train_data=None, verbose=False):
     Returns:
       the model
     """
-
     model = _create_model(session, config, verbose)
 
     ckpt = tf.train.get_checkpoint_state(config.model_dir)
@@ -98,29 +122,6 @@ def get_model(session, config, train_data=None, verbose=False):
         session.run(tf.global_variables_initializer())
         if verbose:
             print("done in %.2f seconds."%(time.time() - start_time))
-        # Initialize scaling params
-        if config.data_scaler is not None:
-            scaling_params = None
-            if config.scalesfile is not None and os.path.isfile(config.scalesfile):
-                scaling_params = pickle.load( open( config.scalesfile, "rb" ) )
-                if verbose:
-                    print("Reading scaling params from %s"%config.scalesfile);
-            else:
-                scaling_params = train_data.get_scaling_params(config.data_scaler)
-                if config.scalesfile is not None:
-                    pickle.dump(scaling_params, open( config.scalesfile, "wb" ))
-                    if verbose:
-                        print("Writing scaling params to %s"%config.scalesfile);
-
-            model.set_scaling_params(session,**scaling_params)
-            if verbose:
-                print("Scaling params are:")
-                print("%-10s %-6s %-6s"%('feature','mean','std'))
-                for i in range(len(train_data.feature_names)):
-                    center = "%.4f"%scaling_params['center'][i];
-                    scale  = "%.4f"%scaling_params['scale'][i];
-                    print("%-10s %-6s %-6s"%(train_data.feature_names[i],
-                                             center,scale))
 
     return model
 

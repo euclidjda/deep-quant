@@ -24,8 +24,10 @@ import sys
 import tensorflow as tf
 import regex as re
 import math
+import numpy as np
 
 from utils import data_utils, model_utils
+from noise_model import NoiseModel
 
 def pretty_progress(step, prog_int, dot_count):
     if ( (prog_int<=1) or (step % (int(prog_int)+1)) == 0):
@@ -33,7 +35,8 @@ def pretty_progress(step, prog_int, dot_count):
     return dot_count
 
 def run_epoch(session, model, train_data, valid_data,
-                keep_prob=1.0, passes=1.0, verbose=False):
+              keep_prob=1.0, passes=1.0, 
+              noise_model=None, verbose=False):
 
     if not train_data.num_batches > 0:
         raise RuntimeError("batch_size*max_unrollings is larger "
@@ -54,16 +57,17 @@ def run_epoch(session, model, train_data, valid_data,
 
     for step in range(train_steps):
         batch = train_data.next_batch()
+        if noise_model is not None:
+            batch = noise_model.add_noise(batch)
         train_mse += model.train_step(session, batch, keep_prob=keep_prob)
         if verbose: dot_count = pretty_progress(step,prog_int,dot_count)
 
+    # evaluate validation data
     for step in range(valid_steps):
         batch = valid_data.next_batch()
         (mse,_) = model.step(session, batch)
         valid_mse += mse
         if verbose: dot_count = pretty_progress(train_steps+step,prog_int,dot_count)
-
-    # evaluate validation data
 
     if verbose:
         print("."*(100-dot_count),end='')
@@ -115,9 +119,17 @@ def train_model(config):
             tf.set_random_seed(config.seed)
 
         print("Constructing model ...")
-        model = model_utils.get_model(session, config, 
-                                      train_data=train_data, 
-                                      verbose=True)
+        model = model_utils.get_model(session, config, verbose=True)
+
+        params = model_utils.get_scaling_params(config,train_data,verbose=True)
+        model.set_scaling_params(session,**params)
+
+        noise_model = None
+        if config.training_noise is not None:
+            print("Training noise level: %.2f * 1-stdev"%config.training_noise) 
+            noise_model = NoiseModel(seed=config.seed,
+                                     scaling_params=params,
+                                     degree=config.training_noise)
 
         if config.early_stop is not None:
             print("Training will early stop without "
@@ -137,6 +149,7 @@ def train_model(config):
             (train_mse, valid_mse) = run_epoch(session, model, train_data, valid_data,
                                                keep_prob=config.keep_prob, 
                                                passes=config.passes,
+                                               noise_model=noise_model,
                                                verbose=True)
             print( ('Epoch: %d Train MSE: %.6f Valid MSE: %.6f Learning rate: %.4f') %
                   (i + 1, train_mse, valid_mse, lr) )

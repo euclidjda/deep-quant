@@ -59,13 +59,14 @@ def get_configs():
     configs.DEFINE_integer("min_years",None,"Alt to min_unrollings")
     configs.DEFINE_integer("max_years",None,"Alt to max_unrollings")
     configs.DEFINE_integer("pls_years",None,"Alt to max_years. max_years = min_year+pls_years")
-    # num_unrollings is being depricated by max_unrollings
+    # num_unrollings is being depricated, replaced with max_unrollings
     configs.DEFINE_integer("num_unrollings",4,"Number of unrolling steps")
     configs.DEFINE_integer("stride",12,"How many steps to skip per unrolling")
     configs.DEFINE_integer("forecast_n",12,"How many steps to forecast into the future")
     configs.DEFINE_integer("batch_size",1,"Size of each batch")
     configs.DEFINE_integer("num_layers",1, "Numer of RNN layers")
     configs.DEFINE_integer("num_hidden",10,"Number of hidden layer units")
+    configs.DEFINE_float("training_noise",None, "Level of training noise as multiple of 1-stdev")
     configs.DEFINE_float("init_scale",0.1, "Initial scale for weights")
     configs.DEFINE_float("max_grad_norm",10.0,"Gradient clipping")
     configs.DEFINE_integer("start_date",None,"First date to train on as YYYYMM")
@@ -95,6 +96,7 @@ def get_configs():
     configs.DEFINE_float("passes",1.0,"Passes through day per epoch")
     configs.DEFINE_float("target_lambda",0.5,"How much to weight last step vs. all steps in loss")
     configs.DEFINE_float("rnn_lambda",0.5,"How much to weight last step vs. all steps in loss")
+    configs.DEFINE_float("l2_alpha",0.0,"L2 Regularization")
     configs.DEFINE_integer("max_epoch",0,"Stop after max_epochs")
     configs.DEFINE_integer("early_stop",None,"Early stop parameter")
     configs.DEFINE_integer("seed",None,"Seed for deterministic training")

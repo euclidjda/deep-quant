@@ -84,17 +84,11 @@ class BaseModel(object):
         np.set_printoptions(suppress=True)
         np.set_printoptions(precision=3)
 
-        print()
-        print(batch.inputs[-1][0][18:22])
-
         feed_dict = self._get_feed_dict(batch,keep_prob=1.0,training=training)
 
-        # (s,t,lt,lkt,lkti,o,lo,lko,lkoi) = sess.run([self._seq_lengths,self._t,self._lt,self._lkt,self._lkti,self._o,self._lo,self._lko,self._lkoi],feed_dict)
-
-        (mse, preds) = sess.run([self._mse,self._predictions],feed_dict)
+        (mse, preds) = sess.run([self._mse,self._predictions], feed_dict)
         # assert( train_evals > 0 )
-
-        return mse, preds
+        return mse
 
     def _get_feed_dict(self, batch, keep_prob=1.0, training=False):
 

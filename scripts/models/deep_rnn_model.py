@@ -170,8 +170,15 @@ class DeepRnnModel(BaseModel):
         # here is the learning part of the graph
         p1 = config.target_lambda
         p2 = config.rnn_lambda
-        loss = p1 * self._mse_0 + (1.0-p1)*(p2*self._mse_1 + (1.0-p2)*self._mse_2)
         tvars = tf.trainable_variables()
+
+        l2 = config.l2_alpha * sum(
+            tf.nn.l2_loss(tf_var)
+            for tf_var in tvars
+            if not ("_b" in tf_var.name)
+        )
+
+        loss = p1 * self._mse_0 + (1.0-p1)*(p2*self._mse_1 + (1.0-p2)*self._mse_2) + l2
         grads = tf.gradients(loss,tvars)
 
         if (config.max_grad_norm > 0):

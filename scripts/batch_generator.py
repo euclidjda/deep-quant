@@ -98,6 +98,8 @@ class BatchGenerator(object):
         self._data_len = len(data)
         assert(self._data_len)
 
+        print("Total number of records %d"%len(self._dates))
+
         # Setup data
         self._init_column_indices(config)
         self._init_validation_set(config, validation, verbose)
@@ -248,7 +250,10 @@ class BatchGenerator(object):
         self._key_idx = colnames.index(config.key_field)
         self._active_idx = colnames.index(config.active_field)
         self._date_idx = colnames.index(config.date_field)
-        self._normalizer_idx = colnames.index(config.scale_field)
+        if config.scale_field == '__norm__':
+            self._normalizer_idx = None
+        else:
+            self._normalizer_idx = np_array_index(colnames, config.scale_field)
 
         # Set up input-related attributes
         self._num_inputs = config.num_inputs = len(self._feature_names)
@@ -270,7 +275,10 @@ class BatchGenerator(object):
         # Set up fin_inputs attribute and aux_inputs attribute
         self._fin_inputs  = self._data.iloc[:, self._fin_colidxs].as_matrix()
         self._aux_inputs  = self._data.iloc[:, self._aux_colidxs].as_matrix()
-        self._normalizers = self._data.iloc[:, self._normalizer_idx].as_matrix()
+        if self._normalizer_idx is not None:
+            self._normalizers = self._data.iloc[:, self._normalizer_idx].as_matrix()
+        else:
+            self._normalizers = np.linalg.norm(self._fin_inputs, axis=1)
 
     def _init_validation_set(self, config, validation, verbose=True):
         """
@@ -376,9 +384,9 @@ class BatchGenerator(object):
                 assert( idx < self._data_len )
                 date = self._dates[idx]
                 key = self._keys[idx]
+                attr.append((key,date))
                 next_idx = idx + forecast_n
                 next_key = self._keys[next_idx] if next_idx < len(self._keys) else ""
-                attr.append((key,date))
                 x[b,0:len1] = self._get_feature_vector(end_idx,idx)
                 if len2 > 0:
                     x[b,len1:len1+len2] = self._get_aux_vector(idx)
@@ -562,11 +570,20 @@ class BatchGenerator(object):
                 if verbose is True:
                     print("done in %.2f seconds."%(time.time() - start_time))
 
-    def _valid_dates(self):
+    def _train_dates(self):
         data = self._data
         dates = list(set(data[self._config.date_field]))
         dates.sort()
         split_date = self._config.split_date
+        train_dates = [d for d in dates if d < split_date]
+        return train_dates
+
+    def _valid_dates(self):
+        data = self._data
+        dates = list(set(data[self._config.date_field]))
+        dates.sort()
+        years = 100*((self._config.min_unrollings*self._config.stride)//12)
+        split_date = self._config.split_date - years
         valid_dates = [d for d in dates if d >= split_date]
         return valid_dates
 
@@ -578,17 +595,18 @@ class BatchGenerator(object):
         """
         config = self._config
         if config.split_date is not None:
-            valid_dates = self._valid_dates()
-            indexes = self._data[config.date_field].isin(valid_dates)
+            train_dates = self._train_dates()
+            indexes = self._data[config.date_field].isin(train_dates)
+            train_data = self._data[indexes]
             if verbose is True:
-                print("Training period: %s to %s"%(config.start_date,min(valid_dates)))
+                print("Training period: %s to %s"%(min(train_dates),max(train_dates)))
         else:
             valid_keys = list(self._validation_set.keys())
             indexes = self._data[config.key_field].isin(valid_keys)
+            train_data = self._data[~indexes]
             if verbose is True:
                 all_keys = sorted(set(self._data[config.key_field]))
                 print("Num training entities: %d"%(len(all_keys)-len(valid_keys)))
-        train_data = self._data[~indexes]
         assert(len(train_data))
         return BatchGenerator("", config, validation=False,
                               data=train_data, is_training_only=True)
@@ -674,9 +692,9 @@ class Batch(object):
     def attribs(self):
         return self._attribs
 
-    #@property
-    #def size(self):
-    #    return len(self._attribs)
+    @property
+    def size(self):
+        return len(self._seq_lengths)
 
     @property
     def normalizers(self):
