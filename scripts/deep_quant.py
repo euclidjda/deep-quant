@@ -115,6 +115,7 @@ def get_configs():
     configs.DEFINE_float("picp_lambda",1.0, "Contribution of PICP loss term for HQPI UQ model")
     configs.DEFINE_float("smoothing_pi_check", 100, "Smoothing parameter for calculation of PI check in HQPI UQ model")
     configs.DEFINE_float("confidence_alpha", 0.1, "Alpha used for calculating confidence level (= 1 - alpha)")
+    configs.DEFINE_boolean("huber_loss", False, "Use huber loss instead of mse")
     configs.DEFINE_float("huber_delta", 1.0, "delta for huber loss")
 
     c = configs.ConfigValues()

@@ -91,9 +91,9 @@ def predict_mve(config):
                                                                uq=config.UQ, UQ_model_type='MVE')
             # (mse, preds) = model.debug_step(session, batch)
 
+            date = batch_to_date(batch)
+            key = batch_to_key(batch)
             if math.isnan(mse) is False:
-                date = batch_to_date(batch)
-                key = batch_to_key(batch)
                 if date not in perfs:
                     perfs[date] = list()
                     perfs_p[date] = list()
@@ -102,25 +102,24 @@ def predict_mve(config):
 
             # Print according to the options
             if config.pretty_print_preds:
-                pretty_print_predictions( batches, batch, preds, preds_variance,  mse, mse_var)
+                pretty_print_predictions(batches, batch, preds, preds_variance,  mse, mse_var)
             elif config.print_preds:
                 print_predictions(config, batches, batch, preds, preds_variance,  mse, mse_var)
 
             # Get values and update DataFrames if df_dirname is provided in config
             if config.df_dirname is not None:
-                if not math.isnan(mse):
-                    # Get all values
-                    target_val = get_value(batches, batch, 'target')
-                    output_val = get_value(batches, batch, 'output', preds)
-                    variance_val = get_value(batches, batch, 'variance', preds_variance)
-                    mse_val = mse
-                    mse_var_val = mse_var
-                    values_list = [target_val, output_val, variance_val, mse_val, mse_var_val]
+                # Get all the values
+                target_val = get_value(batches, batch, 'target')
+                output_val = get_value(batches, batch, 'output', preds)
+                variance_val = get_value(batches, batch, 'variance', preds_variance)
+                mse_val = mse
+                mse_var_val = mse_var
+                values_list = [target_val, output_val, variance_val, mse_val, mse_var_val]
 
-                    # Update DataFrames
-                    for j in range(len(df_list)):
-                        assert(len(df_list) == len(values_list))
-                        df_list[j] = update_df(df_list[j], date, key, values_list[j])
+                # Update DataFrames
+                for j in range(len(df_list)):
+                    assert(len(df_list) == len(values_list))
+                    df_list[j] = update_df(df_list[j], date, key, values_list[j])
 
         # Save the DataFrames
         if config.df_dirname:
@@ -195,9 +194,8 @@ def predict_pie(config):
                                                           uq=config.UQ, UQ_model_type='PIE')
             # (mse, preds) = model.debug_step(session, batch)
 
-            if math.isnan(mpiw) is False:
-                date = batch_to_date(batch)
-                key = batch_to_key(batch)
+            date = batch_to_date(batch)
+            key = batch_to_key(batch)
 
             # Dummy input to be consistent with the rest of the predictions printing options. MSE = 0.0. It is not
             # evaluated in PIE case
@@ -209,17 +207,16 @@ def predict_pie(config):
 
             # Get values and update DataFrames if df_dirname is provided in config
             if config.df_dirname is not None:
-                if not math.isnan(mpiw):
-                    # Get all values
-                    target_val = get_value(batches, batch, 'target')
-                    output_lb_val = get_value(batches, batch, 'output_lb', preds_lb)
-                    output_ub_val = get_value(batches, batch, 'output_ub', preds_ub)
-                    values_list = [target_val, output_lb_val, output_ub_val]
+                # Get all values
+                target_val = get_value(batches, batch, 'target')
+                output_lb_val = get_value(batches, batch, 'output_lb', preds_lb)
+                output_ub_val = get_value(batches, batch, 'output_ub', preds_ub)
+                values_list = [target_val, output_lb_val, output_ub_val]
 
-                    # Update DataFrames
-                    for j in range(len(df_list)):
-                        assert(len(df_list) == len(values_list))
-                        df_list[j] = update_df(df_list[j], date, key, values_list[j])
+                # Update DataFrames
+                for j in range(len(df_list)):
+                    assert(len(df_list) == len(values_list))
+                    df_list[j] = update_df(df_list[j], date, key, values_list[j])
 
         # Save the DataFrames
         if not os.path.isdir(config.df_dirname):

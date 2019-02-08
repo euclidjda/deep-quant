@@ -23,6 +23,7 @@ import sys
 import numpy as np
 import tensorflow as tf
 
+from tensorflow.python.framework import ops
 from tensorflow.python.ops import math_ops
 from models.base_model import BaseModel
 
@@ -119,7 +120,7 @@ class DeepLogLikelihoodUQModel(BaseModel):
         for i in range(max_unrollings):
             output = tf.nn.xw_plus_b(rnn_outputs[i], output_w, output_b)
             # 1e-6 is added to variance for numerical stability
-            variance = tf.math.add(tf.nn.softplus(tf.nn.xw_plus_b(rnn_outputs[i], variance_w, variance_b)), 1e-6)
+            variance = tf.math.maximum(tf.nn.softplus(tf.nn.xw_plus_b(rnn_outputs[i], variance_w, variance_b)), 1e-6)
             if config.direct_connections is True:
                 self._outputs += self._scaled_inputs[i][:, :num_outputs]
 
@@ -140,6 +141,10 @@ class DeepLogLikelihoodUQModel(BaseModel):
         outputs = tf.multiply(seqmask, outputs)
         variances = tf.multiply(seqmask, variances)
         targets = tf.multiply(seqmask, targets)
+
+        # Add 1e-6 where seqmask is 0 for numerical stability
+        seqmin = 1e-6*(1-seqmask)
+        variances = variances + seqmin
 
         last_k_seqmask = seqmask[:, min_unrollings - 1:, :]
         last_k_outputs = outputs[:, min_unrollings - 1:, :]
@@ -194,15 +199,16 @@ class DeepLogLikelihoodUQModel(BaseModel):
             self._mse_0 = self._mean_squared_error_w_variance(last_k_targets[:, :, ktidx],
                                                    last_k_outputs[:, :, ktidx],
                                                    last_k_variances[:, :, ktidx],
-                                                   last_k_seqmask[:, :, ktidx])
+                                                   last_k_seqmask[:, :, ktidx], config)
             self._mse_1 = self._mean_squared_error_w_variance(last_k_targets, last_k_outputs,
-                                                               last_k_variances, last_k_seqmask)
+                                                               last_k_variances, last_k_seqmask, config)
 
-        self._mse_2 = self._mean_squared_error_w_variance(targets, outputs, variances, seqmask)
+        self._mse_2 = self._mean_squared_error_w_variance(targets, outputs, variances, seqmask, config)
 
         self._mse = tf.losses.mean_squared_error(last_target[:, ktidx], last_output[:, ktidx])
         self._mse_var = self._mean_squared_error_w_variance(last_target[:, ktidx], last_output[:, ktidx],
-                                                        last_variance[:, ktidx], last_seqmask[:, ktidx])
+                                                        last_variance[:, ktidx], last_seqmask[:, ktidx],
+                                                            config)
 
         # here is the learning part of the graph
         p1 = config.target_lambda
@@ -228,9 +234,37 @@ class DeepLogLikelihoodUQModel(BaseModel):
 
         self._train_op = optimizer.apply_gradients(zip(grads, tvars))
 
-    def _mean_squared_error_w_variance(self, targets, outputs, variances, mask):
+
+    def _mean_squared_error_w_variance(self, targets, outputs, variances, mask, config):
         """ Returns mean squared error modified with variance"""
-        loss = tf.multiply(tf.squared_difference(targets, outputs), 1./variances) + tf.log(variances)
+        if config.huber_loss:
+            diff = self._huber_loss(targets, outputs, config)
+        else:
+            diff = tf.squared_difference(targets, outputs)
+        loss = tf.multiply(diff, tf.multiply(1./variances, mask)) + tf.log(variances)
         # TODO: Make the below safe to div by zero
         mse_v = tf.reduce_sum(loss)/tf.reduce_sum(mask)
         return mse_v
+
+    @staticmethod
+    def _huber_loss(labels, predictions, config):
+        """ Huber loss tensor"""
+        delta = config.huber_delta
+        predictions = math_ops.to_float(predictions)
+        labels = math_ops.to_float(labels)
+        predictions.get_shape().assert_is_compatible_with(labels.get_shape())
+        error = math_ops.subtract(predictions, labels)
+        abs_error = math_ops.abs(error)
+        quadratic = math_ops.minimum(abs_error, delta)
+        # The following expression is the same in value as
+        # tf.maximum(abs_error - delta, 0), but importantly the gradient for the
+        # expression when abs_error == delta is 0 (for tf.maximum it would be 1).
+        # This is necessary to avoid doubling the gradient, since there is already a
+        # nonzero contribution to the gradient from the quadratic term.
+        linear = math_ops.subtract(abs_error, quadratic)
+        losses = math_ops.add(
+            math_ops.multiply(
+                ops.convert_to_tensor(0.5, dtype=quadratic.dtype),
+                math_ops.multiply(quadratic, quadratic)),
+            math_ops.multiply(delta, linear))
+        return losses
