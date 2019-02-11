@@ -273,10 +273,10 @@ class BatchGenerator(object):
         assert(config.target_idx >= 0)
 
         # Set up fin_inputs attribute and aux_inputs attribute
-        self._fin_inputs  = self._data.iloc[:, self._fin_colidxs].as_matrix()
-        self._aux_inputs  = self._data.iloc[:, self._aux_colidxs].as_matrix()
+        self._fin_inputs  = self._data.iloc[:, self._fin_colidxs].values
+        self._aux_inputs  = self._data.iloc[:, self._aux_colidxs].values
         if self._normalizer_idx is not None:
-            self._normalizers = self._data.iloc[:, self._normalizer_idx].as_matrix()
+            self._normalizers = self._data.iloc[:, self._normalizer_idx].values
         else:
             self._normalizers = np.linalg.norm(self._fin_inputs, axis=1)
 
