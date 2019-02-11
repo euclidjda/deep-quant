@@ -40,6 +40,7 @@ def get_configs():
     configs.DEFINE_string("datafile", 'open_dataset.dat', "a datafile name.")
     configs.DEFINE_string("predict_datafile", None, "If predict_datafile is not None, use it instead of datafile for predictions")
     configs.DEFINE_string("mse_outfile", None, "A file to write mse values during predict phase.")
+    configs.DEFINE_string("scalesfile", None, "Optional file for storing scaling params")
     configs.DEFINE_string("mse_var_outfile", None, "A file to write mse_var values during predict phase.")
     configs.DEFINE_string("default_gpu", '', "The default GPU to use e.g., /gpu:0")
     configs.DEFINE_string("nn_type",'DeepRnnModel',"Model type")
