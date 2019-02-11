@@ -253,7 +253,6 @@ class BatchGenerator(object):
         if config.scale_field == '__norm__':
             self._normalizer_idx = None
         else:
-            #self._normalizer_idx = np_array_index(colnames, config.scale_field)
             self._normalizer_idx = colnames.index(config.scale_field)
             
         # Set up input-related attributes

@@ -234,7 +234,6 @@ class DeepLogLikelihoodUQModel(BaseModel):
 
         self._train_op = optimizer.apply_gradients(zip(grads, tvars))
 
-
     def _mean_squared_error_w_variance(self, targets, outputs, variances, mask, config):
         """ Returns mean squared error modified with variance"""
         if config.huber_loss:
