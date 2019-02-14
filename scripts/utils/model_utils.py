@@ -23,6 +23,7 @@ import os
 
 import numpy as np
 import tensorflow as tf
+import pickle
 
 from tensorflow.python.platform import gfile
 from models.deep_mlp_model import DeepMlpModel
