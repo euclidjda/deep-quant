@@ -163,12 +163,12 @@ class DeepRnnModel(BaseModel):
         self._mse_2 = self._mean_squared_error(targets, outputs, seqmask)
 
         # Following six lines determine if mse returned is scaled or unscaled. Comment/ Uncomment the relevant sections
-        # self._mse = tf.losses.mean_squared_error(last_target[:,ktidx], last_output[:,ktidx])
-        if config.data_scaler is not None and config.scale_targets is True:
-            self._mse = tf.losses.mean_squared_error(self.reverse_center_and_scale(last_target)[:, ktidx],
-                                                     self.reverse_center_and_scale(last_output)[:, ktidx])
-        else:
-            self._mse = tf.losses.mean_squared_error(last_target[:, ktidx], last_output[:, ktidx])
+        self._mse = tf.losses.mean_squared_error(last_target[:,ktidx], last_output[:,ktidx])
+        #if config.data_scaler is not None and config.scale_targets is True:
+        #    self._mse = tf.losses.mean_squared_error(self.reverse_center_and_scale(last_target)[:, ktidx],
+        #                                             self.reverse_center_and_scale(last_output)[:, ktidx])
+        #else:
+        #    self._mse = tf.losses.mean_squared_error(last_target[:, ktidx], last_output[:, ktidx])
 
         # here is the learning part of the graph
         p1 = config.target_lambda
