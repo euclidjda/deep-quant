@@ -32,7 +32,6 @@ def get_configs():
     """
     Defines all configuration params passable to command line.
     """
-    configs.DEFINE_string("categorical_fields",None,"A comma-separated list of categorical fields.")
     configs.DEFINE_string("name",'none',"A name for the config.")
     configs.DEFINE_string("datafile", 'open_dataset.dat', "a datafile name.")
     configs.DEFINE_string("predict_datafile", None, "If predict_datafile is not None, use it instead of datafile for predictions")
@@ -45,8 +44,9 @@ def get_configs():
     configs.DEFINE_string("key_field", 'gvkey',"Key column name header in datafile")
     configs.DEFINE_string("target_field", 'oiadpq_ttm',"Target column name header in datafile")
     configs.DEFINE_string("scale_field", 'mrkcap',"Feature to scale inputs by")
-    configs.DEFINE_string("financial_fields", '',"shared input and target field names")
+    configs.DEFINE_string("financial_fields", '',"Shared input and target field names")
     configs.DEFINE_string("aux_fields", None,"non-target, input only fields")
+    configs.DEFINE_string("dont_scale", None,"Names of fields to not scale")
     configs.DEFINE_string("data_dir",'',"The data directory")
     configs.DEFINE_string("model_dir",'chkpts',"Model (checkpoint) directory")
     configs.DEFINE_string("rnn_cell",'gru',"lstm or gru")
