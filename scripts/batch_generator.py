@@ -249,6 +249,7 @@ class BatchGenerator(object):
 
         # store input vector indices to NOT scale
         dont_scale_colidxs = get_colidxs_from_colnames( self._data, config.dont_scale )
+        dont_scale_colidxs = [i for i in dont_scale_colidxs if i in all_colidxs]
         self._dont_scale_input_idxs = [all_colidxs.index(i) for i in dont_scale_colidxs]
 
         # Set up other attributes
