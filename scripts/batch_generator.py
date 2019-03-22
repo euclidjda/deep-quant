@@ -240,10 +240,17 @@ class BatchGenerator(object):
 
         self._aux_colidxs = get_colidxs_from_colnames(
             self._data, config.aux_fields)
- 
+
+        all_colidxs = self._fin_colidxs + self._aux_colidxs
+
         # save feature names
         colnames = self._data.columns.values
-        self._feature_names = colnames[self._fin_colidxs + self._aux_colidxs]
+        self._feature_names = colnames[all_colidxs]
+
+        # store input vector indices to NOT scale
+        dont_scale_colidxs = get_colidxs_from_colnames( self._data, config.dont_scale )
+        dont_scale_colidxs = [i for i in dont_scale_colidxs if i in all_colidxs]
+        self._dont_scale_input_idxs = [all_colidxs.index(i) for i in dont_scale_colidxs]
 
         # Set up other attributes
         colnames = list(colnames)
@@ -254,29 +261,25 @@ class BatchGenerator(object):
             self._normalizer_idx = None
         else:
             self._normalizer_idx = colnames.index(config.scale_field)
-            
+
         # Set up input-related attributes
         self._num_inputs = config.num_inputs = len(self._feature_names)
 
         # Set up target index
         idx = colnames.index(config.target_field)
-        if config.target_field == 'target':
-            config.target_idx = 0
-            self._num_outputs = config.num_outputs = 1
-            self._price_target_idx = idx
-        else:
-            config.target_idx = idx - self._fin_colidxs[0]
-            self._num_outputs = config.num_outputs = self._num_inputs \
-                                                     - len(self._aux_colidxs)
-            self._price_target_idx = -1
+        config.target_idx = idx - self._fin_colidxs[0]
+        self._num_outputs = config.num_outputs = \
+            self._num_inputs - len(self._aux_colidxs)
+        self._price_target_idx = -1
 
         assert(config.target_idx >= 0)
 
         # Set up fin_inputs attribute and aux_inputs attribute
-        self._fin_inputs  = self._data.iloc[:, self._fin_colidxs].values
-        self._aux_inputs  = self._data.iloc[:, self._aux_colidxs].values
+        self._fin_inputs  = self._data.iloc[:, self._fin_colidxs].as_matrix()
+        self._aux_inputs  = self._data.iloc[:, self._aux_colidxs].as_matrix()
+
         if self._normalizer_idx is not None:
-            self._normalizers = self._data.iloc[:, self._normalizer_idx].values
+            self._normalizers = self._data.iloc[:, self._normalizer_idx].as_matrix()
         else:
             self._normalizers = np.linalg.norm(self._fin_inputs, axis=1)
 
@@ -470,6 +473,12 @@ class BatchGenerator(object):
             params = dict()
             params['center'] = scaler.center_ if hasattr(scaler,'center_') else scaler.mean_
             params['scale'] = scaler.scale_
+
+            # Do not scale these features
+            for i in self._dont_scale_input_idxs:
+                params['center'][i] = 0.0
+                params['scale'][i] = 1.0
+            
             self._scaling_params = params
 
         return self._scaling_params
