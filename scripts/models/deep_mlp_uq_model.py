@@ -29,7 +29,7 @@ from tensorflow.python.ops import math_ops
 from tensorflow.python.ops import random_ops
 
 
-class DeepMlpModel(BaseModel):
+class DeepMlpUQModel(BaseModel):
     """
     A Deep MLP regression model with an
     arbitrary number of fixed width hidden layers.
