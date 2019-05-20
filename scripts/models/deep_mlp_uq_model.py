@@ -110,16 +110,16 @@ class DeepMlpUQModel(BaseModel):
             skip_inputs = inputs[:, :num_inputs]
             outputs = tf.concat([skip_inputs, outputs], 1)
 
+        # variance regression layer
+        linear_var_b = tf.get_variable("linear_var_b", [num_outputs])
+        linear_var_w = tf.get_variable("linear_var_w", [num_prev, num_outputs])
+        variances = tf.math.maximum(tf.nn.softplus(tf.nn.xw_plus_b(outputs, linear_var_w, linear_var_b)),
+                                    1e-6)
+
         # final regression layer
         linear_b = tf.get_variable("linear_b", [num_outputs])
         linear_w = tf.get_variable("linear_w", [num_prev, num_outputs])
         outputs = tf.nn.xw_plus_b(outputs, linear_w, linear_b)
-
-        # variance regression layer
-        linear__var_b = tf.get_variable("linear_var_b", [num_outputs])
-        linear_var_w = tf.get_variable("linear_var_w", [num_prev, num_outputs])
-        variances = tf.math.maximum(tf.nn.softplus(tf.nn.xw_plus_b(outputs, linear_var_w, linear__var_b)),
-                                    1e-6)
 
         if config.direct_connections is True:
             outputs = outputs + inputs[:, :num_outputs]

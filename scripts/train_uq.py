@@ -170,6 +170,7 @@ def train_model(config):
         
     tf_config = tf.ConfigProto(allow_soft_placement=True,
                                log_device_placement=False)
+    tf_config.gpu_options.allow_growth = True
 
     with tf.Graph().as_default(), tf.Session(config=tf_config) as session:
         if config.seed is not None:
