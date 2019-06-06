@@ -23,10 +23,11 @@ import sys
 import numpy as np
 import tensorflow as tf
 
+from tensorflow.python.framework import ops
 from tensorflow.python.ops import math_ops
 from models.base_model import BaseModel
 
-class DeepRnnModel(BaseModel):
+class DeepRnnModelHL(BaseModel):
     """
     A Deep Rnn Model that supports regression with 
     arbitrary number of fixed width hidden layers.
@@ -152,57 +153,69 @@ class DeepRnnModel(BaseModel):
 
         # Different components of mse definitions
         if config.backfill is True:
-            self._mse_0 = tf.losses.mean_squared_error(last_target[:,ktidx], last_output[:,ktidx])
-            self._mse_1 = tf.losses.mean_squared_error(last_target, last_output)
+            self._huber_loss_0 = tf.losses.huber_loss(last_target[:, ktidx], last_output[:, ktidx],
+                                               delta=config.huber_delta)
+            self._huber_loss_1 = tf.losses.huber_loss(last_target, last_output, delta=config.huber_delta)
         else:
-            self._mse_0 = self._mean_squared_error(last_k_targets[:,:,ktidx],
-                                                   last_k_outputs[:,:,ktidx],
-                                                   last_k_seqmask[:,:,ktidx])
-            self._mse_1 = self._mean_squared_error(last_k_targets, last_k_outputs, last_k_seqmask)
+            self._huber_loss_0 = self._huber_loss(last_k_targets[:, :, ktidx],
+                                                   last_k_outputs[:, :, ktidx],
+                                                   last_k_seqmask[:, :, ktidx], config)
+            self._huber_loss_1 = self._huber_loss(last_k_targets, last_k_outputs, last_k_seqmask, config)
 
-        self._mse_2 = self._mean_squared_error(targets, outputs, seqmask)
+        self._huber_loss_2 = self._huber_loss(targets, outputs, seqmask, config)
 
-        # Following six lines determine if mse returned is scaled or unscaled. Comment/ Uncomment the relevant sections
-        self._mse = tf.losses.mean_squared_error(last_target[:,ktidx], last_output[:,ktidx])
-        #if config.data_scaler is not None and config.scale_targets is True:
-        #    self._mse = tf.losses.mean_squared_error(self.reverse_center_and_scale(last_target)[:, ktidx],
-        #                                             self.reverse_center_and_scale(last_output)[:, ktidx])
-        #else:
-        #    self._mse = tf.losses.mean_squared_error(last_target[:, ktidx], last_output[:, ktidx])
+        self._mse = tf.losses.mean_squared_error(last_target[:, ktidx], last_output[:, ktidx])
 
         # here is the learning part of the graph
         p1 = config.target_lambda
         p2 = config.rnn_lambda
-
+        l2 = config.l2_alpha*sum(tf.nn.l2_loss(tf_var) for tf_var in tf.trainable_variables() if "_b" not in tf_var.name)
+        loss = p1 * self._huber_loss_0 + (1.0-p1)*(p2*self._huber_loss_1 + (1.0-p2)*self._huber_loss_2) + l2
         tvars = tf.trainable_variables()
+        grads = tf.gradients(loss, tvars)
 
-        l2 = config.l2_alpha * sum(
-            tf.nn.l2_loss(tf_var)
-            for tf_var in tvars
-            if not ("_b" in tf_var.name)
-        )
-
-        loss = p1 * self._mse_0 + (1.0-p1)*(p2*self._mse_1 + (1.0-p2)*self._mse_2) + l2
-        grads = tf.gradients(loss,tvars)
-
-        if (config.max_grad_norm > 0):
-            grads, self._grad_norm = tf.clip_by_global_norm(grads,config.max_grad_norm)
+        if config.max_grad_norm > 0:
+            grads, self._grad_norm = tf.clip_by_global_norm(grads, config.max_grad_norm)
         else:
             self._grad_norm = tf.constant(0.0)
 
         self._lr = tf.Variable(0.0, trainable=False)
         optimizer = None
         args = config.optimizer_params
-        if hasattr(tf.train,config.optimizer):
-            optimizer = getattr(tf.train, config.optimizer)(learning_rate=self._lr,**args)
+        if hasattr(tf.train, config.optimizer):
+            optimizer = getattr(tf.train, config.optimizer)(learning_rate=self._lr, **args)
         else:
-            raise RuntimeError("Unknown optimizer = %s"%config.optimizer)
+            raise RuntimeError("Unknown optimizer = %s" % config.optimizer)
 
         self._train_op = optimizer.apply_gradients(zip(grads, tvars))
 
+    @staticmethod
+    def _huber_loss(labels, predictions, mask, config):
+        """ Huber loss according to masking"""
+        delta = config.huber_delta
+        predictions = math_ops.to_float(predictions)
+        labels = math_ops.to_float(labels)
+        predictions.get_shape().assert_is_compatible_with(labels.get_shape())
+        error = math_ops.subtract(predictions, labels)
+        abs_error = math_ops.abs(error)
+        quadratic = math_ops.minimum(abs_error, delta)
+        # The following expression is the same in value as
+        # tf.maximum(abs_error - delta, 0), but importantly the gradient for the
+        # expression when abs_error == delta is 0 (for tf.maximum it would be 1).
+        # This is necessary to avoid doubling the gradient, since there is already a
+        # nonzero contribution to the gradient from the quadratic term.
+        linear = math_ops.subtract(abs_error, quadratic)
+        losses = math_ops.add(
+            math_ops.multiply(
+                ops.convert_to_tensor(0.5, dtype=quadratic.dtype),
+                math_ops.multiply(quadratic, quadratic)),
+            math_ops.multiply(delta, linear))
+        huber_loss = tf.reduce_sum(losses) / tf.reduce_sum(mask)
+        return huber_loss
 
-    def _mean_squared_error(self, targets, outputs, mask):
+    @staticmethod
+    def _mean_squared_error(targets, outputs, mask):
         loss = math_ops.squared_difference(targets, outputs)
         # TODO: Make the below safe to div by zero
-        mse = tf.reduce_sum( loss ) / tf.reduce_sum( mask )
+        mse = tf.reduce_sum(loss) / tf.reduce_sum(mask)
         return mse

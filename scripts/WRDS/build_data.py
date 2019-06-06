@@ -60,7 +60,7 @@ db = wrds.Connection()
 top_gvkey_month = {}
 top_N_eq_gvkey_list_all = set()
 
-start_date = '1980-01-01'
+start_date = '2013-01-01'
 curr_date = datetime.datetime.strptime(start_date,'%Y-%m-%d')
 
 # Go through months starting with the start date and find top N companies by mrk cap

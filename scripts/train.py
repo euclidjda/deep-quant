@@ -51,7 +51,7 @@ def run_epoch(session, model, train_data, valid_data,
     prog_int = total_steps/100 # progress interval for stdout
 
     train_data.shuffle() # we want to randomly shuffle train data
-    valid_data.rewind()  # make sure we start a beggining
+    valid_data.rewind()  # make sure we start a beginning
 
     print("Steps: %d "%total_steps,end=' ')
 
@@ -134,7 +134,6 @@ def train_model(config):
         if config.early_stop is not None:
             print("Training will early stop without "
               "improvement after %d epochs."%config.early_stop)
-        sys.stdout.flush()
 
         train_history = list()
         valid_history = list()

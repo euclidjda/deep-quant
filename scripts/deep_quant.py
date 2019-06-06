@@ -24,8 +24,11 @@ from __future__ import print_function
 import tensorflow as tf
 
 import configs as configs
+
 from train import train_model
 from predict import predict
+from train_uq import train_model as train_model_uq
+from predict_uq import predict as predict_uq
 
 
 def get_configs():
@@ -37,6 +40,7 @@ def get_configs():
     configs.DEFINE_string("predict_datafile", None, "If predict_datafile is not None, use it instead of datafile for predictions")
     configs.DEFINE_string("mse_outfile", None, "A file to write mse values during predict phase.")
     configs.DEFINE_string("scalesfile", None, "Optional file for storing scaling params")
+    configs.DEFINE_string("mse_var_outfile", None, "A file to write mse_var values during predict phase.")
     configs.DEFINE_string("default_gpu", '', "The default GPU to use e.g., /gpu:0")
     configs.DEFINE_string("nn_type",'DeepRnnModel',"Model type")
     configs.DEFINE_string("active_field", 'active', "Key column name header for active indicator")
@@ -79,9 +83,13 @@ def get_configs():
     configs.DEFINE_boolean("hidden_dropout",False,"Do dropout on hidden layers")
     configs.DEFINE_boolean("rnn_dropout",False,"Do dropout on recurrent connections")
     configs.DEFINE_boolean("skip_connections",False,"Have a linear fully connected weight skip hidden units in MLP")
-    configs.DEFINE_boolean("direct_connections",False,"Have direct connections between input and output in MLP or RNN")
+    configs.DEFINE_boolean("direct_connections",False,"Have direct connections between input and output in MLP")
     configs.DEFINE_boolean("use_cache",True,"Load data for logreg from cache (vs processing from batch generator)")
     configs.DEFINE_boolean("pretty_print_preds",False,"Print predictions in tabular format with inputs, targets, and keys")
+    configs.DEFINE_boolean("print_preds", False,
+                           "Print predictions with just date, gvkey and output values")
+    configs.DEFINE_string("df_dirname", None,
+                           "Saves dataframes for target, output, variance/variance, mse and mse_var in df_dirname")
     configs.DEFINE_boolean("scale_targets",True,"")
     configs.DEFINE_boolean("backfill",False,"Backfill seq history to max_unrollings with data in first time step")
     configs.DEFINE_boolean("log_squasher",True,"Squash large normalized inputs with natural log function")
@@ -96,11 +104,21 @@ def get_configs():
     configs.DEFINE_float("passes",1.0,"Passes through day per epoch")
     configs.DEFINE_float("target_lambda",0.5,"How much to weight last step vs. all steps in loss")
     configs.DEFINE_float("rnn_lambda",0.5,"How much to weight last step vs. all steps in loss")
-    configs.DEFINE_float("l2_alpha",0.0,"L2 Regularization")
     configs.DEFINE_integer("max_epoch",0,"Stop after max_epochs")
     configs.DEFINE_integer("early_stop",None,"Early stop parameter")
     configs.DEFINE_integer("seed",None,"Seed for deterministic training")
     configs.DEFINE_integer("cache_id",None,"A unique experiment key for traking a cahce")
+    configs.DEFINE_float("keep_prob_pred",1.0,"Keep Prob for dropout during prediction")
+    configs.DEFINE_boolean("print_normalized_outputs", False, "Print normalized outputs. Doesn't apply to pretty print")
+    configs.DEFINE_boolean("UQ", False, "Uncertainty Quantification Mode")
+    configs.DEFINE_string("UQ_model_type", 'MVE', "Select between MVE or PIE")
+    configs.DEFINE_float("noise_lambda",1.0,"Weight decay for noise in the loss function. Refer to DeepBayesUQ Model")
+    configs.DEFINE_float("l2_alpha",0.0,"L2 regularization for weight parameters.")
+    configs.DEFINE_float("picp_lambda",1.0, "Contribution of PICP loss term for HQPI UQ model")
+    configs.DEFINE_float("smoothing_pi_check", 100, "Smoothing parameter for calculation of PI check in HQPI UQ model")
+    configs.DEFINE_float("confidence_alpha", 0.1, "Alpha used for calculating confidence level (= 1 - alpha)")
+    configs.DEFINE_boolean("huber_loss", False, "Use huber loss instead of mse")
+    configs.DEFINE_float("huber_delta", 1.0, "delta for huber loss")
 
     c = configs.ConfigValues()
 
@@ -137,11 +155,21 @@ def get_configs():
 def main(_):
     config = get_configs()
 
-    # Check to see if we are in training or testing mode
-    if config.train is True:
-        train_model(config)
+    # Check if Uncertainty Quantification mode
+    if config.UQ:
+        assert (config.UQ_model_type in ['MVE', 'PIE'])
+        # Check to see if we are in training or testing mode
+        if config.train is True:
+            train_model_uq(config)
+        else:
+            predict_uq(config)
+
     else:
-        predict(config)
+        # Check to see if we are in training or testing mode
+        if config.train is True:
+            train_model(config)
+        else:
+            predict(config)
 
 if __name__ == "__main__":
     tf.app.run()

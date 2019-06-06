@@ -12,40 +12,36 @@ sns.set_style()
 class ErrorPlots(object):
     """ Creates various plots to analyze training data and error plots"""
 
-    def __init__(self, train_mse_data=None, err_df=None):
+    def __init__(self, err_df=None):
         """ Instantiates the class with training mse data and error df"""
 
-        self.train_mse_data = train_mse_data
         self.err_df = err_df
 
-    def plot_train_hist(self,filename=None):
-        """ Plots the training and validation error history and saves with the given filename"""
+    def plot_train_hist(self, train_mse_data=None, figure_name='train_hist.png'):
+        """ Plots the training and validation error history """
 
-        if not self.train_mse_data:
+        if not train_mse_data:
             print("MSE data not provided")
             return
 
-        epoch = self.train_mse_data.keys()
-        train_err = [x[0] for x in self.train_mse_data.values()]
-        val_err = [x[1] for x in self.train_mse_data.values()]
+        epoch = train_mse_data.keys()
+        train_err = [x[0] for x in train_mse_data.values()]
+        val_err = [x[1] for x in train_mse_data.values()]
 
         plt.plot(epoch, train_err, label='Train Error')
-        plt.plot(epoch, val_err,'--',label='Val Error')
+        plt.plot(epoch, val_err, label='Val Error')
         plt.title("Training MSE History")
         plt.xlabel('Epochs')
         plt.ylabel('MSE')
         plt.legend()
-        if filename == None:
-            plt.savefig('train_hist.png')
-        else:
-            plt.savefig(filename)
+        plt.savefig(figure_name)
         plt.clf()
         return
 
     def plot_cdf(self, threshold=1.):
         """ Plots the cumulative distribution of mean percentage error"""
 
-        if self.err_df is None:
+        if not self.err_df:
             print("Error DF not provided")
             return
 

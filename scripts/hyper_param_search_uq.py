@@ -41,6 +41,7 @@ import pickle
 _SHELL         = '/bin/sh'
 _VALID_ERR_IDX = 7
 
+
 def get_search_configs():
     """
     Defines the configurations for hyper parameter search
@@ -53,12 +54,13 @@ def get_search_configs():
     configurations.DEFINE_integer("num_threads",4,"NUmber of parallel threads (Number of parallel executions)")
     configurations.DEFINE_integer("num_gpu",1,"Number of GPU on the machine, Use 0 if there are None")
     configurations.DEFINE_integer("sleep_time",1,"Sleep time")
-    configurations.DEFINE_float("mutate_rate",0.02,"Mutation rate for genetic algorithm")
+    configurations.DEFINE_float("mutate_rate",0.2,"Mutation rate for genetic algorithm")
     configurations.DEFINE_string("init_pop",None,"Specify starting population. Path to the pickle file")
 
     c = configurations.ConfigValues()
 
     return c
+
 
 def get_name(gen,i):
     d1 = max(6,len(str(gen)))
@@ -66,17 +68,21 @@ def get_name(gen,i):
     fmt = 'gen-%0'+str(d1)+'d-mem-%0'+str(d2)+'d';
     return fmt%(gen,i);
 
+
 def output_filename(gen,i):
     name = get_name(gen,i)
     filename = "output/stdout-%s.txt"%name
     return filename
 
+
 def config_filename(gen,i):
     name = get_name(gen,i)
     return "%s.conf"%name
 
+
 def donefile_filename(gen,thread):
     return "output/done-g%04d-u%03d.txt"%(gen,thread)
+
 
 def script_filename(gen,thread):
     dirname = 'scripts'
@@ -84,12 +90,14 @@ def script_filename(gen,thread):
     scriptname = basename + "-u%03d.sh"%thread
     return scriptname
 
+
 def serialize_member(mem):
   str = ""
   for el in sorted(mem):
     if el != '--name' and el != '--model_dir':
       str += ':' + mem[el][0]
   return str
+
 
 def generate_results_test(pop,gen):
   result = list()
@@ -100,6 +108,7 @@ def generate_results_test(pop,gen):
     result.append(random.random())
   return result
 
+
 def generate_results(pop,gen):
     result = list()
     for i in range(len(pop)):
@@ -109,8 +118,15 @@ def generate_results(pop,gen):
             content = f.readlines()
         content = [x.strip() for x in content]
         # remove lines w/o error
-        content = [s for s in content if re.search('MSE',s)]
-        errors = [float(s.split()[_VALID_ERR_IDX]) for s in content]
+        try:
+            content = [s for s in content if re.search('MSE_w_variance',s)]
+            errors = [float(s.split()[_VALID_ERR_IDX]) for s in content]
+            assert len(content) > 0
+        except AssertionError:
+            content = [s for s in content if re.search('Valid LOSS',s)]
+            errors = [float(s.split()[-1]) for s in content]
+
+
         if len(errors) > 0:
             errors.sort()
             result.append(errors[0])
@@ -124,6 +140,7 @@ def generate_results(pop,gen):
     assert(len(pop) == len(result))
     return result
 
+
 def poll_for_done(pop,gen):
     not_done = True
     while(not_done):
@@ -135,11 +152,13 @@ def poll_for_done(pop,gen):
         if num_done == _NUM_THREADS:
             not_done = False
 
+
 def execute_train_scripts(pop,gen):
     str = ""
     for thread in range(_NUM_THREADS):
         str += script_filename(gen,thread) + " & "
     os.system(str)
+
 
 def create_train_scripts(pop,gen):
     dirname = 'scripts'
@@ -163,9 +182,10 @@ def create_train_scripts(pop,gen):
                     str = "CUDA_VISIBLE_DEVICES=%d"%(thread%_NUM_GPU)
                 elif _NUM_GPU==0:
                     str = "CUDA_VISIBLE_DEVICES=''"
-                str += " deep_quant.py"
+                str += " /home/lchauhan/deep-quant/scripts/deep_quant.py"
                 str += " --config=config/"+config_filename(gen,i)
                 #str += " --seed=%i"%id_seed
+                str += " --UQ=True"
                 str += " --cache_id=%i"%id_seed
                 str += " > " + output_filename(gen,i) 
                 str += " 2> output/stderr-%s.txt"%get_name(gen,i)
@@ -175,6 +195,7 @@ def create_train_scripts(pop,gen):
             print("echo 'done.' > %s"%donefile,file=f)
         f.closed
         os.system("chmod +x %s"%scriptname)
+
 
 def write_population_configs(pop,gen):
     dirname = 'config'
@@ -188,6 +209,7 @@ def write_population_configs(pop,gen):
             for flag in sorted(configs):
                 print("%-30s %s"%(flag,configs[flag][0]),file=f)
         f.closed
+
 
 def train_population(pop,gen):
     """ Train the population
@@ -206,12 +228,14 @@ def train_population(pop,gen):
     #result = generate_results_test(pop,gen)
     return result
 
+
 def calc_diversity(pop):
     mems = [serialize_member(m) for m in pop]
     count = float(len(mems))
     uniq  = float(len(set(mems)))
     assert(count > 0)
     return uniq/count
+
 
 def swap(items,i,j):
     """ Swap two items in a list
@@ -220,6 +244,7 @@ def swap(items,i,j):
     tmp = items[i]
     items[i] = items[j]
     items[j] = tmp
+
 
 def randomize(mem):
     """ Radomize a population memeber
@@ -231,6 +256,7 @@ def randomize(mem):
         if len(items) > 1:
             i = random.randrange(0,len(items))
             swap(items,0,i)
+
 
 def mutate(mem):
     """ Mutate a population memeber
@@ -253,6 +279,7 @@ def mutate(mem):
     print("BE "+before_s)
     print("AF "+after_s)
 
+
 def init_population(config):
     """ Initialize a population
     Args: config
@@ -269,6 +296,7 @@ def init_population(config):
       pop.append(mem)
     return pop
 
+
 def cross_parents(mom,dad,child_name='none'):
     assert(type(mom) is dict)
     assert(type(dad) is dict)
@@ -284,6 +312,7 @@ def cross_parents(mom,dad,child_name='none'):
     print("2: " + serialize_member(dad))
     print("3: " + serialize_member(child))
     return child
+
 
 def get_next_generation(pop, gen, results):
     assert(type(pop) is list)
@@ -311,6 +340,7 @@ def get_next_generation(pop, gen, results):
       new_pop.append(child)
     return new_pop, new_best
 
+
 def parse_config(filename):
     with open(filename) as f:
         content = f.readlines()
@@ -323,6 +353,7 @@ def parse_config(filename):
         flag = elements.pop(0)
         config[flag] = elements
     return config
+
 
 def execute_genetic_search(args):
     config_filename = args.template
@@ -364,6 +395,7 @@ def execute_genetic_search(args):
         print("Generation: %s Best: %s Error: %.4f Diversity: %3d%%"%(gen,best_name,error,int(100*diversity)))
         sys.stdout.flush()
 
+
 def get_all_config_permutations(src,tbl,i,allperms):
     flags = [f for f in sorted(src)]
     if i == len(flags):
@@ -376,6 +408,7 @@ def get_all_config_permutations(src,tbl,i,allperms):
             new_tbl[flag] = [param]
             get_all_config_permutations(src,new_tbl,i+1,allperms)
 
+
 def execute_grid_search(args):
     config_filename = args.template
     # config is a dict of lists
@@ -384,6 +417,7 @@ def execute_grid_search(args):
     tbl = dict()
     get_all_config_permutations(config,tbl,0,allperms)
     train_population(allperms,0)
+
 
 def main():
 

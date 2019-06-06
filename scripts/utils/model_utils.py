@@ -30,8 +30,13 @@ from models.deep_mlp_model import DeepMlpModel
 from models.clvynt_model import ClvyntModel
 from models.naive_model import NaiveModel
 from models.deep_rnn_model import DeepRnnModel
-
+from models.deep_bayes_uq_model import DeepBayesUQModel
+from models.deep_loglikelihood_uq_model import DeepLogLikelihoodUQModel
+from models.deep_hqpi_uq_model import DeepHqpiUQModel
+from models.deep_rnn_model_huber_loss import DeepRnnModelHL
+from models.deep_mlp_uq_model import DeepMlpUQModel
 #from log_reg_model import LogRegModel
+
 
 def save_model(session, config, step):
     last_checkpoint_path = tf.train.latest_checkpoint(config.model_dir)
@@ -98,12 +103,11 @@ def get_model(session, config, verbose=False):
     Args:
       session: the tf session
       config: a config that specifies the model geometry and learning params
-      train_data: if we are initializing a model, we may need the training data
-                  to set the feature scaling parameters            
       verbose: print status output if true
     Returns:
       the model
     """
+    
     model = _create_model(session, config, verbose)
 
     ckpt = tf.train.get_checkpoint_state(config.model_dir)

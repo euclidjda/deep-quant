@@ -39,22 +39,31 @@ class ErrorAnalysis(object):
             return
 
         mse_data = OrderedDict()
+        mse_p_data = OrderedDict()
 
         # Iterate through the file
         with open(self.train_log_file) as f:
             lines = f.readlines()
 
             for line in lines:
-                line = line.split(' ')
-                if line[0] == 'Epoch:':
+
+                if 'Train MSE' in line and 'precision' not in line:
+                    line = line.split(' ')
                     epoch = int(line[1])
                     train_mse = float(line[4])
                     valid_mse = float(line[7])
-
                     # Add to the mse dict
                     mse_data[epoch] = (train_mse, valid_mse)
 
-        return mse_data
+                if 'MSE_w_precision' in line:
+                    line = line.split(' ')
+                    epoch = int(line[1])
+                    train_mse_p = float(line[4])
+                    valid_mse_p = float(line[7])
+                    # Add to the mse dict
+                    mse_p_data[epoch] = (train_mse_p, valid_mse_p)
+
+        return mse_data, mse_p_data
 
     def read_predictions(self):
         """ Returns a dict of companies with output and target values# Structure of companies dict
@@ -75,7 +84,7 @@ class ErrorAnalysis(object):
         # initialize the dicts
         companies={}
 
-        with open(self.pred_file, 'rb') as f:
+        with open(self.pred_file, 'r') as f:
             lines = f.readlines()
 
             for i, line in enumerate(lines):
@@ -91,16 +100,20 @@ class ErrorAnalysis(object):
 
                     gvkey = row[1]
 
-                    try:
-                        companies[gvkey][self.period]['output'][date] = cur_output
-                        companies[gvkey][self.period]['target'][date] = cur_target
-                        companies[gvkey][self.period]['mse'][date] = mse_val
-                    except KeyError:
+                    # Initialize dicts
+                    if gvkey not in companies.keys():
                         companies[gvkey] = {}
+                    if self.period not in companies[gvkey]:
                         companies[gvkey][self.period] = {}
+                    if 'output' not in companies[gvkey][self.period]:
                         companies[gvkey][self.period]['output'] = {}
                         companies[gvkey][self.period]['target'] = {}
                         companies[gvkey][self.period]['mse'] = {}
+
+                    # Update dicts
+                    companies[gvkey][self.period]['output'][date] = cur_output
+                    companies[gvkey][self.period]['target'][date] = cur_target
+                    companies[gvkey][self.period]['mse'][date] = mse_val
 
                 except (ValueError, IndexError):
                     pass
@@ -183,24 +196,24 @@ if __name__ == '__main__':
 
     # Test
 
-    pred_file = ("D:\\gcp_deep_cloud\\recreate-nips-2017-v3\\rnn\\predicts-rnn-pretty.dat")
-    train_file = ("D:\\gcp_deep_cloud\\recreate-nips-2017-v3\\rnn\\output-rnn-train.txt")
+    #pred_file = ("D:\\gcp_deep_cloud\\")
+    train_file = ("D:\\gcp_deep_cloud\\deep-quant-3\\exp-5\\train-stdout-UQ.dat")
     
-    EA = ErrorAnalysis(train_file,pred_file)
-    #EA = ErrorAnalysis(train_file)
+    EA = ErrorAnalysis(train_file)
 
     print("Reading train log")
-    mse = EA.read_train_log()
-    #print(mse)
-    print("getting errors")
-    df_err = EA.get_errors(save_csv=True)
+    mse, mse_p = EA.read_train_log()
+
+    #print("getting errors")
+    #df_err = EA.get_errors(save_csv=True)
 
     #df_err = pd.read_csv('errors.csv')
-    print(df_err.head())
+    #print(df_err.head())
 
-    #EP = ErrorPlots(mse, df_err)
+    EP = ErrorPlots()
     #EP = ErrorPlots(mse)
-    #EP.plot_train_hist()
+    EP.plot_train_hist(train_mse_data=mse, figure_name='mse.png')
+    EP.plot_train_hist(train_mse_data=mse_p, figure_name='mse_p.png')
     #EP.plot_cdf(threshold=2.0)
     #print("Threshold count: %2.2f"%EP.get_threshold_count())
     #EP.plot_error_dist(threshold=2.0)
