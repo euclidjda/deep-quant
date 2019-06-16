@@ -105,6 +105,22 @@ $ cd search
 $ python $DEEP_QUANT/scripts/hyper_param_search.py --template=hyper-search.conf --search_algorithm='genetic'
 ```
 
+## Uncertainty Quantification (UQ)
+
+Forecast uncertainty is obtained by using UQ compatible deep learning models available in the _models_ directory.
+Examples of the UQ parameters to be used in the config file (eg system-test.conf) are as follows:
+```
+--UQ                    True
+--nn_type               DeepLogLikelihoodUQModel
+--UQ_model_type         MVE
+--df_dirname            outputs_dfs
+--keep_prob_pred        0.7
+```
+```df_dirname``` will contain the corresponding output dataframes for prediction, data noise variance and errors.
+Total variance is the sum of data noise variance (output of the NN) and model variance. Model variance is 
+calculated by performing the same experiment multiple times with different random seed. Confidence Intervals can 
+be calculated using the predictions and the total variance.
+
 ## Contributors and Acknowledgement
 
 This repository was developed and is maintained by [Euclidean Technologies, LLC](http://www.euclidean.com/). Individual core contributors include [John Alberg](https://github.com/euclidjda), [Zachary Lipton](https://github.com/zackchase), [Lakshay Kumar Chauhan](https://github.com/lakshaykc), and [Ignacio Aranguren](https://github.com/nachoaz). 
