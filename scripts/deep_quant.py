@@ -110,7 +110,7 @@ def get_configs():
     configs.DEFINE_integer("cache_id",None,"A unique experiment key for traking a cahce")
     configs.DEFINE_float("keep_prob_pred",1.0,"Keep Prob for dropout during prediction")
     configs.DEFINE_boolean("print_normalized_outputs", False, "Print normalized outputs. Doesn't apply to pretty print")
-    configs.DEFINE_boolean("UQ", False, "Uncertainty Quantification Mode")
+    configs.DEFINE_boolean("UQ", False, "Uncertainty Quantification Model")
     configs.DEFINE_string("UQ_model_type", 'MVE', "Select between MVE or PIE")
     configs.DEFINE_float("noise_lambda",1.0,"Weight decay for noise in the loss function. Refer to DeepBayesUQ Model")
     configs.DEFINE_float("l2_alpha",0.0,"L2 regularization for weight parameters.")
