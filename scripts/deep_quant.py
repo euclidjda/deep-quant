@@ -120,6 +120,12 @@ def get_configs():
     configs.DEFINE_boolean("huber_loss", False, "Use huber loss instead of mse")
     configs.DEFINE_float("huber_delta", 1.0, "delta for huber loss")
 
+    configs.DEFINE_integer("conv_size", 3, "size of convolutional filters, input of n gives (n,n) sized filters")
+    configs.DEFINE_integer("num_filters", 1, "number of filters per convolutional layer")
+    configs.DEFINE_boolean("pooling", True, "toggle for using pooling in DeepCNNModels")
+    configs.DEFINE_integer("pool_size", 2, "size of pooling filters, input of n gives (n,n) sized filters")
+    configs.DEFINE_integer("conv_blocks", 2, "number of convolutional blocks used by DeepCNNModel architecture, where a block is a conv2d layer and then optional pooling")
+
     c = configs.ConfigValues()
 
     if c.min_unrollings is None:
