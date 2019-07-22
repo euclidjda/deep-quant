@@ -139,6 +139,8 @@ class DeepCNNModel(BaseModel):
         size = x_dim * y_dim * in_channels
         for i in range(fc_blocks):
             outputs = self._batch_relu_layer(outputs, "layer_%d"%i, size, fc_layer_size)
+            if config.hidden_dropout is True:
+                outputs = tf.nn.dropout(outputs, self._keep_prob)
             size = fc_layer_size
             #update fc_layer_size here if desired
 
