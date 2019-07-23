@@ -35,6 +35,7 @@ from models.deep_loglikelihood_uq_model import DeepLogLikelihoodUQModel
 from models.deep_hqpi_uq_model import DeepHqpiUQModel
 from models.deep_rnn_model_huber_loss import DeepRnnModelHL
 from models.deep_mlp_uq_model import DeepMlpUQModel
+from models.deep_cnn_model import DeepCNNModel
 #from log_reg_model import LogRegModel
 
 
